@@ -16,7 +16,7 @@ plugins {
 }
 
 group = "jp.kaiz.shachia"
-version = "0.0.1"
+version = "0.0.2"
 
 buildscript {
     repositories {
