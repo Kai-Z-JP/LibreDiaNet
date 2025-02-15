@@ -69,7 +69,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("jp.kaiz:shachia-gtfs:0.0.3")
+                implementation("jp.kaiz:shachia-gtfs:0.0.4")
                 implementation(ktor("serialization-kotlinx-json"))
                 implementation("app.softwork:kotlinx-uuid-core:0.0.22")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
