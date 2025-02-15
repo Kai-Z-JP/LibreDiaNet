@@ -4,7 +4,8 @@ import emotion.react.css
 import jp.kaiz.shachia.dianet.RouteDetail
 import jp.kaiz.shachia.dianet.data.JsoRoute
 import jp.kaiz.shachia.dianet.data.jsoRoute
-import jp.kaiz.shachia.gtfs.GTFS
+import jp.kaiz.shachia.gtfs.js.data.JsGTFS
+import jp.kaiz.shachia.gtfs.js.data.JsRoute
 import mui.material.Autocomplete
 import mui.material.AutocompleteProps
 import mui.material.TextField
@@ -18,15 +19,17 @@ import web.cssom.Color
 import web.cssom.em
 
 external interface TabPanelSelectRouteProps : TabPanelProps {
-    var gtfs: GTFS
+    var gtfs: JsGTFS
     var routes: List<RouteDetail>
     var onChange: (List<RouteDetail>) -> Unit
 }
 
 val TabPanelSelectRoute = FC<TabPanelSelectRouteProps> { props ->
-    val allRoutes = props.gtfs.routes.distinctBy { it.id }.flatMap { route ->
-        props.gtfs.trips
-            .filter { it.routeId == route.id }
+    val gtfs = props.gtfs
+
+    val allRoutes = gtfs.routes.distinctBy(JsRoute::routeId).flatMap { route ->
+        gtfs.trips
+            .filter { it.routeId == route.routeId }
             .distinctBy { it.directionId }
             .map { jsoRoute(route, it.directionId) }
     }.sortedBy { "${it.railwayCode}_${it.direction}" }

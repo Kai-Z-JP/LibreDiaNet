@@ -1,6 +1,6 @@
 package jp.kaiz.shachia.dianet.data
 
-import jp.kaiz.shachia.gtfs.Route
+import jp.kaiz.shachia.gtfs.js.data.JsRoute
 import js.objects.jso
 
 
@@ -12,13 +12,17 @@ external interface JsoRoute {
     var name: String
 }
 
-fun jsoRoute(route: Route, direction: Int?): JsoRoute = jso {
-    label = "${route.id}_${direction ?: "null"} ${route.name()}"
-    railwayCode = "${route.id}_${direction ?: "null"}"
+fun jsoRoute(route: JsRoute, direction: Int?): JsoRoute = jso {
+    label = "${route.routeId}_${direction ?: "null"} ${route.name()}"
+    railwayCode = "${route.routeId}_${direction ?: "null"}"
 
-    id = route.id
+    id = route.routeId
     this.direction = direction
     name = route.name()
 }
 
-fun Route.name() = this.shortName ?: this.longName ?: ""
+fun JsRoute.name() =
+    if (this.shortName.isNullOrEmpty()) when {
+        this.longName.isNullOrEmpty() -> ""
+        else -> this.longName!!
+    } else this.shortName!!

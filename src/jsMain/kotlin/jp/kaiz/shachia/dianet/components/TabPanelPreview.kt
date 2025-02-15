@@ -4,7 +4,7 @@ import emotion.react.css
 import jp.kaiz.shachia.dianet.PoleDetail
 import jp.kaiz.shachia.dianet.RouteDetail
 import jp.kaiz.shachia.dianet.data.*
-import jp.kaiz.shachia.gtfs.GTFS
+import jp.kaiz.shachia.gtfs.js.data.JsGTFS
 import kotlinx.datetime.*
 import mui.icons.material.Delete
 import mui.material.*
@@ -25,10 +25,10 @@ external interface TabPanelPreviewProps : TabPanelProps {
     var onRequestCreateDiaNetXlsx: (List<Pair<String, LocalDate>>) -> Unit
     var isChanged: Boolean
     var isDownloading: Boolean
-    var gtfs: GTFS
+    var gtfs: JsGTFS
     var routes: List<RouteDetail>
     var sortedStops: List<PoleDetail>
-    var constructedRoutes: List<ConstructedPreviewRoute>
+    var constructedRoutes: List<JsConstructedPreviewRoute>
     var excludedStopPatterns: Set<List<String>>
 }
 
@@ -37,10 +37,10 @@ val TabPanelPreview = FC<TabPanelPreviewProps> { props ->
 
     val calendars = useMemo(date) {
         props.gtfs.calendar.filter { cal ->
-            val startInt = cal.startDate
+            val startInt = cal.startDate.toString()
             val startDate =
                 LocalDate(startInt.take(4).toInt(), startInt.drop(4).take(2).toInt(), startInt.takeLast(2).toInt())
-            val endInt = cal.endDate
+            val endInt = cal.endDate.toString()
             val endDate = LocalDate(endInt.take(4).toInt(), endInt.drop(4).take(2).toInt(), endInt.takeLast(2).toInt())
 
             if (startDate > date || endDate < date) {
@@ -59,17 +59,19 @@ val TabPanelPreview = FC<TabPanelPreviewProps> { props ->
         }.map { it.id }
     }
 
-    val allPoles = props.gtfs.stops
-    val stops = props.sortedStops.map { it to allPoles.find { pole -> pole.id == it.id }!! }
+    val stops = useMemo(props.gtfs, props.sortedStops) {
+        props.sortedStops.map { it to props.gtfs.stops.find { pole -> pole.stopId == it.id }!! }
+    }
 
     val constructedRoutes = props.constructedRoutes
 
-    val constructedTrips = useMemo(props.gtfs, props.routes, calendars) {
+    val constructedTrips = useMemo(props.gtfs, props.routes, calendars, props.excludedStopPatterns) {
         props.routes.flatMap { route ->
             val direction = route.direction
             val routeId = route.id
-            val route = props.gtfs.routes.first { it.id == routeId }
-            val tripStopTimes = props.gtfs.trips
+            val jsRoute = props.gtfs.routes.first { it.routeId == routeId }
+            val routeName = jsRoute.name()
+            props.gtfs.trips
                 .filter { it.routeId == routeId && it.directionId == direction && it.serviceId in calendars }
                 .map { trip ->
                     props.gtfs.stopTimes
@@ -77,13 +79,12 @@ val TabPanelPreview = FC<TabPanelPreviewProps> { props ->
                         .sortedBy { it.stopSequence }
                 }.filter { stopTimes ->
                     stopTimes.map { it.stopId } !in props.excludedStopPatterns
+                }.map { tripStopTimes ->
+                    JsConstructedPreviewTrip(
+                        routeName = routeName,
+                        stopTime = tripStopTimes
+                    )
                 }
-            tripStopTimes.map { tripStopTimes ->
-                ConstructedPreviewTrip(
-                    route = route,
-                    stopTime = tripStopTimes
-                )
-            }
         }.sortedBy { it.stopTime.first().departureTime }
     }
 
@@ -105,7 +106,7 @@ val TabPanelPreview = FC<TabPanelPreviewProps> { props ->
         constructedRoutes.flatMap { it.stopPatterns }.associateWith { stopPattern ->
             stops.mapIndexed { index, (pole) ->
                 val poleIndexes = stopPattern.mapIndexedNotNull { index, stop ->
-                    if (stop.id == pole.id) index else null
+                    if (stop.stopId == pole.id) index else null
                 }
 
                 when {
@@ -206,7 +207,7 @@ val TabPanelPreview = FC<TabPanelPreviewProps> { props ->
                                     textAlign = TextAlign.center
                                     border = Border(1.px, LineStyle.solid)
                                 }
-                                +it.route.name()
+                                +it.routeName
                             }
                         }
                     }
@@ -356,7 +357,7 @@ val TabPanelPreview = FC<TabPanelPreviewProps> { props ->
                             constructedTrips.forEach { trip ->
                                 val stopIdPattern = trip.stopTime.map { it.stopId }
                                 val poleIndex = stopPatternPoleIndexMapping.entries.first { (stopPattern) ->
-                                    stopPattern.map { it.id } == stopIdPattern
+                                    stopPattern.map { it.stopId } == stopIdPattern
                                 }.value[index]
 
                                 val poleStopTime = if (poleIndex != null && poleIndex != -1) trip.stopTime[poleIndex]

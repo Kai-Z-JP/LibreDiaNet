@@ -12,16 +12,16 @@ import jp.kaiz.shachia.dianet.data.jsoGtfsFeedItem
 import jp.kaiz.shachia.dianet.data.useData
 import jp.kaiz.shachia.dianet.gtfs.feed.GTFSFeedItem
 import jp.kaiz.shachia.dianet.gtfs.feed.GTFSFileResponse
-import jp.kaiz.shachia.dianet.webworkers.GtfsUnZip
-import jp.kaiz.shachia.dianet.webworkers.WorkerPool
 import jp.kaiz.shachia.gtfs.GTFS
+import jp.kaiz.shachia.gtfs.io.zip.ZipExtractorJs
+import jp.kaiz.shachia.gtfs.io.zip.readFromZipEntries
+import jp.kaiz.shachia.gtfs.js.data.JsGTFS
 import js.buffer.ArrayBuffer
 import js.reflect.unsafeCast
 import js.typedarrays.Int8Array
 import kotlinx.browser.localStorage
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.uuid.UUID
@@ -38,7 +38,6 @@ import react.dom.html.ReactHTML.label
 import web.cssom.*
 import web.html.InputType
 
-val pool = WorkerPool(10, "./worker.js")
 const val LOCAL_STORAGE_KEY_NAME = "libre-dianet"
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -53,7 +52,7 @@ val Index = FC {
     }
 
     val (selectedPreset, setSelectedPreset) = useState<UUID>()
-    val (allGtfs, setAllGtfs) = useState(mapOf<String, GTFS>())
+    val (allGtfs, setAllGtfs) = useState(mapOf<String, JsGTFS>())
 
     val gtfsFileResponse by useData<GTFSFileResponse>("https://api.gtfs-data.jp/v2/files")
     val gtfsFeedItems = gtfsFileResponse?.body ?: emptyList()
@@ -67,15 +66,14 @@ val Index = FC {
         presetList
             .map { it.info }
             .filterIsInstance<DataRepoGtfsInformation>()
-            .filter {
-                it.id !in allGtfs.keys
-            }.forEach {
-                MainScope().launch {
-                    val url =
-                        "https://api.gtfs-data.jp/v2/organizations/${it.orgId}/feeds/${it.feedId}/files/feed.zip"
+            .filter { it.id !in allGtfs.keys }
+            .forEach {
+                GlobalScope.launch {
+                    val url = "https://api.gtfs-data.jp/v2/organizations/${it.orgId}/feeds/${it.feedId}/files/feed.zip"
                     val zipBytes = client.get(url).bodyAsBytes()
                     try {
-                        val gtfs = pool.request(GtfsUnZip(zipBytes)).gtfs
+                        val zipList = ZipExtractorJs().extract(zipBytes)
+                        val gtfs = GTFS.readFromZipEntries(zipList)
                         setAllGtfs { current -> current + (it.id to gtfs) }
                     } catch (e: Exception) {
                         e.printStackTrace()
@@ -93,11 +91,12 @@ val Index = FC {
             .map { it.info }
             .filterIsInstance<RawGtfsInformation>()
             .filter { it.id !in allGtfs }
-            .forEach {
-                if (it.zipByteArray.isNotEmpty()) {
-                    GlobalScope.launch {
+            .map {
+                GlobalScope.launch {
+                    if (it.zipByteArray.isNotEmpty()) {
                         try {
-                            val gtfs = pool.request(GtfsUnZip(it.zipByteArray)).gtfs
+                            val zipList = ZipExtractorJs().extract(it.zipByteArray)
+                            val gtfs = GTFS.readFromZipEntries(zipList)
                             setAllGtfs { current -> current + (it.id to gtfs) }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -308,7 +307,7 @@ val CreateNewRawPresetButtonWithDialog = FC<CreateNewRawPresetButtonWithDialogPr
         showDialog = false
     }
 
-    var gtfsFileName by useState<String>()
+    var gtfsFileName by useState<String>("")
     var gtfsByteArray by useState<ByteArray?>(null)
 
     Button {
@@ -329,7 +328,7 @@ val CreateNewRawPresetButtonWithDialog = FC<CreateNewRawPresetButtonWithDialogPr
         }
 
         DialogContent {
-            +"Zipファイルからの読み込みはベータ版です。都営などの非常に大きなデータは環境によって読み込めない可能性があります。"
+            +"Zipファイルからの読み込みはベータ版です。"
         }
 
         DialogContent {
@@ -356,7 +355,7 @@ val CreateNewRawPresetButtonWithDialog = FC<CreateNewRawPresetButtonWithDialogPr
                         onChange = { event ->
                             val files = event.target.files
                             if (files != null && files.length > 0) {
-                                MainScope().launch {
+                                GlobalScope.launch {
                                     val file = files[0]
                                     val arrayBuffer = file.arrayBuffer()
                                     gtfsByteArray = arrayBuffer.asByteArray()
@@ -375,17 +374,19 @@ val CreateNewRawPresetButtonWithDialog = FC<CreateNewRawPresetButtonWithDialogPr
                 +"新しいプリセットを作成"
                 color = ButtonColor.primary
                 variant = ButtonVariant.contained
-                disabled = gtfsFileName == null || gtfsByteArray == null
+                disabled = gtfsFileName.isEmpty() || gtfsByteArray == null
                 fullWidth = true
                 onClick = {
-                    val preset = RoutePreset(
-                        info = RawGtfsInformation(
-                            zipByteArray = gtfsByteArray!!,
-                            name = gtfsFileName!!,
+                    GlobalScope.launch {
+                        val preset = RoutePreset(
+                            info = RawGtfsInformation(
+                                zipByteArray = gtfsByteArray!!,
+                                name = gtfsFileName!!,
+                            )
                         )
-                    )
-                    props.onCreateNewPreset(preset)
-                    onClose()
+                        props.onCreateNewPreset(preset)
+                        onClose()
+                    }
                 }
             }
         }

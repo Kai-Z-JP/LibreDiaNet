@@ -1,14 +1,17 @@
+@file:OptIn(DelicateCoroutinesApi::class)
+
 package jp.kaiz.shachia.dianet.components
 
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import jp.kaiz.shachia.dianet.*
-import jp.kaiz.shachia.dianet.data.ConstructedPreviewRoute
+import jp.kaiz.shachia.dianet.data.JsConstructedPreviewRoute
 import jp.kaiz.shachia.dianet.pages.VisuallyHiddenInput
 import jp.kaiz.shachia.dianet.pages.asByteArray
-import jp.kaiz.shachia.gtfs.GTFS
-import kotlinx.coroutines.MainScope
+import jp.kaiz.shachia.gtfs.js.data.JsGTFS
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import mui.icons.material.CloudUpload
@@ -30,7 +33,7 @@ val tabList = listOf(
 
 external interface PresetEditorProps : Props {
     var dataSource: GTFSDateSource
-    var gtfs: GTFS?
+    var gtfs: JsGTFS?
     var preset: RoutePreset
     var onUpdate: (RoutePreset) -> Unit
     var onDelete: () -> Unit
@@ -57,11 +60,11 @@ val PresetEditor = FC<PresetEditorProps> { props ->
                 val trips = gtfs.trips.filter { it.routeId == routeId && it.directionId == direction }
                 val stopPatterns = trips.map { trip ->
                     gtfs.stopTimes.filter { it.tripId == trip.tripId }.sortedBy { it.stopSequence }.map { it.stopId }
-                }.distinct().map { stopTimes ->
-                    stopTimes.map { stopTime -> gtfs.stops.first { it.id == stopTime } }
+                }.distinct().map { stopIds ->
+                    stopIds.map { stopId -> gtfs.stops.first { it.stopId == stopId } }
                 }
-                val route = gtfs.routes.first { it.id == routeId }
-                ConstructedPreviewRoute(
+                val route = gtfs.routes.first { it.routeId == routeId }
+                JsConstructedPreviewRoute(
                     route = route,
                     direction = direction,
                     stopPatterns = stopPatterns
@@ -84,7 +87,7 @@ val PresetEditor = FC<PresetEditorProps> { props ->
             }
         }
 
-        MainScope().launch {
+        GlobalScope.launch {
             try {
                 val response = client.post("/api/poi_parser/create") {
                     setBody(
@@ -130,7 +133,8 @@ val PresetEditor = FC<PresetEditorProps> { props ->
                     name = name,
                     routes = routes,
                     poles = sortedStops,
-                    index = presetIndex
+                    index = presetIndex,
+                    excludedStopPatterns = excludedStopPatterns
                 )
                 props.onUpdate(newPreset)
             }
@@ -295,7 +299,7 @@ val UpdatePresetRawGtfsData = FC<UpdatePresetRawGtfsDataProps> { props ->
                 onChange = { event ->
                     val files = event.target.files
                     if (files != null && files.length > 0) {
-                        MainScope().launch {
+                        GlobalScope.launch {
                             val file = files[0]
                             val arrayBuffer = file.arrayBuffer()
                             gtfsByteArray = arrayBuffer.asByteArray()
@@ -315,11 +319,13 @@ val UpdatePresetRawGtfsData = FC<UpdatePresetRawGtfsDataProps> { props ->
         disabled = gtfsFileName == null || gtfsByteArray == null
         fullWidth = true
         onClick = {
-            val info = RawGtfsInformation(
-                zipByteArray = gtfsByteArray!!,
-                name = gtfsFileName!!,
-            )
-            props.onUpdateInformation(info)
+            GlobalScope.launch {
+                val info = RawGtfsInformation(
+                    zipByteArray = gtfsByteArray!!,
+                    name = gtfsFileName!!,
+                )
+                props.onUpdateInformation(info)
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 package jp.kaiz.shachia.dianet.components
 
 import jp.kaiz.shachia.dianet.Override
-import jp.kaiz.shachia.gtfs.Stop
+import jp.kaiz.shachia.gtfs.js.data.JsStop
 import mui.material.Box
 import mui.material.Checkbox
 import mui.material.FormControlLabel
@@ -13,7 +13,7 @@ import web.cssom.px
 
 external interface DraggableStyledPoleProps : Props {
     var override: Override
-    var pole: Stop
+    var pole: JsStop
     var index: Int
     var onChangeOverride: (Override) -> Unit
 }
@@ -26,7 +26,7 @@ val DraggableStyledSortedPole = FC<DraggableStyledPoleProps> { props ->
     var open by useState(override != Override.NONE)
 
     Draggable {
-        key = pole.id
+        key = pole.stopId
         draggableId = index.toString()
         this.index = index
         children = { provided, _, _ ->

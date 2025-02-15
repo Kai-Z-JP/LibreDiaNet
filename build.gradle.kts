@@ -42,18 +42,6 @@ kotlin {
     jvm {
         withJava()
     }
-    js("worker") {
-        binaries.executable()
-        browser {
-            webpackTask {
-                mainOutputFileName = "worker.js"
-            }
-            distribution {
-                distributionName = "worker"
-            }
-        }
-    }
-
     js {
         binaries.executable()
         browser {
@@ -61,7 +49,7 @@ kotlin {
                 cssSupport {
                     enabled.set(true)
                 }
-//                this.mode = KotlinWebpackConfig.Mode.DEVELOPMENT
+                this.mode = KotlinWebpackConfig.Mode.DEVELOPMENT
                 this.devServer = KotlinWebpackConfig.DevServer(
                     port = 8080,
                     static = mutableListOf(
@@ -104,11 +92,8 @@ kotlin {
                 implementation("jp.kaiz:shachia-poi-dsl:0.0.1")
             }
         }
-        val workerMain by getting {
 
-        }
         val jsMain by getting {
-            resources.srcDirs("./build/kotlin-webpack/worker/worker")
             dependencies {
                 implementation(ktorCl("js"))
                 implementation(ktorCl("content-negotiation"))
@@ -211,5 +196,3 @@ tasks.getByName<Jar>("jvmJar") {
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
-
-tasks["jsProcessResources"].dependsOn.add("workerBrowserDistribution")

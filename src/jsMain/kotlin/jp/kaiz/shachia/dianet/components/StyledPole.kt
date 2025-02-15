@@ -1,7 +1,7 @@
 package jp.kaiz.shachia.dianet.components
 
 import jp.kaiz.shachia.dianet.PoleDetail
-import jp.kaiz.shachia.gtfs.Stop
+import jp.kaiz.shachia.gtfs.js.data.JsStop
 import mui.material.Box
 import mui.system.sx
 import react.FC
@@ -11,7 +11,7 @@ import react.beautiful.dnd.DraggableStateSnapshot
 import web.cssom.*
 
 external interface StyledPoleProps : PropsWithChildren {
-    var pole: Stop
+    var pole: JsStop
     var provided: DraggableProvided?
     var snapshot: DraggableStateSnapshot?
     var disabled: Boolean?
@@ -76,4 +76,4 @@ val StyledPole = FC<StyledPoleProps> { props ->
     }
 }
 
-fun Stop.toPoleDetail() = PoleDetail(id)
+fun JsStop.toPoleDetail() = PoleDetail(stopId)

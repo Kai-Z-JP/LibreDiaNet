@@ -1,12 +1,12 @@
 package jp.kaiz.shachia.dianet.components
 
 import jp.kaiz.shachia.dianet.PoleDetail
-import jp.kaiz.shachia.dianet.data.ConstructedPreviewRoute
+import jp.kaiz.shachia.dianet.data.JsConstructedPreviewRoute
 import jp.kaiz.shachia.dianet.data.name
 import jp.kaiz.shachia.dianet.xor
-import jp.kaiz.shachia.gtfs.GTFS
-import jp.kaiz.shachia.gtfs.Route
-import jp.kaiz.shachia.gtfs.Stop
+import jp.kaiz.shachia.gtfs.js.data.JsGTFS
+import jp.kaiz.shachia.gtfs.js.data.JsRoute
+import jp.kaiz.shachia.gtfs.js.data.JsStop
 import mui.icons.material.Check
 import mui.material.*
 import mui.system.sx
@@ -21,8 +21,8 @@ external interface TabPanelConstructRouteProps : TabPanelProps {
     var onChange: (List<PoleDetail>) -> Unit
     var excludedStopPatterns: Set<List<String>>
     var onChangeExcludedPatterns: (Set<List<String>>) -> Unit
-    var gtfs: GTFS
-    var constructedRoutes: List<ConstructedPreviewRoute>
+    var gtfs: JsGTFS
+    var constructedRoutes: List<JsConstructedPreviewRoute>
 }
 
 val TabPanelConstructRoute = FC<TabPanelConstructRouteProps> { props ->
@@ -31,7 +31,7 @@ val TabPanelConstructRoute = FC<TabPanelConstructRouteProps> { props ->
     val stopPatternMap = useMemo(constructedRoutes) {
         constructedRoutes.flatMap { cr ->
             val direction = cr.direction
-            val routeId = cr.route.id
+            val routeId = cr.route.routeId
             cr.stopPatterns.mapIndexed { index, stopPattern ->
                 val sCode = "${routeId}_${direction ?: "null"} / $index"
                 sCode to Pair(cr.route, stopPattern)
@@ -61,8 +61,7 @@ val TabPanelConstructRoute = FC<TabPanelConstructRouteProps> { props ->
                 if (!selectedPoles.isNullOrEmpty() && poleIndex in selectedPoles) {
                     val poleDetails = selectedPoles.map { stopPattern[it].toPoleDetail() }
                     newSortedStops.addAll(dest.index, poleDetails)
-                    selectedPoleMap =
-                        selectedPoleMap.toMutableMap().apply { remove(source.droppableId) }
+                    selectedPoleMap = selectedPoleMap.toMutableMap().apply { remove(source.droppableId) }
                 } else {
                     val poleDetail = stopPattern[poleIndex].toPoleDetail()
                     newSortedStops.add(dest.index, poleDetail)
@@ -115,11 +114,9 @@ val TabPanelConstructRoute = FC<TabPanelConstructRouteProps> { props ->
                             this.route = route
                             this.sCode = sCode
                             this.stops = stopPattern
-                            this.excluded = stopPattern.map { it.id } in props.excludedStopPatterns
+                            this.excluded = stopPattern.map { it.stopId } in props.excludedStopPatterns
                             this.onChangeExcluded = {
-                                props.onChangeExcludedPatterns = {
-                                    props.excludedStopPatterns xor setOf(it)
-                                }
+                                props.onChangeExcludedPatterns(props.excludedStopPatterns xor setOf(it))
                             }
                             this.key = sCode
                             this.sortedStops = sortedStops
@@ -142,7 +139,7 @@ val TabPanelConstructRoute = FC<TabPanelConstructRouteProps> { props ->
                     }
                     DroppableSortedStops {
                         this.sortedStops = sortedStops
-                        this.poleCache = props.gtfs.stops.associateBy(Stop::id)
+                        this.poleCache = props.gtfs.stops.associateBy(JsStop::stopId)
                         this.onChange = props.onChange
                     }
                 }
@@ -155,7 +152,7 @@ val TabPanelConstructRoute = FC<TabPanelConstructRouteProps> { props ->
 
 external interface DroppableSortedStopsProps : Props {
     var sortedStops: List<PoleDetail>
-    var poleCache: Map<String, Stop>
+    var poleCache: Map<String, JsStop>
     var onChange: (List<PoleDetail>) -> Unit
 }
 
@@ -207,9 +204,9 @@ val DroppableSortedStops = FC<DroppableSortedStopsProps> { props ->
 }
 
 external interface AccordionRouteStopsProps : Props {
-    var route: Route
+    var route: JsRoute
     var sCode: String
-    var stops: List<Stop>
+    var stops: List<JsStop>
     var sortedStops: List<PoleDetail>
     var selectedPoles: Set<Int>
     var onChangeSelect: (Set<Int>) -> Unit
@@ -237,19 +234,19 @@ val AccordionRouteStops = FC<AccordionRouteStopsProps> { props ->
         disableGutters = true
 
         AccordionSummary {
-            Typography { +"${route.id} ${route.name()} (${stops.first().name}-${stops.last().name})" }
-            if (sortedStopsCode.containsAll(stops.map(Stop::id))) {
+            Typography { +"${route.routeId} ${route.name()} (${stops.first().name}-${stops.last().name})" }
+            if (sortedStopsCode.containsAll(stops.map(JsStop::stopId))) {
                 Check {}
             }
         }
 
         AccordionDetails {
-//            Checkbox {
-//                checked = props.excluded
-//                onChange = { event, checked ->
-//                    props.onChangeExcluded(stops.map(Stop::id))
-//                }
-//            }
+            Checkbox {
+                checked = props.excluded
+                onChange = { event, checked ->
+                    props.onChangeExcluded(stops.map(JsStop::stopId))
+                }
+            }
             Droppable {
                 droppableId = railwayCode
                 isDropDisabled = true
@@ -282,10 +279,11 @@ val AccordionRouteStops = FC<AccordionRouteStopsProps> { props ->
                     Box.create {
                         ref = provided.innerRef
                         stops.mapIndexed { index, pole ->
-                            val poleCode = pole.id
+                            val poleCode = pole.stopId
                             val draggableId = "$index SCode:$railwayCode"
                             val shouldRenderClone = draggableId == snapshot.draggingFromThisWith
-                            val disabled = stops.count { it.id == poleCode } == sortedStopsCode.count { it == poleCode }
+                            val disabled =
+                                stops.count { it.stopId == poleCode } == sortedStopsCode.count { it == poleCode }
                             Box {
                                 key = index.toString()
                                 if (shouldRenderClone) {
@@ -329,7 +327,7 @@ val AccordionRouteStops = FC<AccordionRouteStopsProps> { props ->
 }
 
 external interface PoleItemProps : Props {
-    var pole: Stop
+    var pole: JsStop
 }
 
 val PoleItem = FC<PoleItemProps> {
@@ -339,6 +337,6 @@ val PoleItem = FC<PoleItemProps> {
     }
     Typography {
         sx { color = Color("gray") }
-        +pole.id
+        +pole.stopId
     }
 }
