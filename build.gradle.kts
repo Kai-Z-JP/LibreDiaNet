@@ -1,12 +1,7 @@
-@file:OptIn(ExperimentalDistributionDsl::class)
-
 import io.ktor.plugin.features.*
-import kotlinx.html.*
-import kotlinx.html.dom.createHTMLDocument
-import kotlinx.html.dom.serialize
-import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalDistributionDsl
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+import org.gradle.api.tasks.Exec
+import org.gradle.api.tasks.Sync
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -18,15 +13,6 @@ plugins {
 group = "jp.kaiz.shachia"
 version = "0.0.2"
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath(libs.kotlinx.html)
-    }
-}
-
 val ktorVersion = extra["ktor.version"] as String
 fun ktor(target: String) = "io.ktor:ktor-$target:$ktorVersion"
 fun ktorSv(target: String) = ktor("server-$target")
@@ -36,34 +22,18 @@ application {
     mainClass = "jp.kaiz.shachia.dianet.DiaNetApplicationKt"
 }
 
-val mainClassStr by extra("io.ktor.server.netty.EngineMain")
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
 
 kotlin {
+    jvmToolchain(21)
     jvm {
         withJava()
-    }
-    js {
-        binaries.executable()
-        browser {
-            commonWebpackConfig {
-                cssSupport {
-                    enabled.set(true)
-                }
-                this.mode = KotlinWebpackConfig.Mode.DEVELOPMENT
-                this.devServer = KotlinWebpackConfig.DevServer(
-                    port = 8080,
-                    static = mutableListOf(
-                        "$buildDir/processedResources/js/main",
-                        "$buildDir/kotlin-webpack/worker/worker"
-                    ),
-                    proxy = mutableListOf(
-                        KotlinWebpackConfig.DevServer.Proxy(
-                            context = mutableListOf("/api"),
-                            target = "http://127.0.0.1:9090"
-                        )
-                    )
-                )
-            }
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_21)
         }
     }
     sourceSets {
@@ -81,6 +51,7 @@ kotlin {
                 implementation(ktorSv("content-negotiation"))
                 implementation(ktorSv("cors"))
                 implementation(ktorSv("call-logging"))
+                implementation(ktorSv("default-headers"))
                 implementation(ktorSv("forwarded-header"))
 
                 implementation(ktorCl("cio"))
@@ -90,22 +61,6 @@ kotlin {
                 implementation("org.slf4j:slf4j-api:2.0.13")
 
                 implementation("jp.kaiz:shachia-poi-dsl:0.0.1")
-            }
-        }
-
-        val jsMain by getting {
-            dependencies {
-                implementation(ktorCl("js"))
-                implementation(ktorCl("content-negotiation"))
-
-                implementation(kotlinWrappers.react)
-                implementation(kotlinWrappers.reactDom)
-                implementation(kotlinWrappers.reactRouterDom)
-                implementation(kotlinWrappers.reactBeautifulDnd)
-
-                implementation(kotlinWrappers.emotion)
-                implementation(kotlinWrappers.mui.material)
-                implementation(kotlinWrappers.mui.iconsMaterial)
             }
         }
     }
@@ -130,34 +85,41 @@ ktor {
     }
 }
 
-tasks.named("processResources") {
-    dependsOn("createSPAHtml")
+val frontendDir = layout.projectDirectory.dir("frontend")
+val frontendNodeModules = frontendDir.dir("node_modules")
+val frontendDist = frontendDir.dir("dist")
+
+val frontendInstall by tasks.registering(Exec::class) {
+    workingDir(frontendDir.asFile)
+    commandLine("pnpm", "install", "--frozen-lockfile")
+    inputs.files(
+        frontendDir.file("package.json"),
+        frontendDir.file("pnpm-lock.yaml")
+    )
+    outputs.dir(frontendNodeModules)
 }
 
-task("createSPAHtml") {
-    File(project.projectDir, "src/commonMain/resources/index.html").writeText(
-        createHTMLDocument().html {
-            lang = "ja"
-            head {
-                meta(charset = "utf-8")
-                title("Index | LibreDiaNet")
-                meta(
-                    name = "viewport",
-                    content = "width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
-                )
-                link(
-                    rel = "stylesheet",
-                    href = "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap"
-                )
-            }
-            body {
-                div {
-                    id = "root"
-                }
-                script(src = "/${project.name}.js") { }
-            }
-        }.serialize(true)
+val frontendBuild by tasks.registering(Exec::class) {
+    dependsOn(frontendInstall)
+    workingDir(frontendDir.asFile)
+    commandLine("pnpm", "build")
+    inputs.files(
+        frontendDir.file("package.json"),
+        frontendDir.file("pnpm-lock.yaml"),
+        frontendDir.file("tsconfig.json"),
+        frontendDir.file("tsconfig.app.json"),
+        frontendDir.file("vite.config.ts"),
+        frontendDir.file("index.html")
     )
+    inputs.dir(frontendDir.dir("src"))
+    inputs.dir(frontendDir.dir("public"))
+    outputs.dir(frontendDist)
+}
+
+val syncFrontendDist by tasks.registering(Sync::class) {
+    dependsOn(frontendBuild)
+    from(frontendDist)
+    into(layout.buildDirectory.dir("generated/frontend"))
 }
 
 tasks.wrapper {
@@ -165,8 +127,10 @@ tasks.wrapper {
 }
 
 tasks.named<Copy>("jvmProcessResources") {
-    val jsBrowserDistribution = tasks.named("jsBrowserDistribution")
-    from(jsBrowserDistribution)
+    dependsOn(syncFrontendDist)
+    from(syncFrontendDist) {
+        into("frontend")
+    }
 }
 
 tasks.named<JavaExec>("run") {
@@ -175,22 +139,9 @@ tasks.named<JavaExec>("run") {
     classpath(tasks.named<Jar>("jvmJar"))
 }
 
-tasks.named("jsProductionExecutableCompileSync") {
-    dependsOn(tasks.named("jsBrowserDevelopmentWebpack"))
-}
-
 tasks.getByName<Jar>("jvmJar") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    val taskName =
-        if (project.hasProperty("isProduction") || project.gradle.startParameter.taskNames.contains("installDist")) {
-            "jsBrowserProductionWebpack"
-        } else {
-            "jsBrowserDevelopmentWebpack"
-        }
-    val webpackTask = tasks.getByName<KotlinWebpack>(taskName)
-    dependsOn(webpackTask)
-    from(File(webpackTask.destinationDirectory, webpackTask.outputFileName))
+    dependsOn(syncFrontendDist)
 }
 
 tasks.withType<JavaCompile>().configureEach {

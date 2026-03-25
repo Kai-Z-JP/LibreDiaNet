@@ -9,6 +9,7 @@ import io.ktor.server.http.content.*
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.defaultheaders.*
 import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -27,6 +28,10 @@ fun Application.module() {
     install(ContentNegotiation) {
         json(kotlinxJson)
     }
+    install(DefaultHeaders) {
+        header("Cross-Origin-Opener-Policy", "same-origin")
+        header("Cross-Origin-Embedder-Policy", "require-corp")
+    }
     install(CORS) {
         allowHeader(HttpHeaders.ContentType)
         allowMethod(HttpMethod.Options)
@@ -44,13 +49,12 @@ fun Application.module() {
             }
         }
 
-        get("/") {
+        staticResources("/", "frontend")
+        get("/{...}") {
             call.respondText(
-                this.javaClass.classLoader.getResource("index.html")!!.readText(),
+                this.javaClass.classLoader.getResource("frontend/index.html")!!.readText(),
                 ContentType.Text.Html
             )
         }
-
-        staticResources("/", "")
     }
 }
