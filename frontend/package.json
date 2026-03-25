@@ -16,8 +16,8 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@gtfs-jp/loader": "^4.0.0-beta.7",
-    "@gtfs-jp/types": "^4.0.0-beta.7",
+    "@gtfs-jp/loader": "^4.0.0-beta.10",
+    "@gtfs-jp/types": "^4.0.0-beta.10",
     "@hello-pangea/dnd": "^18.0.1",
     "@mui/icons-material": "^7.3.9",
     "@mui/material": "^7.3.9",
