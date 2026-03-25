@@ -47,6 +47,15 @@ export function useLibreDiaNetApp() {
       return
     }
 
+    if (selectedPreset.info.kind === 'raw' && selectedPreset.info.cacheState === 'missing') {
+      setPresetContext({
+        loading: false,
+        handle: null,
+        error: 'GTFSキャッシュが見つからないため、ZIPの再アップロードが必要です。',
+      })
+      return
+    }
+
     let cancelled = false
     setPresetContext((current) => ({ ...current, loading: true, error: null }))
 
