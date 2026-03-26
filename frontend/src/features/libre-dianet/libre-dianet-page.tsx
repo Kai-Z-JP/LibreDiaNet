@@ -68,7 +68,6 @@ export default function LibreDiaNetPage() {
               <PresetEditor
                 preset={selectedPreset}
                 context={app.presetContext}
-                rawFile={app.selectedRawFile}
                 onUpdate={app.updatePreset}
                 onDelete={() => void app.deletePreset(selectedPreset)}
                 onUpdateRawData={(file) => void app.updateRawPresetData(selectedPreset, file)}

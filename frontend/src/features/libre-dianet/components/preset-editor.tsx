@@ -1,9 +1,10 @@
 import { Alert, Box, Button, LinearProgress, Tab, Tabs, Typography } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
-import { requestDiaNetXlsx } from '../../../api'
+import { buildCreateFromDataRequest, requestDiaNetXlsx } from '../../../api'
 import type { PoleDetail, PresetContext, RouteDetail, RoutePresetV2 } from '../../../types'
 import { sameStringMatrix } from '../../../utils'
 import { useGtfsDerivedData } from '../hooks/use-gtfs-derived-data'
+import { libreDiaNetRepository } from '../lib/repository'
 import { ConstructRoutePanel } from './construct-route-panel'
 import { DeleteButton, EditableTitle, UpdateRawDataSection } from './shared'
 import { PreviewPanel } from './preview-panel'
@@ -15,13 +16,12 @@ const tabLabels = ['路線選択', '停留所並順', 'プレビュー', '設定
 type Props = {
   preset: RoutePresetV2
   context: PresetContext
-  rawFile: File | null
   onUpdate: (preset: RoutePresetV2) => void
   onDelete: () => void
   onUpdateRawData: (file: File) => void
 }
 
-export function PresetEditor({ preset, context, rawFile, onUpdate, onDelete, onUpdateRawData }: Props) {
+export function PresetEditor({ preset, context, onUpdate, onDelete, onUpdateRawData }: Props) {
   const [tab, setTab] = useState(0)
   const [name, setName] = useState(preset.name)
   const [routes, setRoutes] = useState<RouteDetail[]>(preset.routes)
@@ -60,7 +60,7 @@ export function PresetEditor({ preset, context, rawFile, onUpdate, onDelete, onU
     [preset, name, routes, sortedStops, presetIndex, excludedStopPatterns],
   )
 
-  const canExport = preset.info.kind === 'repo' || Boolean(rawFile)
+  const canExport = Boolean(context.handle)
   const exportTooltip = changed
     ? '先に変更結果を保存してください'
     : canExport
@@ -68,9 +68,14 @@ export function PresetEditor({ preset, context, rawFile, onUpdate, onDelete, onU
       : 'raw GTFS の xlsx 出力には、このセッションでの ZIP 再アップロードが必要です'
 
   const requestXlsx = async (dayMapping: [string, string][]) => {
+    if (!context.handle) {
+      return
+    }
     setDownloading(true)
     try {
-      await requestDiaNetXlsx({ preset, rawFile, dayMapping })
+      const gtfs = await libreDiaNetRepository.buildExportData(context.handle, preset)
+      const request = await buildCreateFromDataRequest(preset, gtfs, dayMapping)
+      await requestDiaNetXlsx(request)
     } finally {
       setDownloading(false)
     }

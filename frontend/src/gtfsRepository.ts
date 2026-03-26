@@ -2,6 +2,7 @@ import { createGtfsLoader, type GtfsLoader } from '@gtfs-jp/loader'
 import type {
   ConstructedRoute,
   ConstructedTrip,
+  DiaNetGtfsExportData,
   GtfsHandle,
   GtfsRouteSummary,
   GtfsStop,
@@ -11,6 +12,7 @@ import type {
   RepoInfoV2,
   RouteDetail,
   RouteOption,
+  RoutePresetV2,
   StopMap,
 } from './types'
 import { displayRouteName, toNullableNumber, toNumber } from './utils'
@@ -221,6 +223,91 @@ export class GtfsRepository {
     return this.loadStops(handle.loader.db(), stopIds)
   }
 
+  async buildExportData(handle: GtfsHandle, preset: RoutePresetV2): Promise<DiaNetGtfsExportData> {
+    const db = handle.loader.db()
+    const agencyRow = await db.selectFrom('agency').select(['agency_name']).limit(1).executeTakeFirst()
+    if (!agencyRow) {
+      throw new Error('Agency not found')
+    }
+
+    const routeIds = Array.from(new Set(preset.routes.map((route) => route.id)))
+    const routeRows =
+      routeIds.length === 0
+        ? []
+        : await db
+            .selectFrom('routes')
+            .select(['route_id', 'route_short_name', 'route_long_name'])
+            .where('route_id', 'in', routeIds)
+            .execute()
+
+    const tripRows = dedupeByKey((await Promise.all(preset.routes.map((route) => this.loadTrips(db, route, undefined)))).flat(), (row) =>
+      String(row.trip_id),
+    )
+
+    const tripIds = tripRows.map((row) => String(row.trip_id))
+    const stopTimeRows =
+      tripIds.length === 0
+        ? []
+        : await db
+            .selectFrom('stop_times')
+            .select(['trip_id', 'stop_id', 'stop_sequence', 'departure_time'])
+            .where('trip_id', 'in', tripIds)
+            .orderBy('trip_id')
+            .orderBy('stop_sequence')
+            .execute()
+
+    const stopIds = Array.from(new Set([...preset.poles.map((pole) => pole.id), ...stopTimeRows.map((row) => String(row.stop_id))]))
+    const stopMap = await this.loadStops(db, stopIds)
+
+    const serviceIds = Array.from(new Set(tripRows.map((row) => String(row.service_id))))
+    const calendarRows =
+      serviceIds.length === 0
+        ? []
+        : await db
+            .selectFrom('calendar')
+            .select(['service_id', 'start_date', 'end_date', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'])
+            .where('service_id', 'in', serviceIds)
+            .execute()
+
+    return {
+      agencyName: asOptionalString(agencyRow.agency_name) ?? '',
+      stops: Object.values(stopMap).map((stop) => ({
+        id: stop.stopId,
+        name: stop.name,
+        platformCode: stop.platformCode,
+      })),
+      routes: routeRows.map((row) => ({
+        id: String(row.route_id),
+        shortName: asOptionalString(row.route_short_name),
+        longName: asOptionalString(row.route_long_name),
+      })),
+      trips: tripRows.map((row) => ({
+        tripId: String(row.trip_id),
+        routeId: String(row.route_id),
+        directionId: toNullableNumber(row.direction_id),
+        serviceId: String(row.service_id),
+      })),
+      stopTimes: stopTimeRows.map((row) => ({
+        tripId: String(row.trip_id),
+        stopId: String(row.stop_id),
+        stopSequence: toNumber(row.stop_sequence),
+        departureTime: asOptionalString(row.departure_time),
+      })),
+      calendars: calendarRows.map((row) => ({
+        id: String(row.service_id),
+        startDate: String(row.start_date),
+        endDate: String(row.end_date),
+        sunday: toNumber(row.sunday),
+        monday: toNumber(row.monday),
+        tuesday: toNumber(row.tuesday),
+        wednesday: toNumber(row.wednesday),
+        thursday: toNumber(row.thursday),
+        friday: toNumber(row.friday),
+        saturday: toNumber(row.saturday),
+      })),
+    }
+  }
+
   isRawCacheMissing(error: unknown): boolean {
     return error instanceof RawCacheMissingError
   }
@@ -358,4 +445,16 @@ function normalizeGtfsDate(value: string | null): string | null {
     return null
   }
   return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`
+}
+
+function dedupeByKey<T>(items: T[], getKey: (item: T) => string): T[] {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = getKey(item)
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
 }

@@ -10,7 +10,7 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
     proxy: {
-      '/api': 'http://127.0.0.1:9090',
+      '/api': 'http://localhost:9090',
     },
   },
   preview: {

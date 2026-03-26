@@ -1,4 +1,4 @@
-import type { DayMapping, GtfsFeedItem, GtfsFeedResponse, RepoInfoV2, RoutePresetV2 } from './types'
+import type { DayMapping, DiaNetGtfsExportData, GtfsFeedItem, GtfsFeedResponse, RepoInfoV2, RoutePresetV2 } from './types'
 import { downloadBlob, extractFileName } from './utils'
 
 type BackendRepoInfo = {
@@ -10,7 +10,6 @@ type BackendRepoInfo = {
 
 type BackendRawInfo = {
   type: 'jp.kaiz.shachia.dianet.RawGtfsInformation'
-  zipByteArray: number[]
   name: string | null
   uuid: string
 }
@@ -45,6 +44,12 @@ type BackendCreateRequest = {
   dayMapping: [string, string][]
 }
 
+export type DiaNetXlsxCreateFromDataRequestBody = {
+  gtfs: DiaNetGtfsExportData
+  preset: BackendPreset
+  dayMapping: [string, string][]
+}
+
 export async function fetchGtfsFeeds(): Promise<GtfsFeedItem[]> {
   const response = await fetch('https://api.gtfs-data.jp/v2/files')
   if (!response.ok) {
@@ -54,9 +59,8 @@ export async function fetchGtfsFeeds(): Promise<GtfsFeedItem[]> {
   return data.body
 }
 
-export async function requestDiaNetXlsx(params: { preset: RoutePresetV2; rawFile: File | null; dayMapping: DayMapping[] }): Promise<void> {
-  const request = await buildCreateRequestAsync(params.preset, params.rawFile, params.dayMapping)
-  const response = await fetch('/api/poi_parser/create', {
+export async function requestDiaNetXlsx(request: DiaNetXlsxCreateFromDataRequestBody): Promise<void> {
+  const response = await fetch('/api/poi_parser/create_from_data', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -68,6 +72,18 @@ export async function requestDiaNetXlsx(params: { preset: RoutePresetV2; rawFile
   }
   const blob = await response.blob()
   downloadBlob(blob, extractFileName(response.headers.get('content-disposition')))
+}
+
+export async function buildCreateFromDataRequest(
+  preset: RoutePresetV2,
+  gtfs: DiaNetGtfsExportData,
+  dayMapping: DayMapping[],
+): Promise<DiaNetXlsxCreateFromDataRequestBody> {
+  return {
+    gtfs,
+    preset: buildBackendPreset(preset),
+    dayMapping,
+  }
 }
 
 export async function buildCreateRequestAsync(
@@ -84,24 +100,27 @@ export async function buildCreateRequestAsync(
             type: 'jp.kaiz.shachia.dianet.GTFSRawSource',
             zipByteArray: requireRawBytes(rawBytes),
           },
-    preset: {
-      id: preset.id,
-      name: preset.name,
-      index: preset.index,
-      info:
-        preset.info.kind === 'repo'
-          ? buildBackendRepoInfo(preset.info)
-          : {
-              type: 'jp.kaiz.shachia.dianet.RawGtfsInformation',
-              zipByteArray: requireRawBytes(rawBytes),
-              name: preset.info.name,
-              uuid: preset.info.uuid,
-            },
-      routes: preset.routes,
-      poles: preset.poles,
-      excludedStopPatterns: preset.excludedStopPatterns,
-    },
+    preset: buildBackendPreset(preset),
     dayMapping,
+  }
+}
+
+function buildBackendPreset(preset: RoutePresetV2): BackendPreset {
+  return {
+    id: preset.id,
+    name: preset.name,
+    index: preset.index,
+    info:
+      preset.info.kind === 'repo'
+        ? buildBackendRepoInfo(preset.info)
+        : {
+            type: 'jp.kaiz.shachia.dianet.RawGtfsInformation',
+            name: preset.info.name,
+            uuid: preset.info.uuid,
+          },
+    routes: preset.routes,
+    poles: preset.poles,
+    excludedStopPatterns: preset.excludedStopPatterns,
   }
 }
 

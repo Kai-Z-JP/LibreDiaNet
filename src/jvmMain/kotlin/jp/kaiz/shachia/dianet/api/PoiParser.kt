@@ -7,11 +7,12 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import jp.kaiz.shachia.dianet.*
-import jp.kaiz.shachia.dianet.data.*
+import jp.kaiz.shachia.dianet.data.PoleRow
+import jp.kaiz.shachia.dianet.data.joko
+import jp.kaiz.shachia.dianet.data.name
 import jp.kaiz.shachia.dianet.dsl.poi.XSSFCellStyleBuilder
 import jp.kaiz.shachia.dianet.dsl.poi.workbook
 import jp.kaiz.shachia.gtfs.GTFS
-import jp.kaiz.shachia.gtfs.StopTime
 import jp.kaiz.shachia.gtfs.io.zip.ZipUtils
 import kotlinx.datetime.*
 import org.apache.poi.ss.usermodel.BorderStyle
@@ -38,36 +39,23 @@ fun Route.poiParser() {
             }
 
             val zipEntries = ZipUtils.extractZip(gtfsZipByteArray)
-            val gtfs = GTFS.readFromZip(zipEntries)
-
+            val gtfs = GTFS.readFromZip(zipEntries).toWorkbookData()
             val byteArray = createDiaNetXlsx(gtfs, request.preset, request.dayMapping)
+            return@post call.respondWorkbook(byteArray, gtfs.agencyName, request.preset.name)
+        } catch (e: Exception) {
+            e.printStackTrace()
 
-            val fileName = "${gtfs.agency.name}_${request.preset.name}_${
-                Clock.System.now()
-                    .toLocalDateTime(TimeZone.currentSystemDefault())
-                    .format(LocalDateTime.Formats.ISO)
-            }.xlsx"
+            call.response.status(HttpStatusCode.InternalServerError)
+            return@post call.respond("")
+        }
+    }
 
-            val encodedFileName = URLEncoder.encode(fileName, Charsets.UTF_8)
-
-
-            call.response.header(
-                HttpHeaders.ContentDisposition,
-                ContentDisposition.Attachment.withParameter(
-                    ContentDisposition.Parameters.FileName,
-                    encodedFileName
-                ).toString()
-            )
-
-            val contentType = ContentType.defaultForFileExtension("xlsx")
-            call.response.header(
-                HttpHeaders.ContentType,
-                contentType.toString()
-            )
-
-            return@post call.respondOutputStream(contentType) {
-                byteArray.inputStream().buffered().copyTo(this)
-            }
+    post("/create_from_data") {
+        try {
+            val request = call.receive<DiaNetXlsxCreateFromDataRequest>()
+            val gtfs = request.gtfs.toWorkbookData()
+            val byteArray = createDiaNetXlsx(gtfs, request.preset, request.dayMapping)
+            return@post call.respondWorkbook(byteArray, gtfs.agencyName, request.preset.name)
         } catch (e: Exception) {
             e.printStackTrace()
 
@@ -78,9 +66,145 @@ fun Route.poiParser() {
 }
 
 
-val timeReg = Regex("^\\d{1,3}$")
+private val timeReg = Regex("^\\d{1,3}$")
 
-fun createDiaNetXlsx(gtfs: GTFS, preset: RoutePreset, dayMapping: List<Pair<String, LocalDate>>): ByteArray {
+private data class DiaNetWorkbookData(
+    val agencyName: String,
+    val stops: List<DiaNetWorkbookStop>,
+    val routes: List<DiaNetWorkbookRoute>,
+    val trips: List<DiaNetWorkbookTrip>,
+    val stopTimes: List<DiaNetWorkbookStopTime>,
+    val calendars: List<DiaNetWorkbookCalendar>
+)
+
+private data class DiaNetWorkbookStop(
+    val id: String,
+    val name: String,
+    val platformCode: String?
+)
+
+private data class DiaNetWorkbookRoute(
+    val id: String,
+    val shortName: String?,
+    val longName: String?
+)
+
+private data class DiaNetWorkbookTrip(
+    val tripId: String,
+    val routeId: String,
+    val directionId: Int?,
+    val serviceId: String
+)
+
+private data class DiaNetWorkbookStopTime(
+    val tripId: String,
+    val stopId: String,
+    val stopSequence: Int,
+    val departureTime: String?
+)
+
+private data class DiaNetWorkbookCalendar(
+    val id: String,
+    val startDate: String,
+    val endDate: String,
+    val sunday: Int,
+    val monday: Int,
+    val tuesday: Int,
+    val wednesday: Int,
+    val thursday: Int,
+    val friday: Int,
+    val saturday: Int
+)
+
+private data class DiaNetPreviewRoute(
+    val route: DiaNetWorkbookRoute,
+    val direction: Int?,
+    val stopPatterns: List<List<DiaNetWorkbookStop>>
+)
+
+private data class DiaNetPreviewTrip(
+    val route: DiaNetWorkbookRoute,
+    val stopTime: List<DiaNetWorkbookStopTime>
+)
+
+private fun GTFS.toWorkbookData() = DiaNetWorkbookData(
+    agencyName = agency.name,
+    stops = stops.map { DiaNetWorkbookStop(it.id, it.name ?: "", it.platformCode) },
+    routes = routes.map { DiaNetWorkbookRoute(it.id, it.shortName, it.longName) },
+    trips = trips.map { DiaNetWorkbookTrip(it.tripId, it.routeId, it.directionId, it.serviceId) },
+    stopTimes = stopTimes.map {
+        DiaNetWorkbookStopTime(
+            tripId = it.tripId,
+            stopId = it.stopId ?: "",
+            stopSequence = it.stopSequence,
+            departureTime = it.departureTime
+        )
+    },
+    calendars = calendar.map {
+        DiaNetWorkbookCalendar(
+            id = it.id,
+            startDate = it.startDate,
+            endDate = it.endDate,
+            sunday = it.sunday,
+            monday = it.monday,
+            tuesday = it.tuesday,
+            wednesday = it.wednesday,
+            thursday = it.thursday,
+            friday = it.friday,
+            saturday = it.saturday
+        )
+    }
+)
+
+private fun DiaNetGtfsExportData.toWorkbookData() = DiaNetWorkbookData(
+    agencyName = agencyName,
+    stops = stops.map { DiaNetWorkbookStop(it.id, it.name, it.platformCode) },
+    routes = routes.map { DiaNetWorkbookRoute(it.id, it.shortName, it.longName) },
+    trips = trips.map { DiaNetWorkbookTrip(it.tripId, it.routeId, it.directionId, it.serviceId) },
+    stopTimes = stopTimes.map { DiaNetWorkbookStopTime(it.tripId, it.stopId, it.stopSequence, it.departureTime) },
+    calendars = calendars.map {
+        DiaNetWorkbookCalendar(
+            id = it.id,
+            startDate = it.startDate,
+            endDate = it.endDate,
+            sunday = it.sunday,
+            monday = it.monday,
+            tuesday = it.tuesday,
+            wednesday = it.wednesday,
+            thursday = it.thursday,
+            friday = it.friday,
+            saturday = it.saturday
+        )
+    }
+)
+
+private suspend fun io.ktor.server.application.ApplicationCall.respondWorkbook(
+    byteArray: ByteArray,
+    agencyName: String,
+    presetName: String
+) {
+    val fileName = "${agencyName}_${presetName}_${
+        Clock.System.now()
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+            .format(LocalDateTime.Formats.ISO)
+    }.xlsx"
+    val encodedFileName = URLEncoder.encode(fileName, Charsets.UTF_8)
+    response.header(
+        HttpHeaders.ContentDisposition,
+        ContentDisposition.Attachment.withParameter(
+            ContentDisposition.Parameters.FileName,
+            encodedFileName
+        ).toString()
+    )
+
+    val contentType = ContentType.defaultForFileExtension("xlsx")
+    response.header(HttpHeaders.ContentType, contentType.toString())
+    respondOutputStream(contentType) {
+        byteArray.inputStream().buffered().copyTo(this)
+    }
+}
+
+private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayMapping: List<Pair<String, LocalDate>>): ByteArray {
 
     val poles = preset.poles.map { detail -> detail to gtfs.stops.find { pole -> pole.id == detail.id }!! }
 
@@ -92,7 +216,7 @@ fun createDiaNetXlsx(gtfs: GTFS, preset: RoutePreset, dayMapping: List<Pair<Stri
             stopTimes.map { stopTime -> gtfs.stops.first { it.id == stopTime } }
         }
         val route = gtfs.routes.first { it.id == routeId }
-        ConstructedPreviewRoute(
+        DiaNetPreviewRoute(
             route = route,
             direction = direction,
             stopPatterns = stopPatterns
@@ -101,12 +225,12 @@ fun createDiaNetXlsx(gtfs: GTFS, preset: RoutePreset, dayMapping: List<Pair<Stri
 
     val standardStops = poles.filter { (_, pole) ->
         constructedRoutes
-            .flatMap(ConstructedPreviewRoute::stopPatterns)
+            .flatMap(DiaNetPreviewRoute::stopPatterns)
             .all { pole in it }
     }.map { it.second }
 
     val calendarMapping = dayMapping.map { (name, date) ->
-        name to gtfs.calendar.filter { cal ->
+        name to gtfs.calendars.filter { cal ->
             val startInt = cal.startDate
             val startDate =
                 LocalDate(startInt.take(4).toInt(), startInt.drop(4).take(2).toInt(), startInt.takeLast(2).toInt())
@@ -135,7 +259,7 @@ fun createDiaNetXlsx(gtfs: GTFS, preset: RoutePreset, dayMapping: List<Pair<Stri
             val trips = gtfs.trips
                 .filter { it.routeId == detail.id && it.directionId == detail.direction && it.serviceId in calendars }
             trips.map { trip ->
-                ConstructedPreviewTrip(
+                DiaNetPreviewTrip(
                     route = route,
                     stopTime = gtfs.stopTimes
                         .filter { it.tripId == trip.tripId }
@@ -503,14 +627,14 @@ fun createDiaNetXlsx(gtfs: GTFS, preset: RoutePreset, dayMapping: List<Pair<Stri
 }
 
 
-fun StopTime.departHHMM() = departureTime?.split(":")?.let {
+private fun DiaNetWorkbookStopTime.departHHMM() = departureTime?.split(":")?.let {
     val hh = it[0].padStart(2, '0')
     val mm = it[1].padStart(2, '0')
     "$hh$mm"
 } ?: ""
 
 
-fun StopTime.departHMM() = departureTime?.split(":")?.let {
+private fun DiaNetWorkbookStopTime.departHMM() = departureTime?.split(":")?.let {
     val hh = it[0].toInt()
     val mm = it[1].padStart(2, '0')
     "$hh$mm"

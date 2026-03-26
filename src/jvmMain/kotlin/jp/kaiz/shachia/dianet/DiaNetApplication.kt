@@ -33,6 +33,8 @@ fun Application.module() {
         header("Cross-Origin-Embedder-Policy", "require-corp")
     }
     install(CORS) {
+        allowHost("127.0.0.1:5173")
+        allowHost("localhost:5173")
         allowHeader(HttpHeaders.ContentType)
         allowMethod(HttpMethod.Options)
         allowMethod(HttpMethod.Put)

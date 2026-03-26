@@ -2,6 +2,7 @@ import io.ktor.plugin.features.*
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.Sync
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)

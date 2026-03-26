@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 data class DiaNetXlsxCreateRequest(
     val dateSource: GTFSDateSource,
     val preset: RoutePreset,
+    @Serializable(with = DayMappingListSerializer::class)
     val dayMapping: List<Pair<String, LocalDate>>
 )
 
@@ -39,4 +40,3 @@ data class GTFSRawSource(
         return zipByteArray?.contentHashCode() ?: 0
     }
 }
-

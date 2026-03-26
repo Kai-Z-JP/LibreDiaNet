@@ -97,6 +97,54 @@ export type GtfsStopTime = {
   departureTime: string | null
 }
 
+export type DiaNetGtfsExportData = {
+  agencyName: string
+  stops: DiaNetStopData[]
+  routes: DiaNetRouteData[]
+  trips: DiaNetTripData[]
+  stopTimes: DiaNetStopTimeData[]
+  calendars: DiaNetCalendarData[]
+}
+
+export type DiaNetStopData = {
+  id: string
+  name: string
+  platformCode: string | null
+}
+
+export type DiaNetRouteData = {
+  id: string
+  shortName: string | null
+  longName: string | null
+}
+
+export type DiaNetTripData = {
+  tripId: string
+  routeId: string
+  directionId: number | null
+  serviceId: string
+}
+
+export type DiaNetStopTimeData = {
+  tripId: string
+  stopId: string
+  stopSequence: number
+  departureTime: string | null
+}
+
+export type DiaNetCalendarData = {
+  id: string
+  startDate: string
+  endDate: string
+  sunday: number
+  monday: number
+  tuesday: number
+  wednesday: number
+  thursday: number
+  friday: number
+  saturday: number
+}
+
 export type GtfsRouteSummary = {
   routeId: string
   shortName: string | null
