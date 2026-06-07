@@ -1,4 +1,4 @@
-import { Autocomplete, Box, TextField, Typography } from '@mui/material'
+import { Autocomplete, Box, Divider, TextField, Typography } from '@mui/material'
 import type { ProPreset, ProRouteDetail, ProVersion } from '../../../../types'
 import { proRouteOptionDisplayLabel, proRouteOptionMeta } from '../../model/pro-preview-display-helpers'
 import { proRouteBaseKeyFromParts } from '../../model/pro-route-keys'
@@ -90,6 +90,7 @@ export function PresetRoutePanel({
         slotProps={{ paper: { sx: { backgroundColor: 'white' } } }}
         sx={{ backgroundColor: 'white' }}
       />
+      <Divider sx={{ my: 2 }} />
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', pt: 1 }}>
         <TextField
           label="並び順"
