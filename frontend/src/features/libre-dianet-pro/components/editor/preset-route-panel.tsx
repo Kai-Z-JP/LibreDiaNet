@@ -98,7 +98,7 @@ export function PresetRoutePanel({
           value={preset.index}
           onChange={(event) => onUpdate({ ...preset, index: Number(event.target.value) })}
           slotProps={{ inputLabel: fieldLabelProps }}
-          sx={{ width: 140 }}
+          sx={{ width: 140, backgroundColor: 'white' }}
         />
       </Box>
     </Box>
