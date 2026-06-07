@@ -355,9 +355,9 @@ export const globalStyles = css`
 
   .day-mapping-row {
     display: flex;
-    gap: 8px;
+    gap: 16px;
     align-items: center;
-    margin-bottom: 8px;
+    margin-block: 8px;
   }
 
   .empty-state {

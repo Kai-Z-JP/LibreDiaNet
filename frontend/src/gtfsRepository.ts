@@ -7,6 +7,7 @@ import type {
   DiaNetGtfsExportData,
   GtfsHandle,
   GtfsRouteSummary,
+  GtfsServiceWeekday,
   GtfsStop,
   GtfsStopTime,
   OpenHandleResult,
@@ -27,6 +28,10 @@ type Db = ReturnType<AppGtfsLoader['db']>
 type TripRow = Pick<GtfsJpV4TableRow<'trips'>, 'trip_id' | 'route_id' | 'direction_id' | 'service_id' | 'jp_pattern_id'>
 type StopTimeRow = Pick<GtfsJpV4TableRow<'stop_times'>, 'trip_id' | 'stop_id' | 'stop_sequence'> &
   Partial<Pick<GtfsJpV4TableRow<'stop_times'>, 'departure_time'>>
+type CalendarRow = Pick<
+  GtfsJpV4TableRow<'calendar'>,
+  'service_id' | 'start_date' | 'end_date' | 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday'
+>
 type RawTripRow = Record<keyof TripRow, unknown>
 type RawStopTimeRow = Record<keyof StopTimeRow, unknown>
 
@@ -187,6 +192,27 @@ export class GtfsRepository {
   ): Promise<ConstructedTrip[]> {
     const db = handle.loader.db()
     const activeServices = new Set(await this.loadActiveServiceIds(db, dateIso))
+    return this.listTripsForServices(db, selectedRoutes, activeServices, excludedStopPatterns)
+  }
+
+  async listTripsForWeekday(
+    handle: GtfsHandle,
+    selectedRoutes: RouteDetail[],
+    weekday: GtfsServiceWeekday,
+    referenceDateIso: string,
+    excludedStopPatterns: string[][],
+  ): Promise<ConstructedTrip[]> {
+    const db = handle.loader.db()
+    const activeServices = new Set(await this.loadActiveServiceIdsForWeekday(db, weekday, referenceDateIso))
+    return this.listTripsForServices(db, selectedRoutes, activeServices, excludedStopPatterns)
+  }
+
+  private async listTripsForServices(
+    db: Db,
+    selectedRoutes: RouteDetail[],
+    activeServices: Set<string>,
+    excludedStopPatterns: string[][],
+  ): Promise<ConstructedTrip[]> {
     const excludedKeys = new Set(excludedStopPatterns.map((pattern) => stopPatternKey(pattern)))
     const results: ConstructedTrip[] = []
 
@@ -454,34 +480,35 @@ export class GtfsRepository {
 
   private async loadActiveServiceIds(db: Db, dateIso: string): Promise<string[]> {
     const date = new Date(`${dateIso}T00:00:00`)
-    const weekday = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()] as
-      | 'sunday'
-      | 'monday'
-      | 'tuesday'
-      | 'wednesday'
-      | 'thursday'
-      | 'friday'
-      | 'saturday'
+    const weekday = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()] as GtfsServiceWeekday
 
+    return this.loadActiveServiceIdsForWeekday(db, weekday, dateIso)
+  }
+
+  private async loadActiveServiceIdsForWeekday(db: Db, weekday: GtfsServiceWeekday, referenceDateIso: string): Promise<string[]> {
     const rows = await db
       .selectFrom('calendar')
       .select(['service_id', 'start_date', 'end_date', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'])
       .execute()
 
-    return rows
-      .filter((row) => {
-        const start = normalizeGtfsDate(asOptionalString(row.start_date))
-        const end = normalizeGtfsDate(asOptionalString(row.end_date))
-        if (start && start > dateIso) {
-          return false
-        }
-        if (end && end < dateIso) {
-          return false
-        }
-        return toNumber(row[weekday]) === 1
-      })
-      .map((row) => String(row.service_id))
+    return selectActiveServiceIdsForWeekday(rows, weekday, referenceDateIso)
   }
+}
+
+export function selectActiveServiceIdsForWeekday(rows: CalendarRow[], weekday: GtfsServiceWeekday, referenceDateIso: string): string[] {
+  return rows
+    .filter((row) => {
+      const start = normalizeGtfsDate(asOptionalString(row.start_date))
+      const end = normalizeGtfsDate(asOptionalString(row.end_date))
+      if (start && start > referenceDateIso) {
+        return false
+      }
+      if (end && end < referenceDateIso) {
+        return false
+      }
+      return toNumber(row[weekday]) === 1
+    })
+    .map((row) => String(row.service_id))
 }
 
 async function importRepoZip(loader: AppGtfsLoader, info: RepoInfoV2): Promise<void> {

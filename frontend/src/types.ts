@@ -220,6 +220,8 @@ export type StopMap = Record<string, GtfsStop>
 
 export type DayMapping = [string, string]
 
+export type GtfsServiceWeekday = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+
 export type OpenHandleResult = {
   handle: GtfsHandle
   imported: boolean

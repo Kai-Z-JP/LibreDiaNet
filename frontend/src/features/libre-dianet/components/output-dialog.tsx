@@ -17,7 +17,7 @@ export function OutputDialog({ disabled, onSubmit }: Props) {
       <Button variant="contained" disabled={disabled} onClick={() => setOpen(true)}>
         xlsx出力
       </Button>
-      <Dialog open={open} maxWidth="md" fullWidth onClose={() => setOpen(false)}>
+      <Dialog open={open} maxWidth="sm" fullWidth onClose={() => setOpen(false)}>
         <DialogTitle>出力するシートを設定してください</DialogTitle>
         <DialogContent>
           {dayMapping.map(([name, date], index) => (

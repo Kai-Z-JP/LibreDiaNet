@@ -1,7 +1,9 @@
 import { useMemo, useReducer, type SetStateAction } from 'react'
-import type { ProDisplayFont, ProPreset } from '../../../types'
+import type { GtfsServiceWeekday, ProDisplayFont, ProPreset } from '../../../types'
 import { todayIsoDate } from '../../../utils'
 import type { ProConstructedTrip } from './pro-types'
+
+export type ProPreviewMode = 'day-type' | 'specific-date'
 
 export type ProPoleNameEditor = {
   poleId: string
@@ -45,7 +47,8 @@ export type ProPreviewPendingPoleMerge = {
 }
 
 type ProPreviewState = {
-  dayName: string
+  previewMode: ProPreviewMode
+  weekday: GtfsServiceWeekday
   date: string
   downloading: boolean
   constructedTrips: ProConstructedTrip[]
@@ -57,7 +60,8 @@ type ProPreviewState = {
 }
 
 type ProPreviewAction =
-  | { type: 'setDayName'; value: string }
+  | { type: 'setPreviewMode'; value: ProPreviewMode }
+  | { type: 'setWeekday'; value: GtfsServiceWeekday }
   | { type: 'setDate'; value: string }
   | { type: 'setDownloading'; value: boolean }
   | { type: 'setConstructedTrips'; value: ProConstructedTrip[] }
@@ -69,7 +73,8 @@ type ProPreviewAction =
 
 export function useProPreviewState(revisionDate: string) {
   const [state, dispatch] = useReducer(proPreviewReducer, {
-    dayName: '平日',
+    previewMode: 'day-type',
+    weekday: 'monday',
     date: revisionDate || todayIsoDate(),
     downloading: false,
     constructedTrips: [],
@@ -82,7 +87,8 @@ export function useProPreviewState(revisionDate: string) {
 
   const setters = useMemo(
     () => ({
-      setDayName: (value: string) => dispatch({ type: 'setDayName', value }),
+      setPreviewMode: (value: ProPreviewMode) => dispatch({ type: 'setPreviewMode', value }),
+      setWeekday: (value: GtfsServiceWeekday) => dispatch({ type: 'setWeekday', value }),
       setDate: (value: string) => dispatch({ type: 'setDate', value }),
       setDownloading: (value: boolean) => dispatch({ type: 'setDownloading', value }),
       setConstructedTrips: (value: ProConstructedTrip[]) => dispatch({ type: 'setConstructedTrips', value }),
@@ -104,8 +110,10 @@ function applyStateAction<T>(current: T, value: SetStateAction<T>): T {
 
 function proPreviewReducer(state: ProPreviewState, action: ProPreviewAction): ProPreviewState {
   switch (action.type) {
-    case 'setDayName':
-      return { ...state, dayName: action.value }
+    case 'setPreviewMode':
+      return { ...state, previewMode: action.value }
+    case 'setWeekday':
+      return { ...state, weekday: action.value }
     case 'setDate':
       return { ...state, date: action.value }
     case 'setDownloading':

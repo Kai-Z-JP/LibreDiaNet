@@ -2,6 +2,7 @@ import type { DropResult } from '@hello-pangea/dnd'
 import { useEffect, useMemo } from 'react'
 import { buildProCreateFromDataRequest, requestDiaNetXlsx } from '../../../api'
 import type { GtfsStop, ProPoleDetail, ProPreset, ProPresetContext, ProVersion } from '../../../types'
+import { todayIsoDate } from '../../../utils'
 import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import { proExcludedStopPatternsForSource, proRouteDisplayLabel, sameProPoleStop } from '../model/pro-pole-stop-helpers'
 import {
@@ -33,9 +34,21 @@ export function useProPreviewModel({
   onUpdate: (preset: ProPreset) => void
 }) {
   const { state, setters } = useProPreviewState(version.revisionDate)
-  const { dayName, date, downloading, constructedTrips, poleNameEditor, routeEditor, cellEditor, hoveredTargetId, pendingPoleMerge } = state
   const {
-    setDayName,
+    previewMode,
+    weekday,
+    date,
+    downloading,
+    constructedTrips,
+    poleNameEditor,
+    routeEditor,
+    cellEditor,
+    hoveredTargetId,
+    pendingPoleMerge,
+  } = state
+  const {
+    setPreviewMode,
+    setWeekday,
     setDate,
     setDownloading,
     setConstructedTrips,
@@ -77,6 +90,7 @@ export function useProPreviewModel({
 
   useEffect(() => {
     let cancelled = false
+    const weekdayReferenceDate = version.revisionDate || todayIsoDate()
     const load = async () => {
       const trips = await Promise.all(
         preset.sourceIds.map(async (sourceId) => {
@@ -90,12 +104,11 @@ export function useProPreviewModel({
           if (selectedRoutes.length === 0) {
             return []
           }
-          const sourceTrips = await libreDiaNetRepository.listTripsForDate(
-            handle,
-            selectedRoutes,
-            date,
-            proExcludedStopPatternsForSource(preset.excludedStopPatterns, sourceId),
-          )
+          const excludedStopPatterns = proExcludedStopPatternsForSource(preset.excludedStopPatterns, sourceId)
+          const sourceTrips =
+            previewMode === 'day-type'
+              ? await libreDiaNetRepository.listTripsForWeekday(handle, selectedRoutes, weekday, weekdayReferenceDate, excludedStopPatterns)
+              : await libreDiaNetRepository.listTripsForDate(handle, selectedRoutes, date, excludedStopPatterns)
           return sourceTrips.map((trip) => ({
             ...trip,
             sourceId,
@@ -115,7 +128,18 @@ export function useProPreviewModel({
     return () => {
       cancelled = true
     }
-  }, [context.handles, date, preset.excludedStopPatterns, preset.routes, preset.sourceIds, setConstructedTrips, sourceNameMap])
+  }, [
+    context.handles,
+    date,
+    preset.excludedStopPatterns,
+    preset.routes,
+    preset.sourceIds,
+    previewMode,
+    setConstructedTrips,
+    sourceNameMap,
+    version.revisionDate,
+    weekday,
+  ])
 
   const updateRouteDisplayOverride = (
     routeKey: string,
@@ -266,7 +290,7 @@ export function useProPreviewModel({
       left.localeCompare(right, 'ja'),
     )
 
-  const requestXlsx = async () => {
+  const requestXlsx = async (dayMapping: [string, string][]) => {
     setDownloading(true)
     try {
       const gtfsEntries = await Promise.all(
@@ -303,7 +327,7 @@ export function useProPreviewModel({
       const gtfsBySourceId = Object.fromEntries(
         gtfsEntries.filter((entry): entry is readonly [string, NonNullable<typeof entry>[1]] => Boolean(entry)),
       )
-      await requestDiaNetXlsx(buildProCreateFromDataRequest(version, preset, gtfsBySourceId, [[dayName, date]]))
+      await requestDiaNetXlsx(buildProCreateFromDataRequest(version, preset, gtfsBySourceId, dayMapping))
     } finally {
       setDownloading(false)
     }
@@ -311,7 +335,8 @@ export function useProPreviewModel({
 
   return {
     state: {
-      dayName,
+      previewMode,
+      weekday,
       date,
       downloading,
       constructedTrips,
@@ -329,7 +354,8 @@ export function useProPreviewModel({
       exportDisabled,
     },
     actions: {
-      selectDayName: setDayName,
+      selectPreviewMode: setPreviewMode,
+      selectWeekday: setWeekday,
       changeDate: setDate,
       hoverTarget: setHoveredTargetId,
       openRouteEditor,
@@ -344,11 +370,13 @@ export function useProPreviewModel({
     },
     props: {
       controls: {
-        dayName,
+        previewMode,
+        weekday,
         date,
         downloading,
         exportDisabled,
-        onSelectDayName: setDayName,
+        onSelectPreviewMode: setPreviewMode,
+        onSelectWeekday: setWeekday,
         onChangeDate: setDate,
         onRequestXlsx: requestXlsx,
       },

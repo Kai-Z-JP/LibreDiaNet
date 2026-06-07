@@ -1,9 +1,10 @@
-import DownloadIcon from '@mui/icons-material/Download'
-import { Box, Button, MenuItem, TextField } from '@mui/material'
-import type { GtfsStop, ProPreset, ProPresetContext, ProVersion } from '../../../../types'
+import { Box, MenuItem, TextField, ToggleButton, ToggleButtonGroup } from '@mui/material'
+import type { GtfsServiceWeekday, GtfsStop, ProPreset, ProPresetContext, ProVersion } from '../../../../types'
+import type { ProPreviewMode } from '../../model/use-pro-preview-state'
 import { useProPreviewModel } from '../../hooks/use-pro-preview-model'
 import type { ProConstructedRoute } from '../../model/pro-types'
 import { fieldLabelProps } from '../../model/pro-ui-constants'
+import { OutputDialog } from '../../../libre-dianet/components/output-dialog'
 import { ProPreviewEditorDialogs } from './pro-preview-editor-dialogs'
 import { ProPreviewStyleScope } from './pro-preview-styles'
 import { ProPreviewTable } from './pro-preview-table'
@@ -35,42 +36,70 @@ export function ProPreviewPanel({
     onUpdate,
   })
 
+  const previewModes: { value: ProPreviewMode; label: string }[] = [
+    { value: 'day-type', label: '日種' },
+    { value: 'specific-date', label: '特定日' },
+  ]
+  const weekdays: { value: GtfsServiceWeekday; label: string }[] = [
+    { value: 'monday', label: '月曜' },
+    { value: 'tuesday', label: '火曜' },
+    { value: 'wednesday', label: '水曜' },
+    { value: 'thursday', label: '木曜' },
+    { value: 'friday', label: '金曜' },
+    { value: 'saturday', label: '土曜' },
+    { value: 'sunday', label: '日曜' },
+  ]
+
   return (
     <ProPreviewStyleScope>
       <Box sx={{ display: 'grid', gap: 2 }}>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', pt: 1 }}>
-          <TextField
-            select
+          <ToggleButtonGroup
+            exclusive
             size="small"
-            label="日種"
-            value={props.controls.dayName}
-            onChange={(event) => props.controls.onSelectDayName(event.target.value)}
-            slotProps={{ inputLabel: fieldLabelProps }}
-            sx={{ minWidth: 120, backgroundColor: 'white' }}
+            value={props.controls.previewMode}
+            onChange={(_, value: ProPreviewMode | null) => {
+              if (value) {
+                props.controls.onSelectPreviewMode(value)
+              }
+            }}
           >
-            {['平日', '土曜', '休日'].map((name) => (
-              <MenuItem key={name} value={name}>
-                {name}
-              </MenuItem>
+            {previewModes.map((mode) => (
+              <ToggleButton key={mode.value} value={mode.value}>
+                {mode.label}
+              </ToggleButton>
             ))}
-          </TextField>
-          <TextField
-            size="small"
-            label="日付"
-            type="date"
-            value={props.controls.date}
-            onChange={(event) => props.controls.onChangeDate(event.target.value)}
-            slotProps={{ inputLabel: fieldLabelProps }}
-            sx={{ minWidth: 180, backgroundColor: 'white' }}
-          />
-          <Button
-            startIcon={<DownloadIcon />}
-            variant="contained"
-            disabled={props.controls.exportDisabled || props.controls.downloading}
-            onClick={() => void props.controls.onRequestXlsx()}
-          >
-            xlsx出力
-          </Button>
+          </ToggleButtonGroup>
+          {props.controls.previewMode === 'day-type' ? (
+            <TextField
+              select
+              size="small"
+              label="曜日"
+              value={props.controls.weekday}
+              onChange={(event) => props.controls.onSelectWeekday(event.target.value as GtfsServiceWeekday)}
+              slotProps={{ inputLabel: fieldLabelProps }}
+              sx={{ minWidth: 120, backgroundColor: 'white' }}
+            >
+              {weekdays.map((weekday) => (
+                <MenuItem key={weekday.value} value={weekday.value}>
+                  {weekday.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : (
+            <TextField
+              size="small"
+              label="日付"
+              type="date"
+              value={props.controls.date}
+              onChange={(event) => props.controls.onChangeDate(event.target.value)}
+              slotProps={{ inputLabel: fieldLabelProps }}
+              sx={{ minWidth: 180, backgroundColor: 'white' }}
+            />
+          )}
+          <Box sx={{ marginLeft: 'auto' }}>
+            <OutputDialog disabled={props.controls.exportDisabled || props.controls.downloading} onSubmit={props.controls.onRequestXlsx} />
+          </Box>
         </Box>
         <ProPreviewTable {...props.table} />
         <ProPreviewEditorDialogs {...props.dialogs} />
