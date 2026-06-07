@@ -9,8 +9,7 @@ import { globalStyles } from './global-styles'
 const theme = createTheme({
   palette: {
     background: {
-      default: '#f0f0f0',
-      paper: '#f8f9ff',
+      default: '#fff',
     },
     primary: {
       main: '#1976d2',
