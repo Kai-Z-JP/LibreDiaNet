@@ -32,8 +32,8 @@ export function OutputPoleList({ data, actions }: OutputPoleListProps) {
   const { onUpdate, onUpdatePoleOpenMap, onMergePolesByStopId, onConfirmPendingMerge, onCancelPendingMerge } = actions
 
   return (
-    <Card variant="outlined" sx={{ p: 1, minHeight: 400 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+    <Card elevation={0} sx={{ p: 1, minHeight: 400, backgroundColor: '#eaeef6' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, p: 1 }}>
         <Typography>出力標柱</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button size="small" variant="outlined" startIcon={<MergeIcon />} onClick={onMergePolesByStopId}>

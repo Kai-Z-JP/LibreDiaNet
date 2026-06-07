@@ -41,10 +41,10 @@ export function PolePatternList({ data, actions }: PolePatternListProps) {
           <Accordion
             key={key}
             disableGutters
-            variant="outlined"
+            elevation={0}
             sx={{
               opacity: excluded ? 0.68 : 1,
-              backgroundColor: 'white',
+              backgroundColor: '#eaeef6',
               '&:before': { display: 'none' },
             }}
           >
