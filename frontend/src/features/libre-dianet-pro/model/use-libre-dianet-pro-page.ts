@@ -58,7 +58,8 @@ export function useLibreDiaNetProPage() {
   }
 
   const createPreset = (version: ProVersion) => {
-    const preset = createProPreset(version.gtfsSources.map((source) => source.sourceId))
+    const gtfsSourceIds = version.gtfsSources.map((source) => source.sourceId)
+    const preset = createProPreset(gtfsSourceIds.length === 1 ? gtfsSourceIds : [])
     dispatchVersions({ type: 'preset/create', versionId: version.id, preset })
     setSelectedPresetId(preset.id)
   }
