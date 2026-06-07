@@ -20,7 +20,6 @@ export function EditableTitle({ value, onChange }: { value: string; onChange: (v
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onBlur={() => setEditing(false)}
-          sx={{ my: '0.67em' }}
           slotProps={{
             input: {
               sx: {
@@ -36,7 +35,6 @@ export function EditableTitle({ value, onChange }: { value: string; onChange: (v
             sx={{
               fontSize: '2em',
               fontWeight: 'bold',
-              my: '0.67em',
             }}
           >
             {value}

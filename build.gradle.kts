@@ -2,7 +2,6 @@ import io.ktor.plugin.features.*
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.Sync
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.io.File
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -37,6 +36,16 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_21)
         }
     }
+    js {
+        binaries.executable()
+        browser {
+            commonWebpackConfig {
+                cssSupport {
+                    enabled.set(true)
+                }
+            }
+        }
+    }
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -62,6 +71,21 @@ kotlin {
                 implementation("org.slf4j:slf4j-api:2.0.13")
 
                 implementation("jp.kaiz:shachia-poi-dsl:0.0.1")
+            }
+        }
+        val jsMain by getting {
+            dependencies {
+                implementation(ktorCl("js"))
+                implementation(ktorCl("content-negotiation"))
+
+                implementation(kotlinWrappers.react)
+                implementation(kotlinWrappers.reactDom)
+                implementation(kotlinWrappers.reactRouterDom)
+                implementation(kotlinWrappers.reactBeautifulDnd)
+
+                implementation(kotlinWrappers.emotion)
+                implementation(kotlinWrappers.mui.material)
+                implementation(kotlinWrappers.mui.iconsMaterial)
             }
         }
     }
@@ -104,6 +128,7 @@ val frontendBuild by tasks.registering(Exec::class) {
     dependsOn(frontendInstall)
     workingDir(frontendDir.asFile)
     commandLine("pnpm", "build")
+    environment("VITE_BASE", "/react/")
     inputs.files(
         frontendDir.file("package.json"),
         frontendDir.file("pnpm-lock.yaml"),
@@ -117,10 +142,16 @@ val frontendBuild by tasks.registering(Exec::class) {
     outputs.dir(frontendDist)
 }
 
-val syncFrontendDist by tasks.registering(Sync::class) {
+val syncReactFrontendDist by tasks.registering(Sync::class) {
     dependsOn(frontendBuild)
     from(frontendDist)
-    into(layout.buildDirectory.dir("generated/frontend"))
+    into(layout.buildDirectory.dir("generated/react-frontend"))
+}
+
+val syncKotlinFrontendDist by tasks.registering(Sync::class) {
+    dependsOn(tasks.named("jsBrowserDistribution"))
+    from(layout.buildDirectory.dir("dist/js/productionExecutable"))
+    into(layout.buildDirectory.dir("generated/kotlin-frontend"))
 }
 
 tasks.wrapper {
@@ -128,9 +159,12 @@ tasks.wrapper {
 }
 
 tasks.named<Copy>("jvmProcessResources") {
-    dependsOn(syncFrontendDist)
-    from(syncFrontendDist) {
+    dependsOn(syncKotlinFrontendDist, syncReactFrontendDist)
+    from(syncKotlinFrontendDist) {
         into("frontend")
+    }
+    from(syncReactFrontendDist) {
+        into("react")
     }
 }
 
@@ -142,7 +176,7 @@ tasks.named<JavaExec>("run") {
 
 tasks.getByName<Jar>("jvmJar") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    dependsOn(syncFrontendDist)
+    dependsOn(syncKotlinFrontendDist, syncReactFrontendDist)
 }
 
 tasks.withType<JavaCompile>().configureEach {

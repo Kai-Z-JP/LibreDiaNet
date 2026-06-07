@@ -15,6 +15,8 @@ import jp.kaiz.shachia.dianet.dsl.poi.workbook
 import jp.kaiz.shachia.gtfs.GTFS
 import jp.kaiz.shachia.gtfs.io.zip.ZipUtils
 import kotlinx.datetime.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.apache.poi.ss.usermodel.BorderStyle
 import org.apache.poi.ss.usermodel.FillPatternType
 import org.apache.poi.ss.usermodel.HorizontalAlignment
@@ -66,7 +68,7 @@ fun Route.poiParser() {
 }
 
 
-private val timeReg = Regex("^\\d{1,3}$")
+private val timeReg = Regex("^\\s?\\d{3,4}$")
 
 private data class DiaNetWorkbookData(
     val agencyName: String,
@@ -80,7 +82,8 @@ private data class DiaNetWorkbookData(
 private data class DiaNetWorkbookStop(
     val id: String,
     val name: String,
-    val platformCode: String?
+    val platformCode: String?,
+    val jokoOverride: String? = null
 )
 
 private data class DiaNetWorkbookRoute(
@@ -100,7 +103,8 @@ private data class DiaNetWorkbookStopTime(
     val tripId: String,
     val stopId: String,
     val stopSequence: Int,
-    val departureTime: String?
+    val departureTime: String?,
+    val stopPatternId: String? = null
 )
 
 private data class DiaNetWorkbookCalendar(
@@ -119,7 +123,12 @@ private data class DiaNetWorkbookCalendar(
 private data class DiaNetPreviewRoute(
     val route: DiaNetWorkbookRoute,
     val direction: Int?,
-    val stopPatterns: List<List<DiaNetWorkbookStop>>
+    val stopPatterns: List<DiaNetPreviewStopPattern>
+)
+
+private data class DiaNetPreviewStopPattern(
+    val key: String,
+    val stops: List<DiaNetWorkbookStop>
 )
 
 private data class DiaNetPreviewTrip(
@@ -137,7 +146,8 @@ private fun GTFS.toWorkbookData() = DiaNetWorkbookData(
             tripId = it.tripId,
             stopId = it.stopId ?: "",
             stopSequence = it.stopSequence,
-            departureTime = it.departureTime
+            departureTime = it.departureTime,
+            stopPatternId = null
         )
     },
     calendars = calendar.map {
@@ -158,10 +168,10 @@ private fun GTFS.toWorkbookData() = DiaNetWorkbookData(
 
 private fun DiaNetGtfsExportData.toWorkbookData() = DiaNetWorkbookData(
     agencyName = agencyName,
-    stops = stops.map { DiaNetWorkbookStop(it.id, it.name, it.platformCode) },
+    stops = stops.map { DiaNetWorkbookStop(it.id, it.name, it.platformCode, it.jokoOverride) },
     routes = routes.map { DiaNetWorkbookRoute(it.id, it.shortName, it.longName) },
     trips = trips.map { DiaNetWorkbookTrip(it.tripId, it.routeId, it.directionId, it.serviceId) },
-    stopTimes = stopTimes.map { DiaNetWorkbookStopTime(it.tripId, it.stopId, it.stopSequence, it.departureTime) },
+    stopTimes = stopTimes.map { DiaNetWorkbookStopTime(it.tripId, it.stopId, it.stopSequence, it.departureTime, it.stopPatternId) },
     calendars = calendars.map {
         DiaNetWorkbookCalendar(
             id = it.id,
@@ -207,13 +217,17 @@ private suspend fun io.ktor.server.application.ApplicationCall.respondWorkbook(
 private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayMapping: List<Pair<String, LocalDate>>): ByteArray {
 
     val poles = preset.poles.map { detail -> detail to gtfs.stops.find { pole -> pole.id == detail.id }!! }
+    val excludedStopPatternKeys = preset.excludedStopPatterns.map { it.savedStopPatternKey() }.toSet()
 
     val constructedRoutes = preset.routes.map { (routeId, direction) ->
         val trips = gtfs.trips.filter { it.routeId == routeId && it.directionId == direction }
         val stopPatterns = trips.map { trip ->
-            gtfs.stopTimes.filter { it.tripId == trip.tripId }.sortedBy { it.stopSequence }.map { it.stopId }
-        }.distinct().map { stopTimes ->
-            stopTimes.map { stopTime -> gtfs.stops.first { it.id == stopTime } }
+            gtfs.stopTimes.filter { it.tripId == trip.tripId }.sortedBy { it.stopSequence }
+        }.distinctBy { it.stopPatternKey() }.map { stopTimes ->
+            DiaNetPreviewStopPattern(
+                key = stopTimes.stopPatternKey(),
+                stops = stopTimes.map { stopTime -> gtfs.stops.first { it.id == stopTime.stopId } }
+            )
         }
         val route = gtfs.routes.first { it.id == routeId }
         DiaNetPreviewRoute(
@@ -226,7 +240,7 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
     val standardStops = poles.filter { (_, pole) ->
         constructedRoutes
             .flatMap(DiaNetPreviewRoute::stopPatterns)
-            .all { pole in it }
+            .all { pole in it.stops }
     }.map { it.second }
 
     val calendarMapping = dayMapping.map { (name, date) ->
@@ -259,12 +273,13 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
             val trips = gtfs.trips
                 .filter { it.routeId == detail.id && it.directionId == detail.direction && it.serviceId in calendars }
             trips.map { trip ->
-                DiaNetPreviewTrip(
-                    route = route,
-                    stopTime = gtfs.stopTimes
-                        .filter { it.tripId == trip.tripId }
-                        .sortedBy { it.stopSequence }
-                )
+                gtfs.stopTimes
+                    .filter { it.tripId == trip.tripId }
+                    .sortedBy { it.stopSequence }
+            }.filter { stopTimes ->
+                stopTimes.stopPatternKey() !in excludedStopPatternKeys
+            }.map { stopTimes ->
+                DiaNetPreviewTrip(route = route, stopTime = stopTimes)
             }
         }.sortedBy {
             if (standardStops.isNotEmpty()) {
@@ -276,9 +291,9 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
         }
     }
 
-    val stopPatternPoleIndexMapping = constructedRoutes.flatMap { it.stopPatterns }.associateWith { stopPattern ->
-        preset.poles.mapIndexed { index, currentPole ->
-            val poleIndexes = stopPattern.mapIndexedNotNull { index, stop ->
+    val stopPatternPoleIndexMapping = constructedRoutes.flatMap { it.stopPatterns }.associate { stopPattern ->
+        stopPattern.key to preset.poles.mapIndexed { index, currentPole ->
+            val poleIndexes = stopPattern.stops.mapIndexedNotNull { index, stop ->
                 if (stop.id == currentPole.id) index else null
             }
 
@@ -303,10 +318,7 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
     val sujiMaps = calTripMapping.map { (name, trips) ->
         val timeListList = trips.map { suji ->
 
-            val stopIdPattern = suji.stopTime.map { it.stopId }
-            val stopIdPatternMapping = stopPatternPoleIndexMapping.entries.first { (stopPattern) ->
-                stopPattern.map { it.id } == stopIdPattern
-            }.value
+            val stopIdPatternMapping = stopPatternPoleIndexMapping.getValue(suji.stopTime.stopPatternKey())
             val sujiTime = preset.poles.mapIndexed { index, poleDetail ->
                 val poleIndex = stopIdPatternMapping[index]
                 if (poleIndex == null || poleIndex == -1) ""
@@ -425,13 +437,13 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
                     last - 1 -> "着"
 
                     else -> if (pole.platformCode == "降車") "着"
-                    else if (constructedRoutes.flatMap { it.stopPatterns }.count { pole in it } == 1) {
+                    else if (constructedRoutes.flatMap { it.stopPatterns }.count { pole in it.stops } == 1) {
                         if (constructedRoutes.flatMap { it.stopPatterns }
-                                .any { it.indexOf(pole) == it.size - 1 }) "着" else "発"
+                                .any { it.stops.indexOf(pole) == it.stops.size - 1 }) "着" else "発"
                     } else "発"
                 }
 
-                PoleRow(pole.name, joko, pole.platformCode ?: "")
+                PoleRow(pole.name, pole.jokoOverride ?: joko, pole.platformCode ?: "")
             }
             val poleCount = poleRows.size
 
@@ -565,14 +577,16 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
                             val override = detail.override
                             val poleRow = poleRows[index]
                             val (name, rowSpan) = poleRows.name(index)
-                            val majorStop = override.majorStop
+                            val rowShading = override.rowShading || override.majorStop
+                            val stopNameBold = override.stopNameBold || override.majorStop
                             if (name != null) {
                                 cell {
                                     +name
                                     merge(rowSpan!!, 1)
                                     cellStyle =
-                                        if (majorStop) majorStopNameStyle
-                                        else if (index == 0 || index == poleCount - rowSpan) startEndStopNameStyle
+                                        if (rowShading && (stopNameBold || index == 0 || index == poleCount - rowSpan)) majorStopNameStyle
+                                        else if (rowShading) majorStopStyle
+                                        else if (stopNameBold || index == 0 || index == poleCount - rowSpan) startEndStopNameStyle
                                         else normalStopStyle
                                 }
                             } else {
@@ -592,28 +606,28 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
 
                             cell {
                                 +poleRow.locationName
-                                cellStyle = if (majorStop) majorStopStyle else normalStopStyle
+                                cellStyle = if (rowShading) majorStopStyle else normalStopStyle
                             }
 
                             cell {
                                 +poleRows.joko(index)
-                                cellStyle = if (majorStop) majorStopStyle else normalStopStyle
+                                cellStyle = if (rowShading) majorStopStyle else normalStopStyle
                             }
 
                             timeListList.forEach { sujiTime ->
                                 cell {
-                                    val text = sujiTime[index]
+                                    val text = if (override.horizontalLine && sujiTime[index] == "…") "——" else sujiTime[index]
                                     val time = text.matches(timeReg)
 
                                     cellStyle =
-                                        if (time) (if (majorStop) bodyMajorTimeStyle else bodyTimeStyle)
-                                        else if (majorStop) bodyMajorStyle else bodyStyle
+                                        if (time) (if (rowShading) bodyMajorTimeStyle else bodyTimeStyle)
+                                        else if (rowShading) bodyMajorStyle else bodyStyle
                                     +text
                                 }
                             }
                             repeat(spacing) {
                                 cell {
-                                    cellStyle = if (majorStop) bodyMajorStyle else bodyStyle
+                                    cellStyle = if (rowShading) bodyMajorStyle else bodyStyle
                                     +"…"
                                 }
                             }
@@ -637,5 +651,32 @@ private fun DiaNetWorkbookStopTime.departHHMM() = departureTime?.split(":")?.let
 private fun DiaNetWorkbookStopTime.departHMM() = departureTime?.split(":")?.let {
     val hh = it[0].toInt()
     val mm = it[1].padStart(2, '0')
-    "$hh$mm"
+    "$hh$mm".padStart(4, '\u2002')
 } ?: ""
+
+private fun List<DiaNetWorkbookStopTime>.stopPatternKey(): String {
+    val patternId = firstOrNull()?.stopPatternId?.takeIf { it.isNotBlank() }
+    if (patternId != null && all { it.stopPatternId == patternId }) {
+        return "jp_pattern_id:$patternId"
+    }
+    return stopIdsPatternKey(map { it.stopId })
+}
+
+private fun List<String>.savedStopPatternKey(): String {
+    if (size == 1 && (first().startsWith("jp_pattern_id:") || first().startsWith("pattern_hash:"))) {
+        return first()
+    }
+    return stopIdsPatternKey(this)
+}
+
+private fun stopIdsPatternKey(stopIds: List<String>): String =
+    "pattern_hash:${fnv1a32(Json.encodeToString(stopIds))}"
+
+private fun fnv1a32(value: String): String {
+    var hash = 0x811c9dc5.toInt()
+    value.forEach { char ->
+        hash = hash xor char.code
+        hash *= 0x01000193
+    }
+    return hash.toUInt().toString(16).padStart(8, '0')
+}

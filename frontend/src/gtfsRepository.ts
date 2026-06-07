@@ -1,4 +1,6 @@
-import { createGtfsLoader, type GtfsLoader } from '@gtfs-jp/loader'
+import { createGtfsLoader } from '@gtfs-jp/loader'
+import { type GtfsJpV4TableRow } from '@gtfs-jp/types'
+import { GTFS_SCHEMA, type AppGtfsLoader } from './gtfsSchema'
 import type {
   ConstructedRoute,
   ConstructedTrip,
@@ -15,13 +17,18 @@ import type {
   RoutePresetV2,
   StopMap,
 } from './types'
-import { displayRouteName, toNullableNumber, toNumber } from './utils'
+import { displayRouteName, stopPatternKey, toNullableNumber, toNumber } from './utils'
 
 const IMPORT_OPTIONS = {
   opfsImportMode: 'memory-stage' as const,
 }
 
-type Db = ReturnType<GtfsLoader['db']>
+type Db = ReturnType<AppGtfsLoader['db']>
+type TripRow = Pick<GtfsJpV4TableRow<'trips'>, 'trip_id' | 'route_id' | 'direction_id' | 'service_id' | 'jp_pattern_id'>
+type StopTimeRow = Pick<GtfsJpV4TableRow<'stop_times'>, 'trip_id' | 'stop_id' | 'stop_sequence'> &
+  Partial<Pick<GtfsJpV4TableRow<'stop_times'>, 'departure_time'>>
+type RawTripRow = Record<keyof TripRow, unknown>
+type RawStopTimeRow = Record<keyof StopTimeRow, unknown>
 
 class RawCacheMissingError extends Error {
   constructor() {
@@ -33,21 +40,17 @@ export class GtfsRepository {
   private readonly handles = new Map<string, GtfsHandle>()
 
   async openRepoFeed(info: RepoInfoV2): Promise<OpenHandleResult> {
-    const filename = `repo-${info.orgId}-${info.feedId}.sqlite3`
+    const filename = repoCacheFilename(info)
     const existing = this.handles.get(filename)
     if (existing) {
       return { handle: existing, imported: false }
     }
-    const loader = createGtfsLoader({ storage: 'opfs', filename })
+    const loader = createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
     await loader.open()
     const validation = await loader.validate()
     if (!validation.valid) {
       await loader.reset()
-      const response = await fetch(`https://api.gtfs-data.jp/v2/organizations/${info.orgId}/feeds/${info.feedId}/files/feed.zip`)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch GTFS ZIP: ${response.status}`)
-      }
-      await loader.importZip(await response.blob(), IMPORT_OPTIONS)
+      await importRepoZip(loader, info)
       const postValidation = await loader.validate()
       if (!postValidation.valid) {
         throw new Error(`GTFS validation failed: ${postValidation.missingRequired.join(', ')}`)
@@ -61,13 +64,31 @@ export class GtfsRepository {
     return { handle, imported: false }
   }
 
+  async reloadRepoFeed(info: RepoInfoV2): Promise<OpenHandleResult> {
+    const filename = repoCacheFilename(info)
+    const existing = this.handles.get(filename)
+    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
+    if (!existing) {
+      await loader.open()
+    }
+    await loader.reset()
+    await importRepoZip(loader, info)
+    const validation = await loader.validate()
+    if (!validation.valid) {
+      throw new Error(`GTFS validation failed: ${validation.missingRequired.join(', ')}`)
+    }
+    const handle = { filename, loader }
+    this.handles.set(filename, handle)
+    return { handle, imported: true }
+  }
+
   async openRawFeed(info: RawInfoV2, file?: File): Promise<OpenHandleResult> {
     const filename = `raw-${info.uuid}.sqlite3`
     const existing = this.handles.get(filename)
     if (existing && !file) {
       return { handle: existing, imported: false }
     }
-    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename })
+    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
     if (!existing) {
       await loader.open()
     }
@@ -95,14 +116,14 @@ export class GtfsRepository {
   }
 
   async deleteFeedCache(info: RepoInfoV2 | RawInfoV2): Promise<void> {
-    const filename = info.kind === 'repo' ? `repo-${info.orgId}-${info.feedId}.sqlite3` : `raw-${info.uuid}.sqlite3`
+    const filename = info.kind === 'repo' ? repoCacheFilename(info) : `raw-${info.uuid}.sqlite3`
     const existing = this.handles.get(filename)
     if (existing) {
       await existing.loader.close({ unlink: true })
       this.handles.delete(filename)
       return
     }
-    const loader = createGtfsLoader({ storage: 'opfs', filename })
+    const loader = createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
     await loader.open()
     await loader.close({ unlink: true })
   }
@@ -148,10 +169,7 @@ export class GtfsRepository {
       selectedRoutes.map(async (selectedRoute) => {
         const trips = await this.loadTrips(db, selectedRoute, undefined)
         const route = await this.loadRouteSummary(db, selectedRoute.id)
-        const stopPatterns = await this.loadStopPatterns(
-          db,
-          trips.map((trip) => String(trip.trip_id)),
-        )
+        const stopPatterns = await this.loadStopPatterns(db, trips)
         return {
           route,
           direction: selectedRoute.direction,
@@ -169,7 +187,7 @@ export class GtfsRepository {
   ): Promise<ConstructedTrip[]> {
     const db = handle.loader.db()
     const activeServices = new Set(await this.loadActiveServiceIds(db, dateIso))
-    const excludedKeys = new Set(excludedStopPatterns.map((pattern) => JSON.stringify(pattern)))
+    const excludedKeys = new Set(excludedStopPatterns.map((pattern) => stopPatternKey(pattern)))
     const results: ConstructedTrip[] = []
 
     for (const selectedRoute of selectedRoutes) {
@@ -179,13 +197,8 @@ export class GtfsRepository {
       if (tripIds.length === 0) {
         continue
       }
-      const stopTimeRows = await db
-        .selectFrom('stop_times')
-        .select(['trip_id', 'stop_id', 'stop_sequence', 'departure_time'])
-        .where('trip_id', 'in', tripIds)
-        .orderBy('trip_id')
-        .orderBy('stop_sequence')
-        .execute()
+      const stopTimeRows = await this.loadStopTimeRows(db, tripIds, true)
+      const patternIdByTripId = tripPatternIdMap(trips)
 
       const grouped = new Map<string, GtfsStopTime[]>()
       for (const row of stopTimeRows) {
@@ -195,6 +208,7 @@ export class GtfsRepository {
           stopId: String(row.stop_id),
           stopSequence: toNumber(row.stop_sequence),
           departureTime: asOptionalString(row.departure_time),
+          stopPatternId: patternIdByTripId.get(tripId) ?? null,
         }
         const current = grouped.get(tripId)
         if (current) {
@@ -205,11 +219,12 @@ export class GtfsRepository {
       }
 
       for (const stopTimes of grouped.values()) {
-        const stopPattern = stopTimes.map((stopTime) => stopTime.stopId)
-        if (excludedKeys.has(JSON.stringify(stopPattern))) {
+        if (excludedKeys.has(stopPatternKey(stopTimes))) {
           continue
         }
         results.push({
+          routeId: selectedRoute.id,
+          direction: selectedRoute.direction,
           routeName: displayRouteName(route.shortName, route.longName),
           stopTime: stopTimes,
         })
@@ -240,21 +255,34 @@ export class GtfsRepository {
             .where('route_id', 'in', routeIds)
             .execute()
 
-    const tripRows = dedupeByKey((await Promise.all(preset.routes.map((route) => this.loadTrips(db, route, undefined)))).flat(), (row) =>
+    const allTripRows = dedupeByKey((await Promise.all(preset.routes.map((route) => this.loadTrips(db, route, undefined)))).flat(), (row) =>
       String(row.trip_id),
     )
 
-    const tripIds = tripRows.map((row) => String(row.trip_id))
-    const stopTimeRows =
-      tripIds.length === 0
-        ? []
-        : await db
-            .selectFrom('stop_times')
-            .select(['trip_id', 'stop_id', 'stop_sequence', 'departure_time'])
-            .where('trip_id', 'in', tripIds)
-            .orderBy('trip_id')
-            .orderBy('stop_sequence')
-            .execute()
+    const allTripIds = allTripRows.map((row) => String(row.trip_id))
+    const allStopTimeRows = await this.loadStopTimeRows(db, allTripIds, true)
+    const patternIdByTripId = tripPatternIdMap(allTripRows)
+    const excludedKeys = new Set(preset.excludedStopPatterns.map((pattern) => stopPatternKey(pattern)))
+    const stopTimesByTripId = new Map<string, GtfsStopTime[]>()
+    for (const row of allStopTimeRows) {
+      const tripId = String(row.trip_id)
+      const current = stopTimesByTripId.get(tripId) ?? []
+      current.push({
+        tripId,
+        stopId: String(row.stop_id),
+        stopSequence: toNumber(row.stop_sequence),
+        departureTime: asOptionalString(row.departure_time),
+        stopPatternId: patternIdByTripId.get(tripId) ?? null,
+      })
+      stopTimesByTripId.set(tripId, current)
+    }
+    const excludedTripIds = new Set(
+      Array.from(stopTimesByTripId.entries()).flatMap(([tripId, stopTimes]) =>
+        excludedKeys.has(stopPatternKey(stopTimes)) ? [tripId] : [],
+      ),
+    )
+    const tripRows = allTripRows.filter((row) => !excludedTripIds.has(String(row.trip_id)))
+    const stopTimeRows = allStopTimeRows.filter((row) => !excludedTripIds.has(String(row.trip_id)))
 
     const stopIds = Array.from(new Set([...preset.poles.map((pole) => pole.id), ...stopTimeRows.map((row) => String(row.stop_id))]))
     const stopMap = await this.loadStops(db, stopIds)
@@ -292,6 +320,7 @@ export class GtfsRepository {
         stopId: String(row.stop_id),
         stopSequence: toNumber(row.stop_sequence),
         departureTime: asOptionalString(row.departure_time),
+        stopPatternId: patternIdByTripId.get(String(row.trip_id)) ?? null,
       })),
       calendars: calendarRows.map((row) => ({
         id: String(row.service_id),
@@ -313,13 +342,16 @@ export class GtfsRepository {
   }
 
   private async loadTrips(db: Db, route: RouteDetail, activeServices?: Set<string>) {
-    const rows = await db
-      .selectFrom('trips')
-      .select(['trip_id', 'route_id', 'direction_id', 'service_id'])
-      .$if(route.direction === null, (qb) => qb.where('direction_id', 'is', null))
-      .$if(route.direction !== null, (qb) => qb.where('direction_id', '=', route.direction!))
-      .where('route_id', '=', route.id)
-      .execute()
+    const direction = toDirectionId(route.direction)
+    const rows = (
+      (await db
+        .selectFrom('trips')
+        .select(['trip_id', 'route_id', 'direction_id', 'service_id', 'jp_pattern_id'])
+        .$if(direction === null, (qb) => qb.where('direction_id', 'is', null))
+        .$if(direction !== null, (qb) => qb.where('direction_id', '=', direction!))
+        .where('route_id', '=', route.id)
+        .execute()) as RawTripRow[]
+    ).map(toTripRow)
     if (!activeServices) {
       return rows
     }
@@ -345,17 +377,13 @@ export class GtfsRepository {
     }
   }
 
-  private async loadStopPatterns(db: Db, tripIds: string[]): Promise<GtfsStop[][]> {
+  private async loadStopPatterns(db: Db, trips: TripRow[]): Promise<GtfsStop[][]> {
+    const tripIds = trips.map((trip) => String(trip.trip_id))
     if (tripIds.length === 0) {
       return []
     }
-    const stopTimeRows = await db
-      .selectFrom('stop_times')
-      .select(['trip_id', 'stop_id', 'stop_sequence'])
-      .where('trip_id', 'in', tripIds)
-      .orderBy('trip_id')
-      .orderBy('stop_sequence')
-      .execute()
+    const patternIdByTripId = tripPatternIdMap(trips)
+    const stopTimeRows = await this.loadStopTimeRows(db, tripIds, false)
 
     const stopIds = Array.from(new Set(stopTimeRows.map((row) => String(row.stop_id))))
     const stopMap = await this.loadStops(db, stopIds)
@@ -366,24 +394,44 @@ export class GtfsRepository {
       if (!stop) {
         continue
       }
+      const patternStop = {
+        ...stop,
+        stopSequence: toNumber(row.stop_sequence),
+        stopPatternId: patternIdByTripId.get(tripId) ?? null,
+      }
       const current = grouped.get(tripId)
       if (current) {
-        current.push(stop)
+        current.push(patternStop)
       } else {
-        grouped.set(tripId, [stop])
+        grouped.set(tripId, [patternStop])
       }
     }
 
     const seen = new Set<string>()
     const patterns: GtfsStop[][] = []
     for (const pattern of grouped.values()) {
-      const key = JSON.stringify(pattern.map((stop) => stop.stopId))
+      const key = stopPatternKey(pattern)
       if (!seen.has(key)) {
         seen.add(key)
         patterns.push(pattern)
       }
     }
     return patterns
+  }
+
+  private async loadStopTimeRows(db: Db, tripIds: string[], includeDepartureTime: boolean): Promise<StopTimeRow[]> {
+    if (tripIds.length === 0) {
+      return []
+    }
+    return (
+      await db
+        .selectFrom('stop_times')
+        .select(includeDepartureTime ? ['trip_id', 'stop_id', 'stop_sequence', 'departure_time'] : ['trip_id', 'stop_id', 'stop_sequence'])
+        .where('trip_id', 'in', tripIds)
+        .orderBy('trip_id')
+        .orderBy('stop_sequence')
+        .execute()
+    ).map(toStopTimeRow)
   }
 
   private async loadStops(db: Db, stopIds: string[]): Promise<StopMap> {
@@ -434,6 +482,67 @@ export class GtfsRepository {
       })
       .map((row) => String(row.service_id))
   }
+}
+
+async function importRepoZip(loader: AppGtfsLoader, info: RepoInfoV2): Promise<void> {
+  const response = await fetch(repoFeedZipUrl(info))
+  if (!response.ok) {
+    throw new Error(`Failed to fetch GTFS ZIP: ${response.status}`)
+  }
+  await loader.importZip(await response.blob(), IMPORT_OPTIONS)
+}
+
+function repoCacheFilename(info: RepoInfoV2): string {
+  const fileUid = repoFileUid(info)
+  if (fileUid) {
+    return `repo-${info.orgId}-${info.feedId}-${encodeURIComponent(fileUid)}.sqlite3`
+  }
+  return `repo-${info.orgId}-${info.feedId}.sqlite3`
+}
+
+function repoFeedZipUrl(info: RepoInfoV2): string {
+  const fileUid = repoFileUid(info)
+  const params = fileUid ? new URLSearchParams({ uid: fileUid }) : new URLSearchParams({ rid: 'current' })
+  return `https://api.gtfs-data.jp/v2/organizations/${info.orgId}/feeds/${info.feedId}/files/feed.zip?${params.toString()}`
+}
+
+function repoFileUid(info: RepoInfoV2): string | null {
+  return info.fileUid?.trim() || null
+}
+
+function tripPatternIdMap(trips: TripRow[]): Map<string, string | null> {
+  return new Map(trips.map((trip) => [String(trip.trip_id), asOptionalString(trip.jp_pattern_id)]))
+}
+
+function toTripRow(row: RawTripRow): TripRow {
+  return {
+    trip_id: asRequiredString(row.trip_id),
+    route_id: asRequiredString(row.route_id),
+    direction_id: toDirectionId(row.direction_id),
+    service_id: asRequiredString(row.service_id),
+    jp_pattern_id: asOptionalString(row.jp_pattern_id),
+  }
+}
+
+function toStopTimeRow(row: RawStopTimeRow): StopTimeRow {
+  return {
+    trip_id: asRequiredString(row.trip_id),
+    stop_id: asRequiredString(row.stop_id),
+    stop_sequence: toNumber(row.stop_sequence),
+    departure_time: asOptionalString(row.departure_time),
+  }
+}
+
+function asRequiredString(value: unknown): string {
+  if (value === null || value === undefined) {
+    throw new Error('Required GTFS value is missing')
+  }
+  return String(value)
+}
+
+function toDirectionId(value: unknown): 0 | 1 | null {
+  const direction = toNullableNumber(value)
+  return direction === 0 || direction === 1 ? direction : null
 }
 
 function asOptionalString(value: unknown): string | null {

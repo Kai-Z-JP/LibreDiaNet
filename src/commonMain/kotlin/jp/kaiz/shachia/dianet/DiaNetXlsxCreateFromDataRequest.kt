@@ -25,7 +25,8 @@ data class DiaNetGtfsExportData(
 data class DiaNetStopData(
     val id: String,
     val name: String,
-    val platformCode: String? = null
+    val platformCode: String? = null,
+    val jokoOverride: String? = null
 )
 
 @Serializable
@@ -48,7 +49,8 @@ data class DiaNetStopTimeData(
     val tripId: String,
     val stopId: String,
     val stopSequence: Int,
-    val departureTime: String? = null
+    val departureTime: String? = null,
+    val stopPatternId: String? = null
 )
 
 @Serializable

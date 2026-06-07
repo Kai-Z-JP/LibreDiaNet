@@ -1,4 +1,4 @@
-import type { GtfsLoader } from '@gtfs-jp/loader'
+import type { AppGtfsLoader } from './gtfsSchema'
 
 export type OverrideConfig = {
   majorStop: boolean
@@ -6,6 +6,10 @@ export type OverrideConfig = {
   branchEnd: boolean
   nameOverride: string | null
   locationNameOverride: string | null
+  jokoOverride: string | null
+  rowShading: boolean
+  stopNameBold: boolean
+  horizontalLine: boolean
 }
 
 export const EMPTY_OVERRIDE: OverrideConfig = {
@@ -14,6 +18,10 @@ export const EMPTY_OVERRIDE: OverrideConfig = {
   branchEnd: false,
   nameOverride: null,
   locationNameOverride: null,
+  jokoOverride: null,
+  rowShading: false,
+  stopNameBold: false,
+  horizontalLine: false,
 }
 
 export type RouteDetail = {
@@ -31,6 +39,8 @@ export type RepoInfoV2 = {
   id: string
   orgId: string
   feedId: string
+  fileUid: string | null
+  fileLabel: string | null
   name: string | null
 }
 
@@ -68,12 +78,49 @@ export type GtfsFeedItem = {
   organization_name: string
   feed_id: string
   feed_name: string
+  file_uid?: string
+  file_rid?: string
+  file_from_date?: string
+  file_to_date?: string
+  file_last_updated_at?: string
 }
 
 export type FeedOption = {
   label: string
   orgId: string
   feedId: string
+  defaultFileUid: string | null
+  defaultFileLabel: string | null
+}
+
+export type GtfsFeedDetailResponse = {
+  code: number
+  message: string
+  body: GtfsFeedDetail
+}
+
+export type GtfsFeedDetail = {
+  organization_id: string
+  organization_name: string
+  feed_id: string
+  feed_name: string
+  gtfs_files: GtfsFeedFileItem[]
+}
+
+export type GtfsFeedFileItem = {
+  gtfs_file_uid: string
+  rid: string
+  from_date: string
+  to_date: string
+  update_type?: string | null
+  memo?: string | null
+  created_at?: string | null
+}
+
+export type GtfsFeedFileOption = {
+  uid: string
+  label: string
+  sourceLabel: string
 }
 
 export type RouteOption = {
@@ -88,6 +135,8 @@ export type GtfsStop = {
   stopId: string
   name: string
   platformCode: string | null
+  stopSequence?: number
+  stopPatternId?: string | null
 }
 
 export type GtfsStopTime = {
@@ -95,6 +144,7 @@ export type GtfsStopTime = {
   stopId: string
   stopSequence: number
   departureTime: string | null
+  stopPatternId?: string | null
 }
 
 export type DiaNetGtfsExportData = {
@@ -110,6 +160,7 @@ export type DiaNetStopData = {
   id: string
   name: string
   platformCode: string | null
+  jokoOverride?: string | null
 }
 
 export type DiaNetRouteData = {
@@ -130,6 +181,7 @@ export type DiaNetStopTimeData = {
   stopId: string
   stopSequence: number
   departureTime: string | null
+  stopPatternId?: string | null
 }
 
 export type DiaNetCalendarData = {
@@ -158,6 +210,8 @@ export type ConstructedRoute = {
 }
 
 export type ConstructedTrip = {
+  routeId: string
+  direction: number | null
   routeName: string
   stopTime: GtfsStopTime[]
 }
@@ -173,7 +227,7 @@ export type OpenHandleResult = {
 
 export type GtfsHandle = {
   filename: string
-  loader: GtfsLoader
+  loader: AppGtfsLoader
 }
 
 export type PresetContext = {

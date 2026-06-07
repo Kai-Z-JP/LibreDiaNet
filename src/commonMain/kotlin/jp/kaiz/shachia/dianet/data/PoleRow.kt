@@ -7,7 +7,7 @@ fun List<PoleRow>.joko(index: Int): String {
     val prev = this.getOrNull(index - 1)
 
     val joko = when {
-        prev == null -> "発"
+        prev == null -> current.joko
         prev.joko == current.joko -> "〃"
         else -> current.joko
     }

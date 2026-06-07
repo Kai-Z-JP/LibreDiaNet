@@ -1,11 +1,35 @@
-import type { OverrideConfig, RouteDetail } from './types'
+import type { GtfsStop, GtfsStopTime, OverrideConfig, RouteDetail } from './types'
 
 export function routeKey(route: RouteDetail): string {
   return `${route.id}_${route.direction ?? 'null'}`
 }
 
-export function stopPatternKey(stopIds: string[]): string {
-  return JSON.stringify(stopIds)
+export function stopPatternKey(pattern: string[] | Pick<GtfsStop | GtfsStopTime, 'stopId' | 'stopPatternId'>[]): string {
+  if (pattern.length > 0 && typeof pattern[0] !== 'string') {
+    const stops = pattern as Pick<GtfsStop | GtfsStopTime, 'stopId' | 'stopPatternId'>[]
+    const patternId = stops[0]?.stopPatternId?.trim()
+    if (patternId && stops.every((stop) => stop.stopPatternId === patternId)) {
+      return `jp_pattern_id:${patternId}`
+    }
+    return `pattern_hash:${hashString(JSON.stringify(stops.map((stop) => stop.stopId)))}`
+  }
+  if (
+    pattern.length === 1 &&
+    typeof pattern[0] === 'string' &&
+    (pattern[0].startsWith('jp_pattern_id:') || pattern[0].startsWith('pattern_hash:'))
+  ) {
+    return pattern[0]
+  }
+  return `pattern_hash:${hashString(JSON.stringify(pattern))}`
+}
+
+function hashString(value: string): string {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
 export function toNullableNumber(value: unknown): number | null {
@@ -58,7 +82,11 @@ export function isSameOverride(left: OverrideConfig, right: OverrideConfig): boo
     left.branchStart === right.branchStart &&
     left.branchEnd === right.branchEnd &&
     left.nameOverride === right.nameOverride &&
-    left.locationNameOverride === right.locationNameOverride
+    left.locationNameOverride === right.locationNameOverride &&
+    left.jokoOverride === right.jokoOverride &&
+    left.rowShading === right.rowShading &&
+    left.stopNameBold === right.stopNameBold &&
+    left.horizontalLine === right.horizontalLine
   )
 }
 
@@ -82,6 +110,20 @@ export function convertToEnclosedNumber(value: string | null): string {
     })
     .replaceAll('番', '')
     .replaceAll('降車', '降')
+}
+
+export function formatPreviewDepartureTime(departureTime: string | null | undefined): string {
+  const parts = departureTime?.split(':')
+  if (!parts || parts.length < 2) {
+    return ''
+  }
+  const hour = Number(parts[0])
+  const minute = parts[1]?.padStart(2, '0') ?? ''
+  if (!Number.isFinite(hour) || minute.length === 0) {
+    return ''
+  }
+  const text = `${hour}${minute}`
+  return text.length === 3 ? `\u2002${text}` : text
 }
 
 export function todayIsoDate(): string {

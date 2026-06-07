@@ -27,6 +27,8 @@ describe('migrateLegacyStore', () => {
       id: 'feed_org',
       orgId: 'org',
       feedId: 'feed',
+      fileUid: null,
+      fileLabel: null,
       name: 'feed<label>',
     })
     expect(store.presets[0]?.excludedStopPatterns).toEqual([['a', 'b']])

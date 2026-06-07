@@ -27,9 +27,11 @@ interface GTFSInformation {
 data class DataRepoGtfsInformation(
     val orgId: String,
     val feedId: String,
+    val fileUid: String? = null,
+    val fileLabel: String? = null,
     override var name: String? = null,
 ) : GTFSInformation {
-    override val id = "${feedId}_$orgId"
+    override val id = if (fileUid == null) "${feedId}_$orgId" else "${feedId}_${orgId}_$fileUid"
 }
 
 @Serializable
@@ -86,7 +88,11 @@ data class Override(
     val branchStart: Boolean = false,
     val branchEnd: Boolean = false,
     val nameOverride: String? = null,
-    val locationNameOverride: String? = null
+    val locationNameOverride: String? = null,
+    val jokoOverride: String? = null,
+    val rowShading: Boolean = false,
+    val stopNameBold: Boolean = false,
+    val horizontalLine: Boolean = false
 ) {
     companion object {
         val NONE = Override()

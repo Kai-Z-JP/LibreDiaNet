@@ -12,6 +12,8 @@ describe('buildCreateRequestAsync', () => {
         id: 'feed_org',
         orgId: 'org',
         feedId: 'feed',
+        fileUid: null,
+        fileLabel: null,
         name: 'label',
       },
       routes: [{ id: 'route-1', direction: 0 }],
@@ -25,11 +27,13 @@ describe('buildCreateRequestAsync', () => {
       type: 'jp.kaiz.shachia.dianet.GTFSDataSourceRepo',
       orgId: 'org',
       feedId: 'feed',
+      fileUid: null,
     })
     expect(payload.preset.info).toEqual({
       type: 'jp.kaiz.shachia.dianet.DataRepoGtfsInformation',
       orgId: 'org',
       feedId: 'feed',
+      fileUid: null,
       name: 'label',
     })
   })

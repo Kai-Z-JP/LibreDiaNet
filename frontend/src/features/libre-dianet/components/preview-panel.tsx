@@ -2,7 +2,7 @@ import { Box, TextField, Tooltip } from '@mui/material'
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import type { ConstructedRoute, GtfsHandle, GtfsStop, PoleDetail, RoutePresetV2 } from '../../../types'
-import { convertToEnclosedNumber, displayRouteName, todayIsoDate } from '../../../utils'
+import { convertToEnclosedNumber, displayRouteName, formatPreviewDepartureTime, todayIsoDate } from '../../../utils'
 import { libreDiaNetRepository } from '../lib/repository'
 import { OutputDialog } from './output-dialog'
 
@@ -333,7 +333,7 @@ export function PreviewPanel({
                         key={`trip-time-${tripIndex}-${index}`}
                         style={bodyCellStyle(detail, { borderInline: '1px solid black' }, name === null)}
                       >
-                        {stopTime?.departureTime ? stopTime.departureTime.split(':').slice(0, 2).join('') : ''}
+                        {formatPreviewDepartureTime(stopTime?.departureTime)}
                       </td>
                     )
                   })}

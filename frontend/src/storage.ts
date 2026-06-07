@@ -81,11 +81,15 @@ function parseInfoV2(value: unknown): RepoInfoV2 | RawInfoV2 {
   if (value.kind === 'repo') {
     const orgId = asString(value.orgId)
     const feedId = asString(value.feedId)
+    const fileUid = asOptionalString(value.fileUid)
+    const fileLabel = asOptionalString(value.fileLabel)
     return {
       kind: 'repo',
-      id: asOptionalString(value.id) ?? `${feedId}_${orgId}`,
+      id: asOptionalString(value.id) ?? repoInfoId(orgId, feedId, fileUid),
       orgId,
       feedId,
+      fileUid,
+      fileLabel,
       name: asOptionalString(value.name),
     }
   }
@@ -128,11 +132,15 @@ function parseLegacyInfo(value: unknown): RepoInfoV2 | RawInfoV2 {
   if (typeName.includes('DataRepoGtfsInformation') || ('orgId' in value && 'feedId' in value)) {
     const orgId = asString(value.orgId)
     const feedId = asString(value.feedId)
+    const fileUid = asOptionalString(value.fileUid)
+    const fileLabel = asOptionalString(value.fileLabel)
     return {
       kind: 'repo',
-      id: `${feedId}_${orgId}`,
+      id: repoInfoId(orgId, feedId, fileUid),
       orgId,
       feedId,
+      fileUid,
+      fileLabel,
       name: asOptionalString(value.name),
     }
   }
@@ -173,12 +181,17 @@ function parseOverride(value: unknown) {
   if (!isRecord(value)) {
     return EMPTY_OVERRIDE
   }
+  const majorStop = Boolean(value.majorStop)
   return {
-    majorStop: Boolean(value.majorStop),
+    majorStop,
     branchStart: Boolean(value.branchStart),
     branchEnd: Boolean(value.branchEnd),
     nameOverride: asOptionalString(value.nameOverride),
     locationNameOverride: asOptionalString(value.locationNameOverride),
+    jokoOverride: asOptionalString(value.jokoOverride),
+    rowShading: typeof value.rowShading === 'boolean' ? value.rowShading : majorStop,
+    stopNameBold: typeof value.stopNameBold === 'boolean' ? value.stopNameBold : majorStop,
+    horizontalLine: Boolean(value.horizontalLine),
   }
 }
 
@@ -198,6 +211,10 @@ function asString(value: unknown): string {
 
 function asOptionalString(value: unknown): string | null {
   return typeof value === 'string' ? value : null
+}
+
+function repoInfoId(orgId: string, feedId: string, fileUid: string | null): string {
+  return fileUid ? `${feedId}_${orgId}_${fileUid}` : `${feedId}_${orgId}`
 }
 
 function asOptionalNumber(value: unknown): number | null {

@@ -37,3 +37,7 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+.agents/
+.kotlin/
+kotlin-js-store/

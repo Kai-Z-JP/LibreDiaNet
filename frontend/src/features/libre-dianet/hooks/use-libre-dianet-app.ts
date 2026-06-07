@@ -111,6 +111,8 @@ export function useLibreDiaNetApp() {
         label: `${item.feed_name}<${item.organization_name}>`,
         orgId: item.organization_id,
         feedId: item.feed_id,
+        defaultFileUid: null,
+        defaultFileLabel: null,
       })),
     [feedItems],
   )
@@ -129,6 +131,8 @@ export function useLibreDiaNetApp() {
         id: `${option.feedId}_${option.orgId}`,
         orgId: option.orgId,
         feedId: option.feedId,
+        fileUid: null,
+        fileLabel: null,
         name: option.label,
       },
       routes: [],

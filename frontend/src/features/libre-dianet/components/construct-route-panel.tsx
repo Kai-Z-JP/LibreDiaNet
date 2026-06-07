@@ -258,10 +258,10 @@ export function ConstructRoutePanel({
     onChange(nextStops)
   }
 
-  const toggleExcludedPattern = (pattern: string[]) => {
+  const toggleExcludedPattern = (pattern: GtfsStop[]) => {
     const key = stopPatternKey(pattern)
     const next = excludedStopPatterns.filter((item) => stopPatternKey(item) !== key)
-    onChangeExcludedPatterns(next.length === excludedStopPatterns.length ? [...excludedStopPatterns, pattern] : next)
+    onChangeExcludedPatterns(next.length === excludedStopPatterns.length ? [...next, [key]] : next)
   }
 
   return (
@@ -305,9 +305,7 @@ export function ConstructRoutePanel({
           </Button>
           {Object.entries(stopPatternMap).map(([patternKey, { route, stopPattern }]) => {
             const selected = selectedPoleMap[patternKey] ?? []
-            const excluded = excludedStopPatterns.some(
-              (pattern) => stopPatternKey(pattern) === stopPatternKey(stopPattern.map((stop) => stop.stopId)),
-            )
+            const excluded = excludedStopPatterns.some((pattern) => stopPatternKey(pattern) === stopPatternKey(stopPattern))
             const sortedStopIds = sortedStops.map((stop) => stop.id)
             return (
               <Accordion
@@ -339,7 +337,7 @@ export function ConstructRoutePanel({
                 </AccordionSummary>
                 <AccordionDetails sx={{ pt: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Checkbox checked={excluded} onChange={() => toggleExcludedPattern(stopPattern.map((stop) => stop.stopId))} />
+                    <Checkbox checked={excluded} onChange={() => toggleExcludedPattern(stopPattern)} />
                   </Box>
                   <Droppable
                     droppableId={patternKey}

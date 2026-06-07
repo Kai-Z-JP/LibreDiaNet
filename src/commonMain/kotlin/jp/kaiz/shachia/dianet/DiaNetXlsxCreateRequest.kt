@@ -17,8 +17,13 @@ interface GTFSDateSource
 data class GTFSDataSourceRepo(
     val orgId: String,
     val feedId: String,
+    val fileUid: String? = null,
 ) : GTFSDateSource {
-    val url = "https://api.gtfs-data.jp/v2/organizations/${orgId}/feeds/${feedId}/files/feed.zip"
+    val url = if (fileUid != null) {
+        "https://api.gtfs-data.jp/v2/organizations/${orgId}/feeds/${feedId}/files/feed.zip?uid=${fileUid}"
+    } else {
+        "https://api.gtfs-data.jp/v2/organizations/${orgId}/feeds/${feedId}/files/feed.zip?rid=current"
+    }
 }
 
 @Serializable

@@ -5,6 +5,7 @@ type BackendRepoInfo = {
   type: 'jp.kaiz.shachia.dianet.DataRepoGtfsInformation'
   orgId: string
   feedId: string
+  fileUid: string | null
   name: string | null
 }
 
@@ -18,6 +19,7 @@ type BackendRepoSource = {
   type: 'jp.kaiz.shachia.dianet.GTFSDataSourceRepo'
   orgId: string
   feedId: string
+  fileUid: string | null
 }
 
 type BackendRawSource = {
@@ -129,6 +131,7 @@ function buildBackendRepoInfo(info: RepoInfoV2): BackendRepoInfo {
     type: 'jp.kaiz.shachia.dianet.DataRepoGtfsInformation',
     orgId: info.orgId,
     feedId: info.feedId,
+    fileUid: info.fileUid,
     name: info.name,
   }
 }
@@ -138,6 +141,7 @@ function buildBackendRepoSource(info: RepoInfoV2): BackendRepoSource {
     type: 'jp.kaiz.shachia.dianet.GTFSDataSourceRepo',
     orgId: info.orgId,
     feedId: info.feedId,
+    fileUid: info.fileUid,
   }
 }
 
