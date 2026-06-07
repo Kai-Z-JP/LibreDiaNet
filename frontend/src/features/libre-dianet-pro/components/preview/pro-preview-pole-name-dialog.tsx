@@ -60,7 +60,6 @@ export function ProPreviewPoleNameDialog({
                 select
                 label="発着"
                 value={editor.joko}
-                helperText={`既定: ${editor.defaultJoko}`}
                 onChange={(event) => updateEditor((current) => (current ? { ...current, joko: event.target.value } : current))}
                 slotProps={{ inputLabel: fieldLabelProps }}
                 sx={{ backgroundColor: 'white' }}
