@@ -49,6 +49,8 @@ export function PresetRoutePanel({
           })
         }}
         renderInput={(params) => <TextField {...params} label="プリセットで使用するGTFS" slotProps={{ inputLabel: fieldLabelProps }} />}
+        slotProps={{ paper: { sx: { backgroundColor: 'white' } } }}
+        sx={{ backgroundColor: 'white' }}
       />
       <Autocomplete
         multiple
@@ -85,6 +87,8 @@ export function PresetRoutePanel({
           })
         }
         renderInput={(params) => <TextField {...params} label="路線" slotProps={{ inputLabel: fieldLabelProps }} />}
+        slotProps={{ paper: { sx: { backgroundColor: 'white' } } }}
+        sx={{ backgroundColor: 'white' }}
       />
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', pt: 1 }}>
         <TextField
