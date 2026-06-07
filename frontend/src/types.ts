@@ -235,3 +235,73 @@ export type PresetContext = {
   handle: GtfsHandle | null
   error: string | null
 }
+
+export type ProGtfsSource = {
+  sourceId: string
+  info: RepoInfoV2 | RawInfoV2
+}
+
+export type ProRouteDetail = RouteDetail & {
+  sourceId: string
+}
+
+export type ProDisplayFont = 'NADIA_B' | 'NADIA_R' | 'HEISEI_MINCHO_STD_W3'
+
+export type ProRouteDisplayOverride = {
+  routeKey: string
+  routeNameOverride: string | null
+  routeNameFont: ProDisplayFont | null
+  destinationOverride: string | null
+  stopCellOverrides: ProStopCellDisplayOverride[]
+}
+
+export type ProStopCellDisplayOverride = {
+  poleId: string
+  text: string
+  rowSpan: number
+  font: ProDisplayFont
+}
+
+export type ProPoleStop = {
+  sourceId: string
+  id: string
+  stopSequence: number | null
+  stopPatternKey: string
+  stopIndex: number
+}
+
+export type ProPoleDetail = {
+  id: string
+  stops: ProPoleStop[]
+  override: OverrideConfig
+}
+
+export type ProPreset = {
+  id: string
+  name: string
+  index: number
+  sourceIds: string[]
+  routes: ProRouteDetail[]
+  routeDisplayOverrides: ProRouteDisplayOverride[]
+  poles: ProPoleDetail[]
+  excludedStopPatterns: string[][]
+}
+
+export type ProVersion = {
+  id: string
+  name: string
+  revisionDate: string
+  gtfsSources: ProGtfsSource[]
+  presets: ProPreset[]
+}
+
+export type ProPresetStore = {
+  version: 1
+  versions: ProVersion[]
+}
+
+export type ProPresetContext = {
+  loading: boolean
+  handles: Record<string, GtfsHandle>
+  errors: Record<string, string>
+}
