@@ -1,6 +1,5 @@
 import AddIcon from '@mui/icons-material/Add'
-import styled from '@emotion/styled'
-import { Box, Button, Typography } from '@mui/material'
+import { Box, Button, List, ListItemButton, ListItemText, Typography } from '@mui/material'
 import type { ProVersion } from '../../../../types'
 
 export function PresetList({
@@ -22,21 +21,34 @@ export function PresetList({
           作成
         </Button>
       </Box>
-      <PresetListBody>
+      <List
+        dense
+        disablePadding
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          mt: 1,
+          bgcolor: '#fff',
+          borderRadius: 1,
+        }}
+      >
         {selectedVersion?.presets.map((preset) => (
-          <Button
+          <ListItemButton
             key={preset.id}
-            variant={preset.id === selectedPresetId ? 'contained' : 'text'}
+            selected={preset.id === selectedPresetId}
             onClick={() => onSelectPreset(preset.id)}
             sx={{
-              justifyContent: 'flex-start',
-              backgroundColor: preset.id === selectedPresetId ? undefined : 'white',
-              borderRadius: 1,
-              p: 1,
+              '&.Mui-selected': {
+                bgcolor: 'lightblue',
+              },
+              '&.Mui-selected:hover': {
+                bgcolor: 'lightblue',
+              },
             }}
           >
-            {preset.name}
-          </Button>
+            <ListItemText primary={preset.name} />
+          </ListItemButton>
         ))}
         {selectedVersion && selectedVersion.presets.length === 0 && (
           <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
@@ -48,16 +60,7 @@ export function PresetList({
             バージョンを選択してください
           </Typography>
         )}
-      </PresetListBody>
+      </List>
     </>
   )
 }
-
-const PresetListBody = styled.div`
-  display: flex;
-  min-height: 0;
-  overflow-y: auto;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-`
