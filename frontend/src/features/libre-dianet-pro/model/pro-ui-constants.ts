@@ -5,7 +5,6 @@ export const fieldLabelProps = {
   sx: {
     overflow: 'visible',
     maxWidth: 'none',
-    backgroundColor: 'white',
     px: 0.5,
   },
 }
