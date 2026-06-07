@@ -84,6 +84,11 @@ export async function fetchGtfsFeedFiles(orgId: string, feedId: string): Promise
     uid: file.gtfs_file_uid,
     label: gtfsFileLabel(file.rid, file.from_date, file.to_date, file.memo ?? file.update_type ?? null, file.gtfs_file_uid),
     sourceLabel: gtfsFileSourceLabel(file.from_date, file.to_date, file.memo ?? file.update_type ?? null),
+    fromDate: file.from_date ?? null,
+    toDate: file.to_date ?? null,
+    updateType: file.update_type ?? null,
+    memo: file.memo ?? null,
+    createdAt: file.created_at ?? null,
   }))
 }
 

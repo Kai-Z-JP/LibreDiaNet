@@ -14,6 +14,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  MenuItem,
   TextField,
   Tooltip,
   Typography,
@@ -80,7 +81,7 @@ export function GtfsSourcePanel({
           追加
         </Button>
         <Button variant="outlined" component="label" startIcon={<AddIcon />}>
-          Raw ZIP
+          ZIP ファイルから追加
           <input
             hidden
             type="file"
@@ -106,8 +107,16 @@ export function GtfsSourcePanel({
                 uid: repoInfo.fileUid,
                 label: repoInfo.fileLabel ?? '選択中のGTFSファイル',
                 sourceLabel: repoInfo.fileLabel ?? '選択中のGTFSファイル',
+                fromDate: null,
+                toDate: null,
+                memo: null,
+                createdAt: null,
               })
             : null
+          const fileSelectOptions =
+            selectedFileOption && !fileOptions.some((option) => option.uid === selectedFileOption.uid)
+              ? [selectedFileOption, ...fileOptions]
+              : fileOptions
           return (
             <Card key={source.sourceId} variant="outlined" sx={{ p: 1, display: 'flex', justifyContent: 'space-between', gap: 1 }}>
               <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -121,27 +130,31 @@ export function GtfsSourcePanel({
                     : `raw: ${source.info.uuid}`}
                 </Typography>
                 {source.info.kind === 'repo' && (
-                  <Autocomplete
+                  <TextField
+                    select
                     size="small"
                     sx={{ mt: 1, maxWidth: 640 }}
                     disabled={reloading}
-                    options={fileOptions}
-                    value={selectedFileOption}
-                    onChange={(_, value) => {
-                      if (value) {
-                        onReplaceRepoFile(source, value)
+                    label={reloading ? 'リビジョンを差し替え中' : 'リビジョン'}
+                    value={selectedFileOption?.uid ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value
+                      const file = fileSelectOptions.find((option) => option.uid === value)
+                      if (file) {
+                        onReplaceRepoFile(source, file)
                       }
                     }}
-                    isOptionEqualToValue={(option, value) => option.uid === value.uid}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label={reloading ? 'GTFSファイルを差し替え中' : 'GTFSファイル'}
-                        slotProps={{ inputLabel: fieldLabelProps }}
-                        sx={{ backgroundColor: 'white' }}
-                      />
-                    )}
-                  />
+                    SelectProps={{
+                      renderValue: (value) => fileSelectOptions.find((option) => option.uid === value)?.label ?? '',
+                    }}
+                    slotProps={{ inputLabel: fieldLabelProps }}
+                  >
+                    {fileSelectOptions.map((option) => (
+                      <MenuItem key={option.uid} value={option.uid}>
+                        <RevisionMenuItem option={option} />
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 )}
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -216,4 +229,26 @@ export function GtfsSourcePanel({
 
 function sourceUsageCount(version: ProVersion, sourceId: string): number {
   return version.presets.filter((preset) => preset.sourceIds.includes(sourceId)).length
+}
+
+function RevisionMenuItem({ option }: { option: GtfsFeedFileOption }) {
+  const publishedAt = formatDate(option.createdAt)
+  const dateRange = option.fromDate || option.toDate ? `${option.fromDate ?? '?'} - ${option.toDate ?? '?'}` : null
+
+  if (!publishedAt && !dateRange) {
+    return <Typography variant="body2">{option.label}</Typography>
+  }
+
+  return (
+    <Box sx={{ display: 'grid', gap: 0.25, py: 0.25 }}>
+      <Typography variant="body2">{[publishedAt ? `公開日 ${publishedAt}` : null, dateRange].filter(Boolean).join(' / ')}</Typography>
+      <Typography variant="caption" color="text.secondary">
+        {option.memo?.trim()}
+      </Typography>
+    </Box>
+  )
+}
+
+function formatDate(value: string | null): string | null {
+  return value?.slice(0, 10) || null
 }

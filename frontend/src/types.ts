@@ -121,6 +121,10 @@ export type GtfsFeedFileOption = {
   uid: string
   label: string
   sourceLabel: string
+  fromDate: string | null
+  toDate: string | null
+  memo: string | null
+  createdAt: string | null
 }
 
 export type RouteOption = {
