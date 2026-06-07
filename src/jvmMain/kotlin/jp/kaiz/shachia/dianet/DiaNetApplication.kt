@@ -11,6 +11,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.defaultheaders.*
 import io.ktor.server.plugins.forwardedheaders.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import jp.kaiz.shachia.dianet.api.poiParser
@@ -22,6 +23,18 @@ val client = HttpClient {
     install(ClientContentNegotiation) {
         json(kotlinxJson)
     }
+}
+
+private fun frontendResource(path: String): String =
+    DiaNetApplication::class.java.classLoader.getResource(path)!!.readText()
+
+private object DiaNetApplication
+
+private suspend fun ApplicationCall.respondFrontend(path: String) {
+    respondText(
+        frontendResource(path),
+        ContentType.Text.Html
+    )
 }
 
 fun Application.module() {
@@ -51,12 +64,25 @@ fun Application.module() {
             }
         }
 
+        get("/") {
+            val indexPath =
+                if (call.request.queryParameters["experimental"] == "true") {
+                    "react/index.html"
+                } else {
+                    "frontend/index.html"
+                }
+            call.respondFrontend(indexPath)
+        }
+        get("/pro") {
+            call.respondFrontend("react/index.html")
+        }
+        get("/pro/{...}") {
+            call.respondFrontend("react/index.html")
+        }
+        staticResources("/react", "react")
         staticResources("/", "frontend")
         get("/{...}") {
-            call.respondText(
-                this.javaClass.classLoader.getResource("frontend/index.html")!!.readText(),
-                ContentType.Text.Html
-            )
+            call.respondFrontend("frontend/index.html")
         }
     }
 }
