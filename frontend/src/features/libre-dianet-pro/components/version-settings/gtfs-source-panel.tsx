@@ -2,7 +2,23 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
-import { Autocomplete, Box, Button, Card, IconButton, TextField, Tooltip, Typography } from '@mui/material'
+import {
+  Alert,
+  Autocomplete,
+  Box,
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material'
+import { useState } from 'react'
 import type { FeedOption, GtfsFeedFileOption, ProGtfsSource, ProVersion } from '../../../../types'
 import { repoFeedKey } from '../../model/pro-source-helpers'
 import { fieldLabelProps } from '../../model/pro-ui-constants'
@@ -37,6 +53,9 @@ export function GtfsSourcePanel({
   onReloadSource: (source: ProGtfsSource) => void
   reloadingSourceIds: string[]
 }) {
+  const [deleteTarget, setDeleteTarget] = useState<ProGtfsSource | null>(null)
+  const deleteTargetUsageCount = deleteTarget ? sourceUsageCount(version, deleteTarget.sourceId) : 0
+
   return (
     <Box sx={{ display: 'grid', gap: 2 }}>
       <Box>
@@ -81,6 +100,7 @@ export function GtfsSourcePanel({
           const repoInfo = source.info.kind === 'repo' ? source.info : null
           const fileOptions = repoInfo ? (fileOptionsByFeedKey[repoFeedKey(repoInfo.orgId, repoInfo.feedId)] ?? []) : []
           const reloading = reloadingSourceIds.includes(source.sourceId)
+          const usageCount = sourceUsageCount(version, source.sourceId)
           const selectedFileOption = repoInfo?.fileUid
             ? (fileOptions.find((option) => option.uid === repoInfo.fileUid) ?? {
                 uid: repoInfo.fileUid,
@@ -91,7 +111,10 @@ export function GtfsSourcePanel({
           return (
             <Card key={source.sourceId} variant="outlined" sx={{ p: 1, display: 'flex', justifyContent: 'space-between', gap: 1 }}>
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography>{source.info.name ?? source.info.id}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography>{source.info.name ?? source.info.id}</Typography>
+                  <Chip size="small" label={`${usageCount}プリセットで使用中`} color={usageCount > 0 ? 'primary' : 'default'} />
+                </Box>
                 <Typography variant="body2" color="text.secondary">
                   {source.info.kind === 'repo'
                     ? `repo: ${source.info.orgId}/${source.info.feedId}${source.info.fileLabel ? ` / ${source.info.fileLabel}` : ''}`
@@ -150,7 +173,7 @@ export function GtfsSourcePanel({
                     </IconButton>
                   </Tooltip>
                 )}
-                <IconButton onClick={() => onDeleteSource(source)}>
+                <IconButton onClick={() => (usageCount > 0 ? setDeleteTarget(source) : onDeleteSource(source))}>
                   <DeleteIcon />
                 </IconButton>
               </Box>
@@ -159,6 +182,38 @@ export function GtfsSourcePanel({
         })}
         {version.gtfsSources.length === 0 && <EmptyState text="このバージョンで使用するGTFSを追加してください。" />}
       </Box>
+      <Dialog open={Boolean(deleteTarget)} maxWidth="xs" fullWidth onClose={() => setDeleteTarget(null)}>
+        <DialogTitle>GTFS設定削除</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 1.5 }}>
+          <Typography>「{deleteTarget?.info.name ?? deleteTarget?.info.id ?? 'このGTFS設定'}」を削除します。</Typography>
+          {deleteTargetUsageCount > 0 && (
+            <Alert severity="warning">
+              {deleteTargetUsageCount}
+              プリセットで使われています。削除すると、それらのプリセットからこのGTFSと関連する路線・標柱設定が外れます。
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>キャンセル</Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={!deleteTarget}
+            onClick={() => {
+              if (deleteTarget) {
+                onDeleteSource(deleteTarget)
+              }
+              setDeleteTarget(null)
+            }}
+          >
+            削除
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
+}
+
+function sourceUsageCount(version: ProVersion, sourceId: string): number {
+  return version.presets.filter((preset) => preset.sourceIds.includes(sourceId)).length
 }
