@@ -23,7 +23,7 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
     showStaticPatterns,
     showActualTimetable,
   } = data
-  const { onOpenRouteEditor } = actions
+  const { onOpenRouteEditor, onTogglePatternUsage } = actions
 
   return (
     <thead>
@@ -37,8 +37,13 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
             return (
               <td
                 key={`route-${route.sourceId}-${route.route.routeId}-${route.direction ?? 'null'}-${patternIndex}`}
-                className="pro-preview-route-cell"
-                style={excluded ? disabledPreviewCellStyle : undefined}
+                className="pro-preview-route-cell pro-preview-editable"
+                title={excluded ? 'クリックしてこの停車パターンを使用する' : 'クリックしてこの停車パターンを使用しない'}
+                onClick={() => onTogglePatternUsage(route, pattern)}
+                style={{
+                  ...(excluded ? disabledPreviewCellStyle : {}),
+                  cursor: 'pointer',
+                }}
               >
                 <Box sx={{ display: 'grid', gap: 0.25 }}>
                   <Typography component="span" variant="caption" sx={{ lineHeight: 1, color: 'text.secondary' }}>

@@ -4,7 +4,12 @@ import { buildProCreateFromDataRequest, requestDiaNetXlsx } from '../../../api'
 import type { DayMapping, GtfsStop, ProPoleDetail, ProPreset, ProPresetContext, ProVersion } from '../../../types'
 import { displayRouteName, todayIsoDate } from '../../../utils'
 import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
-import { proExcludedStopPatternsForSource, proRouteDisplayLabel, sameProPoleStop } from '../model/pro-pole-stop-helpers'
+import {
+  proExcludedPatternKey,
+  proExcludedStopPatternsForSource,
+  proRouteDisplayLabel,
+  sameProPoleStop,
+} from '../model/pro-pole-stop-helpers'
 import {
   isProPatternExcluded,
   normalizeProRouteDisplayOverride,
@@ -229,6 +234,17 @@ export function useProPreviewModel({
     })
   }
 
+  const togglePatternUsage = (route: ProConstructedRoute, pattern: GtfsStop[]) => {
+    const patternKey = proExcludedPatternKey(route.sourceId, pattern)
+    const excluded = preset.excludedStopPatterns.some((patternEntry) => patternEntry[0] === patternKey)
+    onUpdate({
+      ...preset,
+      excludedStopPatterns: excluded
+        ? preset.excludedStopPatterns.filter((patternEntry) => patternEntry[0] !== patternKey)
+        : [...preset.excludedStopPatterns, [patternKey]].toSorted((left, right) => (left[0] ?? '').localeCompare(right[0] ?? '')),
+    })
+  }
+
   const exportDisabled = preset.sourceIds.length === 0 || preset.sourceIds.some((sourceId) => !context.handles[sourceId])
 
   const selectPreviewPole = (poleId: string, poleIndex: number, mode: 'single' | 'multiple' | 'range') => {
@@ -405,6 +421,7 @@ export function useProPreviewModel({
       openRouteEditor,
       openPoleNameEditor,
       openCellEditor,
+      togglePatternUsage,
       updatePoleNameEditor: setPoleNameEditor,
       updateRouteEditor: setRouteEditor,
       updateCellEditor: setCellEditor,
@@ -448,6 +465,7 @@ export function useProPreviewModel({
           onOpenRouteEditor: openRouteEditor,
           onOpenPoleNameEditor: openPoleNameEditor,
           onOpenCellEditor: openCellEditor,
+          onTogglePatternUsage: togglePatternUsage,
         },
       },
       dialogs: {

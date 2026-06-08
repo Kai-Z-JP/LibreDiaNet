@@ -27,6 +27,7 @@ export type ProPreviewTableProps = {
     onOpenRouteEditor: (route: ProConstructedRoute, pattern: GtfsStop[]) => void
     onOpenPoleNameEditor: (pole: ProPreset['poles'][number], defaultName: string, defaultLocationName: string, defaultJoko: string) => void
     onOpenCellEditor: (route: ProConstructedRoute, pattern: GtfsStop[], pole: ProPreset['poles'][number], name: string) => void
+    onTogglePatternUsage: (route: ProConstructedRoute, pattern: GtfsStop[]) => void
   }
 }
 
