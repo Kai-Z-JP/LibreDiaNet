@@ -55,13 +55,13 @@ type BackendPreset = {
 type BackendCreateRequest = {
   dateSource: BackendRepoSource | BackendRawSource
   preset: BackendPreset
-  dayMapping: [string, string][]
+  dayMapping: DayMapping[]
 }
 
 export type DiaNetXlsxCreateFromDataRequestBody = {
   gtfs: DiaNetGtfsExportData
   preset: BackendPreset
-  dayMapping: [string, string][]
+  dayMapping: DayMapping[]
 }
 
 export async function fetchGtfsFeeds(): Promise<GtfsFeedItem[]> {

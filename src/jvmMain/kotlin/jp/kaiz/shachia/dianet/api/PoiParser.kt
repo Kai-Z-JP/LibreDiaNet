@@ -121,6 +121,39 @@ private data class DiaNetWorkbookCalendar(
     val saturday: Int
 )
 
+private fun DiaNetWorkbookCalendar.isActiveOn(date: LocalDate): Boolean {
+    val startDate = startDate.toGtfsLocalDate()
+    val endDate = endDate.toGtfsLocalDate()
+
+    if (startDate > date || endDate < date) {
+        return false
+    }
+
+    return when (date.dayOfWeek) {
+        DayOfWeek.SUNDAY -> sunday == 1
+        DayOfWeek.MONDAY -> monday == 1
+        DayOfWeek.TUESDAY -> tuesday == 1
+        DayOfWeek.WEDNESDAY -> wednesday == 1
+        DayOfWeek.THURSDAY -> thursday == 1
+        DayOfWeek.FRIDAY -> friday == 1
+        DayOfWeek.SATURDAY -> saturday == 1
+    }
+}
+
+private fun DiaNetWorkbookCalendar.isActiveOn(weekday: GtfsServiceWeekday): Boolean =
+    when (weekday) {
+        GtfsServiceWeekday.SUNDAY -> sunday == 1
+        GtfsServiceWeekday.MONDAY -> monday == 1
+        GtfsServiceWeekday.TUESDAY -> tuesday == 1
+        GtfsServiceWeekday.WEDNESDAY -> wednesday == 1
+        GtfsServiceWeekday.THURSDAY -> thursday == 1
+        GtfsServiceWeekday.FRIDAY -> friday == 1
+        GtfsServiceWeekday.SATURDAY -> saturday == 1
+    }
+
+private fun String.toGtfsLocalDate(): LocalDate =
+    LocalDate(take(4).toInt(), drop(4).take(2).toInt(), takeLast(2).toInt())
+
 private data class DiaNetPreviewRoute(
     val route: DiaNetWorkbookRoute,
     val direction: Int?,
@@ -221,7 +254,7 @@ private suspend fun io.ktor.server.application.ApplicationCall.respondWorkbook(
     }
 }
 
-private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayMapping: List<Pair<String, LocalDate>>): ByteArray {
+private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayMapping: List<DayMapping>): ByteArray {
 
     val poles = preset.poles.map { detail -> detail to gtfs.stops.find { pole -> pole.id == detail.id }!! }
     val excludedStopPatternKeys = preset.excludedStopPatterns.map { it.savedStopPatternKey() }.toSet()
@@ -244,26 +277,11 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
         )
     }
 
-    val calendarMapping = dayMapping.map { (name, date) ->
-        name to gtfs.calendars.filter { cal ->
-            val startInt = cal.startDate
-            val startDate =
-                LocalDate(startInt.take(4).toInt(), startInt.drop(4).take(2).toInt(), startInt.takeLast(2).toInt())
-            val endInt = cal.endDate
-            val endDate = LocalDate(endInt.take(4).toInt(), endInt.drop(4).take(2).toInt(), endInt.takeLast(2).toInt())
-
-            if (startDate > date || endDate < date) {
-                false
-            }
-            when (date.dayOfWeek) {
-                DayOfWeek.SUNDAY -> cal.sunday == 1
-                DayOfWeek.MONDAY -> cal.monday == 1
-                DayOfWeek.TUESDAY -> cal.tuesday == 1
-                DayOfWeek.WEDNESDAY -> cal.wednesday == 1
-                DayOfWeek.THURSDAY -> cal.thursday == 1
-                DayOfWeek.FRIDAY -> cal.friday == 1
-                DayOfWeek.SATURDAY -> cal.saturday == 1
-                else -> false
+    val calendarMapping = dayMapping.map { mapping ->
+        mapping.name to gtfs.calendars.filter { cal ->
+            when (mapping) {
+                is DateDayMapping -> cal.isActiveOn(mapping.date)
+                is WeekdayDayMapping -> cal.isActiveOn(mapping.weekday)
             }
         }.map { it.id }
     }

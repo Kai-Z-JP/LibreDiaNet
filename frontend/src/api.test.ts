@@ -22,7 +22,7 @@ describe('buildCreateRequestAsync', () => {
       excludedStopPatterns: [],
     }
 
-    const payload = await buildCreateRequestAsync(preset, null, [['平日', '2026-03-25']])
+    const payload = await buildCreateRequestAsync(preset, null, [{ name: '平日', type: 'date', date: '2026-03-25' }])
 
     expect(payload.dateSource).toEqual({
       type: 'jp.kaiz.shachia.dianet.GTFSDataSourceRepo',
@@ -57,7 +57,7 @@ describe('buildCreateRequestAsync', () => {
     }
 
     const file = new File([new Uint8Array([1, 2, 3])], 'raw.zip', { type: 'application/zip' })
-    const payload = await buildCreateRequestAsync(preset, file, [['休日', '2026-03-26']])
+    const payload = await buildCreateRequestAsync(preset, file, [{ name: '休日', type: 'date', date: '2026-03-26' }])
 
     expect(payload.dateSource).toEqual({
       type: 'jp.kaiz.shachia.dianet.GTFSRawSource',
@@ -110,7 +110,7 @@ describe('buildCreateRequestAsync', () => {
           },
         ],
       },
-      [['平日', '2026-03-25']],
+      [{ name: '平日', type: 'date', date: '2026-03-25' }],
     )
 
     expect(payload).toEqual({
@@ -148,7 +148,7 @@ describe('buildCreateRequestAsync', () => {
         poles: [],
         excludedStopPatterns: [],
       },
-      dayMapping: [['平日', '2026-03-25']],
+      dayMapping: [{ name: '平日', type: 'date', date: '2026-03-25' }],
     })
   })
 })
@@ -256,7 +256,7 @@ describe('buildProCreateFromDataRequest', () => {
           ],
         },
       },
-      [['平日', '2026-04-01']],
+      [{ name: '平日', type: 'date', date: '2026-04-01' }],
     )
 
     expect(payload.preset.routes).toEqual([

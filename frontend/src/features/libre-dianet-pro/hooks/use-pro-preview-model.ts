@@ -1,7 +1,7 @@
 import type { DropResult } from '@hello-pangea/dnd'
 import { useEffect, useMemo } from 'react'
 import { buildProCreateFromDataRequest, requestDiaNetXlsx } from '../../../api'
-import type { GtfsStop, ProPoleDetail, ProPreset, ProPresetContext, ProVersion } from '../../../types'
+import type { DayMapping, GtfsStop, ProPoleDetail, ProPreset, ProPresetContext, ProVersion } from '../../../types'
 import { todayIsoDate } from '../../../utils'
 import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import { proExcludedStopPatternsForSource, proRouteDisplayLabel, sameProPoleStop } from '../model/pro-pole-stop-helpers'
@@ -327,7 +327,7 @@ export function useProPreviewModel({
       left.localeCompare(right, 'ja'),
     )
 
-  const requestXlsx = async (dayMapping: [string, string][]) => {
+  const requestXlsx = async (dayMapping: DayMapping[]) => {
     setDownloading(true)
     try {
       const gtfsEntries = await Promise.all(

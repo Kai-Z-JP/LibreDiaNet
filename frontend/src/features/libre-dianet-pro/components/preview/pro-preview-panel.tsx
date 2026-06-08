@@ -38,7 +38,7 @@ export function ProPreviewPanel({
 
   const previewModes: { value: ProPreviewMode; label: string }[] = [
     { value: 'day-type', label: '日種' },
-    { value: 'specific-date', label: '特定日' },
+    { value: 'specific-date', label: '日付' },
   ]
   const weekdays: { value: GtfsServiceWeekday; label: string }[] = [
     { value: 'monday', label: '月曜' },
@@ -63,6 +63,13 @@ export function ProPreviewPanel({
                 props.controls.onSelectPreviewMode(value)
               }
             }}
+            sx={{
+              width: 112,
+              flexShrink: 0,
+              '& .MuiToggleButton-root': {
+                width: 56,
+              },
+            }}
           >
             {previewModes.map((mode) => (
               <ToggleButton key={mode.value} value={mode.value}>
@@ -78,7 +85,7 @@ export function ProPreviewPanel({
               value={props.controls.weekday}
               onChange={(event) => props.controls.onSelectWeekday(event.target.value as GtfsServiceWeekday)}
               slotProps={{ inputLabel: fieldLabelProps }}
-              sx={{ minWidth: 120, backgroundColor: 'white' }}
+              sx={{ minWidth: 180, backgroundColor: 'white' }}
             >
               {weekdays.map((weekday) => (
                 <MenuItem key={weekday.value} value={weekday.value}>

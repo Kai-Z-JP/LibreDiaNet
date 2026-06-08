@@ -1,7 +1,7 @@
 import { Box, TextField, Tooltip } from '@mui/material'
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import type { ConstructedRoute, GtfsHandle, GtfsStop, PoleDetail, RoutePresetV2 } from '../../../types'
+import type { ConstructedRoute, DayMapping, GtfsHandle, GtfsStop, PoleDetail, RoutePresetV2 } from '../../../types'
 import { convertToEnclosedNumber, displayRouteName, formatPreviewDepartureTime, todayIsoDate } from '../../../utils'
 import { libreDiaNetRepository } from '../lib/repository'
 import { OutputDialog } from './output-dialog'
@@ -16,7 +16,7 @@ type Props = {
   constructedRoutes: ConstructedRoute[]
   excludedStopPatterns: string[][]
   handle: GtfsHandle
-  onRequestXlsx: (dayMapping: [string, string][]) => Promise<void>
+  onRequestXlsx: (dayMapping: DayMapping[]) => Promise<void>
 }
 
 type PoleRowState = {

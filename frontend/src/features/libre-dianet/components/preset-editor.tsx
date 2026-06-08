@@ -1,7 +1,7 @@
 import { Alert, Box, Button, LinearProgress, Tab, Tabs, Typography } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { buildCreateFromDataRequest, requestDiaNetXlsx } from '../../../api'
-import type { PoleDetail, PresetContext, RouteDetail, RoutePresetV2 } from '../../../types'
+import type { DayMapping, PoleDetail, PresetContext, RouteDetail, RoutePresetV2 } from '../../../types'
 import { sameStringMatrix } from '../../../utils'
 import { useGtfsDerivedData } from '../hooks/use-gtfs-derived-data'
 import { libreDiaNetRepository } from '../lib/repository'
@@ -67,7 +67,7 @@ export function PresetEditor({ preset, context, onUpdate, onDelete, onUpdateRawD
       ? ''
       : 'raw GTFS の xlsx 出力には、このセッションでの ZIP 再アップロードが必要です'
 
-  const requestXlsx = async (dayMapping: [string, string][]) => {
+  const requestXlsx = async (dayMapping: DayMapping[]) => {
     if (!context.handle) {
       return
     }

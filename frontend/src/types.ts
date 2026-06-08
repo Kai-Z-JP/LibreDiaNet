@@ -224,9 +224,19 @@ export type ConstructedTrip = {
 
 export type StopMap = Record<string, GtfsStop>
 
-export type DayMapping = [string, string]
-
 export type GtfsServiceWeekday = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+
+export type DayMapping =
+  | {
+      name: string
+      type: 'date'
+      date: string
+    }
+  | {
+      name: string
+      type: 'weekday'
+      weekday: GtfsServiceWeekday
+    }
 
 export type OpenHandleResult = {
   handle: GtfsHandle
