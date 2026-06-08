@@ -10,6 +10,7 @@ import {
   normalizeProRouteDisplayOverride,
   proPatternPreviewTimes,
   proTripPreviewTimes,
+  sortProConstructedTrips,
 } from '../model/pro-preview-display-helpers'
 import { proRouteKey } from '../model/pro-route-keys'
 import type { ProConstructedRoute } from '../model/pro-types'
@@ -121,11 +122,7 @@ export function useProPreviewModel({
         }),
       )
       if (!cancelled) {
-        setConstructedTrips(
-          trips
-            .flat()
-            .toSorted((left, right) => (left.stopTime[0]?.departureTime ?? '').localeCompare(right.stopTime[0]?.departureTime ?? '')),
-        )
+        setConstructedTrips(sortProConstructedTrips(trips.flat(), preset.poles, stopMap))
       }
     }
     void load()
@@ -141,6 +138,7 @@ export function useProPreviewModel({
     previewMode,
     setConstructedTrips,
     sourceNameMap,
+    stopMap,
     version.revisionDate,
     weekday,
   ])

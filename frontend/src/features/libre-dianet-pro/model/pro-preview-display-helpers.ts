@@ -1,7 +1,8 @@
 import type { GtfsStop, ProDisplayFont, ProPoleDetail, ProPreset } from '../../../types'
 import type { ProConstructedRoute, ProConstructedTrip, ProRouteOption } from './pro-types'
 import { formatPreviewDepartureTime, stopPatternKey } from '../../../utils'
-import { proStopTimeMatchesPoleStop } from './pro-pole-stop-helpers'
+import { proPoleDisplayName, proStopTimeMatchesPoleStop } from './pro-pole-stop-helpers'
+import { parseTimetableCompareValue, sortTimetableColumns } from './timetable-column-sort'
 
 export const proDisplayFonts: { value: ProDisplayFont; label: string; css: string }[] = [
   { value: 'HEISEI_MINCHO_STD_W3', label: '平成明朝 Std W3', css: '"ヒラギノ明朝 ProN", serif' },
@@ -105,6 +106,37 @@ export function proTripTimeForPole(trip: ProConstructedTrip, pole: ProPoleDetail
 export function proTripPreviewTimes(trip: ProConstructedTrip, poles: ProPoleDetail[]): string[] {
   const times = poles.map((pole) => proTripTimeForPole(trip, pole))
   return fillMissingPreviewTimes(times)
+}
+
+export function sortProConstructedTrips(
+  trips: ProConstructedTrip[],
+  poles: ProPoleDetail[],
+  stopMap: Record<string, GtfsStop>,
+): ProConstructedTrip[] {
+  const poleSpans = poles.map((pole, index) => {
+    const name = proPoleDisplayName(pole, stopMap)
+    const previousPole = poles[index - 1]
+    if (previousPole && proPoleDisplayName(previousPole, stopMap) === name) {
+      return { colSpan: 1 }
+    }
+    let colSpan = 1
+    for (let nextIndex = index + 1; nextIndex < poles.length; nextIndex += 1) {
+      const nextPole = poles[nextIndex]
+      if (!nextPole || proPoleDisplayName(nextPole, stopMap) !== name) {
+        break
+      }
+      colSpan += 1
+    }
+    return { colSpan }
+  })
+
+  return sortTimetableColumns(
+    trips.map((trip) => ({
+      item: trip,
+      compareValues: poles.map((pole) => parseTimetableCompareValue(proTripTimeForPole(trip, pole))),
+    })),
+    poleSpans,
+  )
 }
 
 export function proPatternPreviewTimes(pattern: GtfsStop[], poles: ProPoleDetail[], sourceId: string): string[] {
