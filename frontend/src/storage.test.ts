@@ -127,7 +127,6 @@ describe('Pro preset store', () => {
                   {
                     routeKey: 'source-a::route-a::0',
                     routeNameOverride: 'A1',
-                    routeNameFont: 'NADIA_R',
                     destinationOverride: '終点',
                     useTripHeadsignAsDestination: false,
                     stopCellOverrides: [],
@@ -186,7 +185,6 @@ describe('Pro preset store', () => {
       {
         routeKey: 'source-a::route-a::0',
         routeNameOverride: 'A1',
-        routeNameFont: 'NADIA_R',
         destinationOverride: '終点',
         useTripHeadsignAsDestination: false,
         stopCellOverrides: [],

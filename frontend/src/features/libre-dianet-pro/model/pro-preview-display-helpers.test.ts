@@ -5,7 +5,6 @@ import { hasProRouteNameOverride, normalizeProRouteDisplayOverride } from './pro
 const baseOverride: ProRouteDisplayOverride = {
   routeKey: 'source::route::0::pattern',
   routeNameOverride: null,
-  routeNameFont: null,
   destinationOverride: null,
   useTripHeadsignAsDestination: false,
   stopCellOverrides: [],
@@ -17,12 +16,10 @@ describe('normalizeProRouteDisplayOverride', () => {
       normalizeProRouteDisplayOverride({
         ...baseOverride,
         routeNameOverride: '',
-        routeNameFont: 'NADIA_R',
       }),
     ).toEqual({
       ...baseOverride,
       routeNameOverride: '',
-      routeNameFont: null,
     })
   })
 

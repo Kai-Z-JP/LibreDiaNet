@@ -7,14 +7,12 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  MenuItem,
   TextField,
   Typography,
 } from '@mui/material'
 import type { Dispatch, SetStateAction } from 'react'
-import type { ProDisplayFont, ProPreset } from '../../../../types'
+import type { ProPreset } from '../../../../types'
 import type { ProStopCellEditor } from '../../hooks/use-pro-preview-model'
-import { proDisplayFonts } from '../../model/pro-preview-display-helpers'
 import { fieldLabelProps } from '../../model/pro-ui-constants'
 
 export function ProPreviewCellDialog({
@@ -92,23 +90,6 @@ export function ProPreviewCellDialog({
                   sx={{ backgroundColor: 'white' }}
                 />
               )}
-              <TextField
-                select
-                fullWidth
-                label="書体"
-                value={editor.font}
-                onChange={(event) =>
-                  updateEditor((current) => (current ? { ...current, font: event.target.value as ProDisplayFont } : current))
-                }
-                slotProps={{ inputLabel: fieldLabelProps }}
-                sx={{ backgroundColor: 'white' }}
-              >
-                {proDisplayFonts.map((font) => (
-                  <MenuItem key={font.value} value={font.value}>
-                    {font.label}
-                  </MenuItem>
-                ))}
-              </TextField>
             </Box>
           </DialogContent>
           <DialogActions>
@@ -139,7 +120,6 @@ export function ProPreviewCellDialog({
                             poleId: editor.poleId,
                             text,
                             rowSpan,
-                            font: editor.font,
                           },
                         ]
                       : []),

@@ -156,7 +156,6 @@ export function useProPreviewModel({
     const current = routeDisplayOverridesByKey[routeKey] ?? {
       routeKey,
       routeNameOverride: null,
-      routeNameFont: null,
       destinationOverride: null,
       useTripHeadsignAsDestination: false,
       stopCellOverrides: [],
@@ -187,7 +186,6 @@ export function useProPreviewModel({
       routeKey,
       routeLabel,
       routeName: override?.routeNameOverride ?? defaultRouteName,
-      routeNameFont: override?.routeNameFont ?? 'HEISEI_MINCHO_STD_W3',
       defaultRouteName,
       destination: override?.destinationOverride ?? defaultDestination,
       useTripHeadsignAsDestination: override?.useTripHeadsignAsDestination ?? false,
@@ -228,7 +226,6 @@ export function useProPreviewModel({
       text: cellOverride?.text ?? '',
       useRowSpan: (cellOverride?.rowSpan ?? 1) > 1,
       rowSpanText: String(cellOverride?.rowSpan ?? 2),
-      font: cellOverride?.font ?? 'HEISEI_MINCHO_STD_W3',
     })
   }
 

@@ -5,7 +5,6 @@ import {
   hasProDestinationOverride,
   hasProRouteNameOverride,
   isProPatternExcluded,
-  proDisplayFontCss,
   proDestinationDisplay,
   splitDestinationColumns,
 } from '../../model/pro-preview-display-helpers'
@@ -83,12 +82,7 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
                         : undefined,
                   }}
                 >
-                  <span
-                    className="pro-preview-route-name"
-                    style={{ fontFamily: override?.routeNameFont ? proDisplayFontCss(override.routeNameFont) : undefined }}
-                  >
-                    {routeName || ' '}
-                  </span>
+                  <span className="pro-preview-route-name">{routeName || ' '}</span>
                 </td>
               )
             }),
@@ -100,12 +94,7 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
             const routeName = override?.routeNameOverride ?? ''
             return (
               <td key={`actual-name-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}`} className="pro-preview-route-cell">
-                <span
-                  className="pro-preview-route-name"
-                  style={{ fontFamily: override?.routeNameFont ? proDisplayFontCss(override.routeNameFont) : undefined }}
-                >
-                  {routeName || ' '}
-                </span>
+                <span className="pro-preview-route-name">{routeName || ' '}</span>
               </td>
             )
           })}

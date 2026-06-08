@@ -6,7 +6,6 @@ import {
   disabledPreviewCellStyle,
   isProPatternExcluded,
   justifyTextClass,
-  proDisplayFontCss,
 } from '../../model/pro-preview-display-helpers'
 import { proPoleDefaultLocationName, proPoleDisplayLocationName, proPoleDisplayName } from '../../model/pro-pole-stop-helpers'
 import { proRouteKey, proTripRouteKey } from '../../model/pro-route-keys'
@@ -179,7 +178,6 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                                   : cellDisplay.overridden
                                     ? '#fff3cd'
                                     : undefined,
-                                fontFamily: cellDisplay.font ? proDisplayFontCss(cellDisplay.font) : undefined,
                               }}
                             >
                               <PreviewCellText text={displayText} rowSpan={cellDisplay.rowSpan} />
@@ -203,7 +201,6 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                             key={`actual-time-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}-${pole.id}`}
                             className={`pro-preview-time-cell${sectionLineClass}`}
                             rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
-                            style={{ fontFamily: cellDisplay.font ? proDisplayFontCss(cellDisplay.font) : undefined }}
                           >
                             <PreviewCellText text={displayText} rowSpan={cellDisplay.rowSpan} />
                           </td>

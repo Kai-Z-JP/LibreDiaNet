@@ -1,5 +1,5 @@
 import { useMemo, useReducer, type SetStateAction } from 'react'
-import type { GtfsServiceWeekday, ProDisplayFont, ProPreset } from '../../../types'
+import type { GtfsServiceWeekday, ProPreset } from '../../../types'
 import { todayIsoDate } from '../../../utils'
 import type { ProConstructedTrip } from './pro-types'
 
@@ -24,7 +24,6 @@ export type ProRouteEditor = {
   routeKey: string
   routeLabel: string
   routeName: string
-  routeNameFont: ProDisplayFont
   defaultRouteName: string
   destination: string
   useTripHeadsignAsDestination: boolean
@@ -39,7 +38,6 @@ export type ProStopCellEditor = {
   text: string
   useRowSpan: boolean
   rowSpanText: string
-  font: ProDisplayFont
 }
 
 export type ProPreviewPendingPoleMerge = {

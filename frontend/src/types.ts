@@ -264,12 +264,9 @@ export type ProRouteDetail = RouteDetail & {
   sourceId: string
 }
 
-export type ProDisplayFont = 'NADIA_B' | 'NADIA_R' | 'HEISEI_MINCHO_STD_W3'
-
 export type ProRouteDisplayOverride = {
   routeKey: string
   routeNameOverride: string | null
-  routeNameFont: ProDisplayFont | null
   destinationOverride: string | null
   useTripHeadsignAsDestination: boolean
   stopCellOverrides: ProStopCellDisplayOverride[]
@@ -279,7 +276,6 @@ export type ProStopCellDisplayOverride = {
   poleId: string
   text: string
   rowSpan: number
-  font: ProDisplayFont
 }
 
 export type ProPoleStop = {

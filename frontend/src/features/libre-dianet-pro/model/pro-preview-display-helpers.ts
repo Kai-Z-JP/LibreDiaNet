@@ -1,24 +1,14 @@
-import type { GtfsStop, ProDisplayFont, ProPoleDetail, ProPreset } from '../../../types'
+import type { GtfsStop, ProPoleDetail, ProPreset } from '../../../types'
 import type { ProConstructedRoute, ProConstructedTrip, ProRouteOption } from './pro-types'
 import { formatPreviewDepartureTime, stopPatternKey } from '../../../utils'
 import { proPoleDisplayName, proStopTimeMatchesPoleStop } from './pro-pole-stop-helpers'
 import { parseTimetableCompareValue, sortTimetableColumns } from './timetable-column-sort'
-
-export const proDisplayFonts: { value: ProDisplayFont; label: string; css: string }[] = [
-  { value: 'HEISEI_MINCHO_STD_W3', label: '平成明朝 Std W3', css: '"ヒラギノ明朝 ProN", serif' },
-  { value: 'NADIA_R', label: 'ナディア R', css: '"Nadia R", "ヒラギノ角ゴ ProN", sans-serif' },
-  { value: 'NADIA_B', label: 'ナディア B', css: '"Nadia B", "ヒラギノ角ゴ ProN", sans-serif' },
-]
 
 export const disabledPreviewCellStyle = {
   backgroundColor: '#f1f3f5',
   color: '#8a93a3',
   cursor: 'not-allowed',
 } as const
-
-export function proDisplayFontCss(font: ProDisplayFont): string {
-  return proDisplayFonts.find((item) => item.value === font)?.css ?? proDisplayFonts[0].css
-}
 
 export function normalizeProRouteDisplayOverride(
   override: ProPreset['routeDisplayOverrides'][number] | null,
@@ -44,7 +34,6 @@ export function normalizeProRouteDisplayOverride(
       : {
           ...override,
           routeNameOverride: null,
-          routeNameFont: null,
           destinationOverride: null,
           useTripHeadsignAsDestination: false,
           stopCellOverrides,
@@ -54,7 +43,6 @@ export function normalizeProRouteDisplayOverride(
   return {
     ...override,
     routeNameOverride,
-    routeNameFont: hasRouteNameOverride && routeNameOverride !== '' ? override.routeNameFont : null,
     destinationOverride,
     useTripHeadsignAsDestination,
     stopCellOverrides,
@@ -78,7 +66,6 @@ export function buildProPreviewCellDisplay(
     rowSpan: cellOverride?.rowSpan ?? 1,
     hidden,
     overridden: Boolean(cellOverride),
-    font: cellOverride?.font,
   }
 }
 

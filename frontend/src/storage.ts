@@ -2,7 +2,6 @@ import {
   EMPTY_OVERRIDE,
   type OverrideConfig,
   type PoleDetail,
-  type ProDisplayFont,
   type ProGtfsSource,
   type ProRouteDisplayOverride,
   type ProPoleDetail,
@@ -165,23 +164,11 @@ function parseProRouteDisplayOverrides(value: unknown): ProRouteDisplayOverride[
     return {
       routeKey: asString(record.routeKey),
       routeNameOverride: asNullableString(record.routeNameOverride),
-      routeNameFont: parseNullableProDisplayFont(record.routeNameFont),
       destinationOverride: asNullableString(record.destinationOverride),
       useTripHeadsignAsDestination: asBoolean(record.useTripHeadsignAsDestination, false),
       stopCellOverrides: parseProStopCellDisplayOverrides(record.stopCellOverrides),
     }
   })
-}
-
-function parseNullableProDisplayFont(value: unknown): ProDisplayFont | null {
-  return value === null ? null : parseProDisplayFont(value)
-}
-
-function parseProDisplayFont(value: unknown): ProDisplayFont {
-  if (value === 'NADIA_B' || value === 'NADIA_R' || value === 'HEISEI_MINCHO_STD_W3') {
-    return value
-  }
-  throw new Error('Invalid Pro display font')
 }
 
 function parseProStopCellDisplayOverrides(value: unknown): ProRouteDisplayOverride['stopCellOverrides'] {
@@ -191,7 +178,6 @@ function parseProStopCellDisplayOverrides(value: unknown): ProRouteDisplayOverri
       poleId: asString(record.poleId),
       text: asString(record.text),
       rowSpan: asNumber(record.rowSpan),
-      font: parseProDisplayFont(record.font),
     }
   })
 }

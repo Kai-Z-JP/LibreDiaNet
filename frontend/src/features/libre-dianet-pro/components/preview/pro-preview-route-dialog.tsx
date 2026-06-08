@@ -16,7 +16,6 @@ import UndoIcon from '@mui/icons-material/Undo'
 import type { Dispatch, SetStateAction } from 'react'
 import type { ProPreset } from '../../../../types'
 import type { ProRouteEditor } from '../../hooks/use-pro-preview-model'
-import { proDisplayFontCss } from '../../model/pro-preview-display-helpers'
 import { fieldLabelProps } from '../../model/pro-ui-constants'
 
 export function ProPreviewRouteDialog({
@@ -47,7 +46,6 @@ export function ProPreviewRouteDialog({
                   onChange={(event) => updateEditor((current) => (current ? { ...current, routeName: event.target.value } : current))}
                   slotProps={{ inputLabel: fieldLabelProps }}
                   sx={{ backgroundColor: 'white' }}
-                  inputProps={{ style: { fontFamily: proDisplayFontCss(editor.routeNameFont) } }}
                 />
                 <Tooltip title="系統名欄を元に戻す">
                   <span>
@@ -140,7 +138,6 @@ export function ProPreviewRouteDialog({
                 updateRouteDisplayOverride(editor.routeKey, (current) => ({
                   ...current,
                   routeNameOverride,
-                  routeNameFont: routeNameOverride ? editor.routeNameFont : null,
                   destinationOverride:
                     editor.useTripHeadsignAsDestination || !destination || destination === defaultDestination ? null : destination,
                   useTripHeadsignAsDestination: editor.useTripHeadsignAsDestination,
