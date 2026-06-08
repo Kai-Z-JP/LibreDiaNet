@@ -18,6 +18,8 @@ export type ProPreviewTableProps = {
     routeDisplayOverridesByKey: Record<string, RouteDisplayOverride | undefined>
     previewTimesByPatternKey: Record<string, string[]>
     previewTimesByTripKey: Record<string, string[]>
+    showStaticPatterns: boolean
+    showActualTimetable: boolean
     hoveredTargetId: string | null
   }
   actions: {

@@ -50,6 +50,8 @@ type ProPreviewState = {
   previewMode: ProPreviewMode
   weekday: GtfsServiceWeekday
   date: string
+  showStaticPatterns: boolean
+  showActualTimetable: boolean
   downloading: boolean
   constructedTrips: ProConstructedTrip[]
   poleNameEditor: ProPoleNameEditor | null
@@ -63,6 +65,8 @@ type ProPreviewAction =
   | { type: 'setPreviewMode'; value: ProPreviewMode }
   | { type: 'setWeekday'; value: GtfsServiceWeekday }
   | { type: 'setDate'; value: string }
+  | { type: 'setShowStaticPatterns'; value: boolean }
+  | { type: 'setShowActualTimetable'; value: boolean }
   | { type: 'setDownloading'; value: boolean }
   | { type: 'setConstructedTrips'; value: ProConstructedTrip[] }
   | { type: 'setPoleNameEditor'; value: SetStateAction<ProPoleNameEditor | null> }
@@ -76,6 +80,8 @@ export function useProPreviewState(revisionDate: string) {
     previewMode: 'day-type',
     weekday: 'monday',
     date: revisionDate || todayIsoDate(),
+    showStaticPatterns: true,
+    showActualTimetable: false,
     downloading: false,
     constructedTrips: [],
     poleNameEditor: null,
@@ -90,6 +96,8 @@ export function useProPreviewState(revisionDate: string) {
       setPreviewMode: (value: ProPreviewMode) => dispatch({ type: 'setPreviewMode', value }),
       setWeekday: (value: GtfsServiceWeekday) => dispatch({ type: 'setWeekday', value }),
       setDate: (value: string) => dispatch({ type: 'setDate', value }),
+      setShowStaticPatterns: (value: boolean) => dispatch({ type: 'setShowStaticPatterns', value }),
+      setShowActualTimetable: (value: boolean) => dispatch({ type: 'setShowActualTimetable', value }),
       setDownloading: (value: boolean) => dispatch({ type: 'setDownloading', value }),
       setConstructedTrips: (value: ProConstructedTrip[]) => dispatch({ type: 'setConstructedTrips', value }),
       setPoleNameEditor: (value: SetStateAction<ProPoleNameEditor | null>) => dispatch({ type: 'setPoleNameEditor', value }),
@@ -116,6 +124,10 @@ function proPreviewReducer(state: ProPreviewState, action: ProPreviewAction): Pr
       return { ...state, weekday: action.value }
     case 'setDate':
       return { ...state, date: action.value }
+    case 'setShowStaticPatterns':
+      return { ...state, showStaticPatterns: action.value }
+    case 'setShowActualTimetable':
+      return { ...state, showActualTimetable: action.value }
     case 'setDownloading':
       return { ...state, downloading: action.value }
     case 'setConstructedTrips':

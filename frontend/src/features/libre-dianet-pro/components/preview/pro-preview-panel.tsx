@@ -1,4 +1,4 @@
-import { Box, MenuItem, TextField, ToggleButton, ToggleButtonGroup } from '@mui/material'
+import { Box, FormControlLabel, MenuItem, Switch, TextField, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import type { GtfsServiceWeekday, GtfsStop, ProPreset, ProPresetContext, ProVersion } from '../../../../types'
 import type { ProPreviewMode } from '../../model/use-pro-preview-state'
 import { useProPreviewModel } from '../../hooks/use-pro-preview-model'
@@ -97,6 +97,26 @@ export function ProPreviewPanel({
               sx={{ minWidth: 180, backgroundColor: 'white' }}
             />
           )}
+          <FormControlLabel
+            control={
+              <Switch
+                size="small"
+                checked={props.controls.showStaticPatterns}
+                onChange={(event) => props.controls.onToggleStaticPatterns(event.target.checked)}
+              />
+            }
+            label="静的パターン"
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                size="small"
+                checked={props.controls.showActualTimetable}
+                onChange={(event) => props.controls.onToggleActualTimetable(event.target.checked)}
+              />
+            }
+            label="実時刻表"
+          />
           <Box sx={{ marginLeft: 'auto' }}>
             <OutputDialog disabled={props.controls.exportDisabled || props.controls.downloading} onSubmit={props.controls.onRequestXlsx} />
           </Box>

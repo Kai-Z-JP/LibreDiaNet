@@ -25,6 +25,8 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
     routeDisplayOverridesByKey,
     previewTimesByPatternKey,
     previewTimesByTripKey,
+    showStaticPatterns,
+    showActualTimetable,
     hoveredTargetId,
   } = data
   const { onHoverTarget, onOpenPoleNameEditor, onOpenCellEditor } = actions
@@ -145,67 +147,69 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                     >
                       {joko}
                     </td>
-                    {previewConstructedRoutes.flatMap((route) =>
-                      route.stopPatterns.map((pattern, index) => {
-                        const routeKey = proRouteKey(route, pattern)
-                        const excluded = isProPatternExcluded(preset, route, pattern)
+                    {showStaticPatterns &&
+                      previewConstructedRoutes.flatMap((route) =>
+                        route.stopPatterns.map((pattern, index) => {
+                          const routeKey = proRouteKey(route, pattern)
+                          const excluded = isProPatternExcluded(preset, route, pattern)
+                          const cellDisplay = buildProPreviewCellDisplay(routeDisplayOverridesByKey[routeKey], preset.poles, poleIndex)
+
+                          if (cellDisplay.hidden) return null
+
+                          const targetId = `cell-${routeKey}-${pole.id}`
+                          const text = cellDisplay.textOverride ?? previewTimesByPatternKey[routeKey]?.[poleIndex] ?? ''
+                          const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '——' : text
+
+                          return (
+                            <td
+                              key={`${route.sourceId}-${route.route.routeId}-${index}-${pole.id}`}
+                              className={`pro-preview-time-cell${
+                                excluded
+                                  ? sectionLineClass
+                                  : `${sectionLineClass} pro-preview-editable${previewHoverClass(targetId, hoveredTargetId)}`
+                              }`}
+                              rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
+                              title={excluded ? 'この停車パターンは使用しない' : 'クリックしてセル上書きを編集'}
+                              onMouseEnter={() => !excluded && onHoverTarget(targetId)}
+                              onMouseLeave={() => onHoverTarget((current) => (current === targetId ? null : current))}
+                              onClick={() => !excluded && onOpenCellEditor(route, pattern, pole, name)}
+                              style={{
+                                ...(excluded ? disabledPreviewCellStyle : {}),
+                                backgroundColor: excluded
+                                  ? disabledPreviewCellStyle.backgroundColor
+                                  : cellDisplay.overridden
+                                    ? '#fff3cd'
+                                    : undefined,
+                                fontFamily: cellDisplay.font ? proDisplayFontCss(cellDisplay.font) : undefined,
+                              }}
+                            >
+                              <PreviewCellText text={displayText} rowSpan={cellDisplay.rowSpan} />
+                            </td>
+                          )
+                        }),
+                      )}
+                    {showActualTimetable &&
+                      constructedTrips.map((trip, index) => {
+                        const routeKey = proTripRouteKey(trip)
                         const cellDisplay = buildProPreviewCellDisplay(routeDisplayOverridesByKey[routeKey], preset.poles, poleIndex)
 
                         if (cellDisplay.hidden) return null
 
-                        const targetId = `cell-${routeKey}-${pole.id}`
-                        const text = cellDisplay.textOverride ?? previewTimesByPatternKey[routeKey]?.[poleIndex] ?? ''
+                        const tripKey = `${trip.sourceId}::${trip.stopTime[0]?.tripId ?? index}`
+                        const text = cellDisplay.textOverride ?? previewTimesByTripKey[tripKey]?.[poleIndex] ?? ''
                         const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '——' : text
 
                         return (
                           <td
-                            key={`${route.sourceId}-${route.route.routeId}-${index}-${pole.id}`}
-                            className={`pro-preview-time-cell${
-                              excluded
-                                ? sectionLineClass
-                                : `${sectionLineClass} pro-preview-editable${previewHoverClass(targetId, hoveredTargetId)}`
-                            }`}
+                            key={`actual-time-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}-${pole.id}`}
+                            className={`pro-preview-time-cell${sectionLineClass}`}
                             rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
-                            title={excluded ? 'この停車パターンは使用しない' : 'クリックしてセル上書きを編集'}
-                            onMouseEnter={() => !excluded && onHoverTarget(targetId)}
-                            onMouseLeave={() => onHoverTarget((current) => (current === targetId ? null : current))}
-                            onClick={() => !excluded && onOpenCellEditor(route, pattern, pole, name)}
-                            style={{
-                              ...(excluded ? disabledPreviewCellStyle : {}),
-                              backgroundColor: excluded
-                                ? disabledPreviewCellStyle.backgroundColor
-                                : cellDisplay.overridden
-                                  ? '#fff3cd'
-                                  : undefined,
-                              fontFamily: cellDisplay.font ? proDisplayFontCss(cellDisplay.font) : undefined,
-                            }}
+                            style={{ fontFamily: cellDisplay.font ? proDisplayFontCss(cellDisplay.font) : undefined }}
                           >
                             <PreviewCellText text={displayText} rowSpan={cellDisplay.rowSpan} />
                           </td>
                         )
-                      }),
-                    )}
-                    {constructedTrips.map((trip, index) => {
-                      const routeKey = proTripRouteKey(trip)
-                      const cellDisplay = buildProPreviewCellDisplay(routeDisplayOverridesByKey[routeKey], preset.poles, poleIndex)
-
-                      if (cellDisplay.hidden) return null
-
-                      const tripKey = `${trip.sourceId}::${trip.stopTime[0]?.tripId ?? index}`
-                      const text = cellDisplay.textOverride ?? previewTimesByTripKey[tripKey]?.[poleIndex] ?? ''
-                      const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '——' : text
-
-                      return (
-                        <td
-                          key={`actual-time-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}-${pole.id}`}
-                          className={`pro-preview-time-cell${sectionLineClass}`}
-                          rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
-                          style={{ fontFamily: cellDisplay.font ? proDisplayFontCss(cellDisplay.font) : undefined }}
-                        >
-                          <PreviewCellText text={displayText} rowSpan={cellDisplay.rowSpan} />
-                        </td>
-                      )
-                    })}
+                      })}
                   </tr>
                 )}
               </Draggable>
