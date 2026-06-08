@@ -90,12 +90,12 @@ export function proStopDisplayLabel(
   routes: ProConstructedRoute[],
   includeSourceName: boolean,
 ): string {
-  const stopName = stopMap[`${stop.sourceId}::${stop.id}`]?.name ?? stop.id
+  const stopName = stopMap[`${stop.sourceId}::${stop.id}`]?.name ?? `存在しない停留所`
   const routePattern = proRoutePatternForPoleStop(stop, routes)
   const routeLabel = routePattern ? proRouteDisplayLabel(routePattern.route, includeSourceName) : ''
   const patternLabel = routePattern ? `P${routePattern.patternIndex + 1}` : ''
   const indexLabel = `#${stop.stopIndex + 1}`
-  return [patternLabel, routeLabel ? `${routeLabel}${indexLabel}` : indexLabel, stopName].filter(Boolean).join(' ')
+  return [patternLabel, routeLabel ? `${routeLabel}${indexLabel}` : indexLabel, stopName, `(ID: ${stop.id})`].filter(Boolean).join(' ')
 }
 
 export function proRoutePatternForPoleStop(
