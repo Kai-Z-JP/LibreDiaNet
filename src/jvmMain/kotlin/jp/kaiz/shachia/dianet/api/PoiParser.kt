@@ -652,7 +652,7 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
 
                             timeListList.forEach { sujiTime ->
                                 cell {
-                                    val text = if (override.horizontalLine && sujiTime[index] == "…") "——" else sujiTime[index]
+                                    val text = if (override.horizontalLine && sujiTime[index] == "…") "———" else sujiTime[index]
                                     val time = text.matches(timeReg)
 
                                     cellStyle =

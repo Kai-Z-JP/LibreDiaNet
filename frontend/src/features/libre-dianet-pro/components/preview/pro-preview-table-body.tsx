@@ -163,7 +163,7 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                           if (cellDisplay.hidden) return null
 
                           const text = cellDisplay.textOverride ?? previewTimesByPatternKey[routeKey]?.[poleIndex] ?? ''
-                          const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '——' : text
+                          const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '———' : text
 
                           return (
                             <td
@@ -196,7 +196,7 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
 
                         const tripKey = `${trip.sourceId}::${trip.stopTime[0]?.tripId ?? index}`
                         const text = cellDisplay.textOverride ?? previewTimesByTripKey[tripKey]?.[poleIndex] ?? ''
-                        const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '——' : text
+                        const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '———' : text
 
                         return (
                           <td

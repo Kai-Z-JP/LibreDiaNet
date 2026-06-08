@@ -15,8 +15,8 @@ LibreDiaNet は、交通系サークル「<a href="https://4-o.zone" target="_bl
 本ツールは AGPL ライセンスのもとで公開されており、ソースコードは以下の URL からご確認いただけます。 
 <a href="https://github.com/Kai-Z-JP/LibreDiaNet" target="_blank" rel="noopener noreferrer">https://github.com/Kai-Z-JP/LibreDiaNet</a>
 
-入力されたデータは、原則としてブラウザ上で完結するように処理されます。ただし、Excel ファイルへの出力時のみ、処理に必要な内容をサーバーへ送信します。
-なお、入力・送信された情報およびアクセス情報の保存・解析は行っていません。
+入力された情報は、Excel ファイルへの出力を含めブラウザ上に閉じて処理されます。
+また、入力された情報およびアクセス情報の保存・解析は行っていません。
 
 お問い合わせは、proj-dianet 'ｱｯﾄ' 4-o.zone までお願いいたします。
 `

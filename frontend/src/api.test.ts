@@ -1,76 +1,9 @@
-import { buildCreateFromDataRequest, buildCreateRequestAsync, buildProCreateFromDataRequest } from './api'
+import { buildCreateFromDataRequest, buildProCreateFromDataRequest } from './api'
 import type { ProPreset, ProVersion, RoutePresetV2 } from './types'
 import { stopPatternKey } from './utils'
 
-describe('buildCreateRequestAsync', () => {
-  it('creates backend payload for repo preset', async () => {
-    const preset: RoutePresetV2 = {
-      id: 'preset-1',
-      name: 'Repo',
-      index: 9,
-      info: {
-        kind: 'repo',
-        id: 'feed_org',
-        orgId: 'org',
-        feedId: 'feed',
-        fileUid: 'file-uid-1',
-        fileLabel: '春改正 / uid:file-ui',
-        name: 'label',
-      },
-      routes: [{ id: 'route-1', direction: 0 }],
-      poles: [],
-      excludedStopPatterns: [],
-    }
-
-    const payload = await buildCreateRequestAsync(preset, null, [{ name: '平日', type: 'date', date: '2026-03-25' }])
-
-    expect(payload.dateSource).toEqual({
-      type: 'jp.kaiz.shachia.dianet.GTFSDataSourceRepo',
-      orgId: 'org',
-      feedId: 'feed',
-      fileUid: 'file-uid-1',
-    })
-    expect(payload.preset.info).toEqual({
-      type: 'jp.kaiz.shachia.dianet.DataRepoGtfsInformation',
-      orgId: 'org',
-      feedId: 'feed',
-      fileUid: 'file-uid-1',
-      name: 'label',
-    })
-  })
-
-  it('creates backend payload for raw preset', async () => {
-    const preset: RoutePresetV2 = {
-      id: 'preset-2',
-      name: 'Raw',
-      index: 3,
-      info: {
-        kind: 'raw',
-        id: 'raw-uuid',
-        uuid: 'raw-uuid',
-        name: 'raw.zip',
-        cacheState: 'ready',
-      },
-      routes: [],
-      poles: [],
-      excludedStopPatterns: [],
-    }
-
-    const file = new File([new Uint8Array([1, 2, 3])], 'raw.zip', { type: 'application/zip' })
-    const payload = await buildCreateRequestAsync(preset, file, [{ name: '休日', type: 'date', date: '2026-03-26' }])
-
-    expect(payload.dateSource).toEqual({
-      type: 'jp.kaiz.shachia.dianet.GTFSRawSource',
-      zipByteArray: [1, 2, 3],
-    })
-    expect(payload.preset.info).toEqual({
-      type: 'jp.kaiz.shachia.dianet.RawGtfsInformation',
-      name: 'raw.zip',
-      uuid: 'raw-uuid',
-    })
-  })
-
-  it('creates backend payload for create_from_data export', async () => {
+describe('buildCreateFromDataRequest', () => {
+  it('creates browser xlsx export payload', async () => {
     const preset: RoutePresetV2 = {
       id: 'preset-3',
       name: 'DataExport',

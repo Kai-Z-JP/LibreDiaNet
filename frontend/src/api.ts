@@ -11,7 +11,7 @@ import type {
   RepoInfoV2,
   RoutePresetV2,
 } from './types'
-import { downloadBlob, extractFileName, stopPatternKey } from './utils'
+import { stopPatternKey } from './utils'
 
 type BackendRepoInfo = {
   type: 'jp.kaiz.shachia.dianet.DataRepoGtfsInformation'
@@ -27,18 +27,6 @@ type BackendRawInfo = {
   uuid: string
 }
 
-type BackendRepoSource = {
-  type: 'jp.kaiz.shachia.dianet.GTFSDataSourceRepo'
-  orgId: string
-  feedId: string
-  fileUid: string | null
-}
-
-type BackendRawSource = {
-  type: 'jp.kaiz.shachia.dianet.GTFSRawSource'
-  zipByteArray: number[]
-}
-
 type BackendPreset = {
   id: string
   name: string
@@ -50,12 +38,6 @@ type BackendPreset = {
     override: RoutePresetV2['poles'][number]['override']
   }[]
   excludedStopPatterns: string[][]
-}
-
-type BackendCreateRequest = {
-  dateSource: BackendRepoSource | BackendRawSource
-  preset: BackendPreset
-  dayMapping: DayMapping[]
 }
 
 export type DiaNetXlsxCreateFromDataRequestBody = {
@@ -93,18 +75,8 @@ export async function fetchGtfsFeedFiles(orgId: string, feedId: string): Promise
 }
 
 export async function requestDiaNetXlsx(request: DiaNetXlsxCreateFromDataRequestBody): Promise<void> {
-  const response = await fetch('/api/poi_parser/create_from_data', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  })
-  if (!response.ok) {
-    throw new Error(`xlsx export failed: ${response.status}`)
-  }
-  const blob = await response.blob()
-  downloadBlob(blob, extractFileName(response.headers.get('content-disposition')))
+  const { requestDiaNetXlsxInBrowser } = await import('./xlsxExport')
+  await requestDiaNetXlsxInBrowser(request)
 }
 
 export async function buildCreateFromDataRequest(
@@ -147,25 +119,6 @@ export function buildProCreateFromDataRequest(
       })),
       excludedStopPatterns: preset.excludedStopPatterns,
     },
-    dayMapping,
-  }
-}
-
-export async function buildCreateRequestAsync(
-  preset: RoutePresetV2,
-  rawFile: File | null,
-  dayMapping: DayMapping[],
-): Promise<BackendCreateRequest> {
-  const rawBytes = rawFile ? Array.from(new Uint8Array(await rawFile.arrayBuffer())) : null
-  return {
-    dateSource:
-      preset.info.kind === 'repo'
-        ? buildBackendRepoSource(preset.info)
-        : {
-            type: 'jp.kaiz.shachia.dianet.GTFSRawSource',
-            zipByteArray: requireRawBytes(rawBytes),
-          },
-    preset: buildBackendPreset(preset),
     dayMapping,
   }
 }
@@ -327,15 +280,6 @@ function buildBackendRepoInfo(info: RepoInfoV2): BackendRepoInfo {
   }
 }
 
-function buildBackendRepoSource(info: RepoInfoV2): BackendRepoSource {
-  return {
-    type: 'jp.kaiz.shachia.dianet.GTFSDataSourceRepo',
-    orgId: info.orgId,
-    feedId: info.feedId,
-    fileUid: info.fileUid,
-  }
-}
-
 export function gtfsFileLabel(
   _rid: string | null | undefined,
   fromDate: string | null | undefined,
@@ -357,11 +301,4 @@ export function gtfsFileSourceLabel(
   const dateRange = fromDate || toDate ? `${fromDate ?? '?'} - ${toDate ?? '?'}` : ''
   const titleText = title?.trim()
   return dateRange || titleText || 'GTFSファイル'
-}
-
-function requireRawBytes(rawBytes: number[] | null): number[] {
-  if (!rawBytes) {
-    throw new Error('Raw GTFS export requires a ZIP file in the current session')
-  }
-  return rawBytes
 }
