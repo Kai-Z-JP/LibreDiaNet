@@ -29,7 +29,7 @@ export function PolePatternList({ data, actions }: PolePatternListProps) {
 
   return (
     <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
-      {Object.entries(patternMap).map(([key, { route, pattern, patternIndex }]) => {
+      {Object.entries(patternMap).map(([key, { route, pattern, presetPatternIndex }]) => {
         const excluded = preset.excludedStopPatterns.some(
           (patternEntry) => patternEntry[0] === proExcludedPatternKey(route.sourceId, pattern),
         )
@@ -51,7 +51,8 @@ export function PolePatternList({ data, actions }: PolePatternListProps) {
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ display: 'grid', gap: 1, width: '100%' }}>
                 <Typography>
-                  P{patternIndex + 1} {proRouteDisplayLabel(route, includeSourceNameInRoute)} ({pattern[0]?.name} - {pattern.at(-1)?.name})
+                  P{presetPatternIndex + 1}: {proRouteDisplayLabel(route, includeSourceNameInRoute)} ({pattern[0]?.name} -{' '}
+                  {pattern.at(-1)?.name})
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                   <FormControlLabel

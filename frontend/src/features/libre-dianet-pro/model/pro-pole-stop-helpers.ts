@@ -2,6 +2,13 @@ import type { GtfsStop, GtfsStopTime, ProPoleDetail, ProPoleStop } from '../../.
 import { displayRouteName, stopPatternKey } from '../../../utils'
 import type { ProConstructedRoute } from './pro-types'
 
+export type ProRoutePatternEntry = {
+  route: ProConstructedRoute
+  pattern: GtfsStop[]
+  patternIndex: number
+  presetPatternIndex: number
+}
+
 export function hasVisibleProOverride(pole: ProPoleDetail): boolean {
   return (
     pole.override.majorStop ||
@@ -84,6 +91,21 @@ export function proRouteDisplayLabel(route: ProConstructedRoute, includeSourceNa
   return includeSourceName ? `${route.sourceName} / ${routeName}` : routeName
 }
 
+export function proRoutePatternEntries(routes: ProConstructedRoute[]): ProRoutePatternEntry[] {
+  const entries: ProRoutePatternEntry[] = []
+  for (const route of routes) {
+    for (const [patternIndex, pattern] of route.stopPatterns.entries()) {
+      entries.push({
+        route,
+        pattern,
+        patternIndex,
+        presetPatternIndex: entries.length,
+      })
+    }
+  }
+  return entries
+}
+
 export function proStopDisplayLabel(
   stop: ProPoleStop,
   stopMap: Record<string, GtfsStop>,
@@ -93,24 +115,18 @@ export function proStopDisplayLabel(
   const stopName = stopMap[`${stop.sourceId}::${stop.id}`]?.name ?? `存在しない停留所`
   const routePattern = proRoutePatternForPoleStop(stop, routes)
   const routeLabel = routePattern ? proRouteDisplayLabel(routePattern.route, includeSourceName) : ''
-  const patternLabel = routePattern ? `P${routePattern.patternIndex + 1}` : ''
+  const patternLabel = routePattern ? `P${routePattern.presetPatternIndex + 1}: ` : ''
   const indexLabel = `#${stop.stopIndex + 1}`
   return [patternLabel, routeLabel ? `${routeLabel}${indexLabel}` : indexLabel, stopName, `(ID: ${stop.id})`].filter(Boolean).join(' ')
 }
 
-export function proRoutePatternForPoleStop(
-  stop: ProPoleStop,
-  routes: ProConstructedRoute[],
-): { route: ProConstructedRoute; patternIndex: number } | null {
-  for (const route of routes) {
-    if (route.sourceId !== stop.sourceId) {
+export function proRoutePatternForPoleStop(stop: ProPoleStop, routes: ProConstructedRoute[]): ProRoutePatternEntry | null {
+  for (const entry of proRoutePatternEntries(routes)) {
+    if (entry.route.sourceId !== stop.sourceId) {
       continue
     }
-    const patternIndex = route.stopPatterns.findIndex(
-      (pattern) => stopPatternKey(pattern) === stop.stopPatternKey && pattern[stop.stopIndex]?.stopId === stop.id,
-    )
-    if (patternIndex >= 0) {
-      return { route, patternIndex }
+    if (stopPatternKey(entry.pattern) === stop.stopPatternKey && entry.pattern[stop.stopIndex]?.stopId === stop.id) {
+      return entry
     }
   }
   return null

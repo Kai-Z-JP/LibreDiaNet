@@ -6,6 +6,7 @@ import {
   proExcludedPatternKey,
   proPoleStopFromPatternStop,
   proPoleStopKey,
+  proRoutePatternEntries,
   proStopIdKey,
   sameProPoleStop,
 } from '../model/pro-pole-stop-helpers'
@@ -30,6 +31,7 @@ export type PolePatternMap = Record<
     route: ProConstructedRoute
     pattern: GtfsStop[]
     patternIndex: number
+    presetPatternIndex: number
   }
 >
 
@@ -82,12 +84,10 @@ export function usePoleMergeModel({
   const patternMap: PolePatternMap = useMemo(
     () =>
       Object.fromEntries(
-        constructedRoutes.flatMap((route) =>
-          route.stopPatterns.map((pattern, patternIndex) => [
-            `${route.sourceId}|${route.route.routeId}|${route.direction ?? 'null'}|${patternIndex}`,
-            { route, pattern, patternIndex },
-          ]),
-        ),
+        proRoutePatternEntries(constructedRoutes).map(({ route, pattern, patternIndex, presetPatternIndex }) => [
+          `${route.sourceId}|${route.route.routeId}|${route.direction ?? 'null'}|${patternIndex}`,
+          { route, pattern, patternIndex, presetPatternIndex },
+        ]),
       ),
     [constructedRoutes],
   )

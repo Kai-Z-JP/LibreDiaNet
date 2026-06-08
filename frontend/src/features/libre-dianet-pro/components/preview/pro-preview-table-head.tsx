@@ -9,6 +9,7 @@ import {
   proDestinationDisplay,
   splitDestinationColumns,
 } from '../../model/pro-preview-display-helpers'
+import { proRoutePatternEntries } from '../../model/pro-pole-stop-helpers'
 import { proRouteKey, proTripRouteKey } from '../../model/pro-route-keys'
 import { DestinationPreview } from './pro-preview-parts'
 import type { ProPreviewTableProps } from './pro-preview-table'
@@ -29,28 +30,25 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
     <thead>
       <tr>
         <td colSpan={4} className="pro-preview-stub">
-          {'路\u3000\u3000線'}
+          {'パターン'}
         </td>
         {showStaticPatterns &&
-          previewConstructedRoutes.flatMap((route) =>
-            route.stopPatterns.map((pattern, index) => {
-              const excluded = isProPatternExcluded(preset, route, pattern)
-              return (
-                <td
-                  key={`route-${route.sourceId}-${route.route.routeId}-${index}`}
-                  className="pro-preview-route-cell"
-                  style={excluded ? disabledPreviewCellStyle : undefined}
-                >
-                  <Box sx={{ display: 'grid', gap: 0.25 }}>
-                    <Typography component="span" variant="caption" sx={{ lineHeight: 1, color: 'text.secondary' }}>
-                      P{index + 1}
-                    </Typography>
-                    <span>{displayRouteName(route.route.shortName, route.route.longName) || ' '}</span>
-                  </Box>
-                </td>
-              )
-            }),
-          )}
+          proRoutePatternEntries(previewConstructedRoutes).map(({ route, pattern, patternIndex, presetPatternIndex }) => {
+            const excluded = isProPatternExcluded(preset, route, pattern)
+            return (
+              <td
+                key={`route-${route.sourceId}-${route.route.routeId}-${route.direction ?? 'null'}-${patternIndex}`}
+                className="pro-preview-route-cell"
+                style={excluded ? disabledPreviewCellStyle : undefined}
+              >
+                <Box sx={{ display: 'grid', gap: 0.25 }}>
+                  <Typography component="span" variant="caption" sx={{ lineHeight: 1, color: 'text.secondary' }}>
+                    P{presetPatternIndex + 1}
+                  </Typography>
+                </Box>
+              </td>
+            )
+          })}
         {showActualTimetable &&
           constructedTrips.map((trip, index) => (
             <td key={`actual-route-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}`} className="pro-preview-route-cell">
@@ -114,29 +112,6 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
       </tr>
       <tr>
         <td colSpan={4} className="pro-preview-stub">
-          {'担\u3000\u3000当'}
-        </td>
-        {showStaticPatterns &&
-          previewConstructedRoutes.flatMap((route) =>
-            route.stopPatterns.map((pattern, index) => (
-              <td
-                key={`operator-${route.sourceId}-${route.route.routeId}-${index}`}
-                className="pro-preview-route-cell"
-                style={isProPatternExcluded(preset, route, pattern) ? disabledPreviewCellStyle : undefined}
-              >
-                {' '}
-              </td>
-            )),
-          )}
-        {showActualTimetable &&
-          constructedTrips.map((trip, index) => (
-            <td key={`actual-operator-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}`} className="pro-preview-route-cell">
-              {' '}
-            </td>
-          ))}
-      </tr>
-      <tr>
-        <td colSpan={4} className="pro-preview-stub">
           {'行\u3000\u3000先'}
         </td>
         {showStaticPatterns &&
@@ -146,7 +121,9 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
               const excluded = isProPatternExcluded(preset, route, pattern)
               const override = routeDisplayOverridesByKey[routeKey]
               const defaultDestination = pattern.at(-1)?.name ?? ''
-              const destinations = splitDestinationColumns(override?.useTripHeadsignAsDestination ? '※' : proDestinationDisplay(override, defaultDestination))
+              const destinations = splitDestinationColumns(
+                override?.useTripHeadsignAsDestination ? '※' : proDestinationDisplay(override, defaultDestination),
+              )
               return (
                 <td
                   key={`dest-${route.sourceId}-${route.route.routeId}-${index}`}
