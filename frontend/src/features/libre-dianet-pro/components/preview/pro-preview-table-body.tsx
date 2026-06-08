@@ -28,8 +28,9 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
     showStaticPatterns,
     showActualTimetable,
     hoveredTargetId,
+    selectedPoleIds,
   } = data
-  const { onHoverTarget, onOpenPoleNameEditor, onOpenCellEditor } = actions
+  const { onHoverTarget, onSelectPole, onOpenPoleNameEditor, onOpenCellEditor } = actions
 
   return (
     <Droppable
@@ -39,6 +40,8 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
         const pole = preset.poles[rubric.source.index]
         const name = pole ? proPoleDisplayName(pole, stopMap) : ''
         const locationName = pole ? proPoleDisplayLocationName(pole, stopMap) : ''
+        const selected = pole ? selectedPoleIds.includes(pole.id) : false
+        const selectedCount = selected ? selectedPoleIds.length : 0
 
         return (
           <table className="pro-preview-table pro-preview-drag-table">
@@ -47,10 +50,17 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                 ref={provided.innerRef}
                 {...provided.draggableProps}
                 {...provided.dragHandleProps}
-                className={`pro-preview-body-row${snapshot.isDragging ? ' pro-preview-row-dragging' : ''}`}
+                className={`pro-preview-body-row${selected ? ' pro-preview-row-selected' : ''}${
+                  snapshot.isDragging ? ' pro-preview-row-dragging' : ''
+                }`}
               >
-                <td className="pro-preview-dnd-handle">
+                <td className={`pro-preview-dnd-handle${selected ? ' pro-preview-dnd-handle-selected' : ''}`}>
                   <DragIndicatorIcon fontSize="small" />
+                  {selectedCount > 1 && (
+                    <Box component="span" className="pro-preview-selection-count">
+                      {selectedCount}
+                    </Box>
+                  )}
                 </td>
                 <td className="pro-preview-pole-name">
                   <Box component="span" className={`pro-preview-pole-name-text ${justifyTextClass(name)}`}>
@@ -83,8 +93,10 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
             const joko = previousRawJoko === null ? rawJoko : previousRawJoko === rawJoko ? '〃' : rawJoko
             const openPoleEditor = () => onOpenPoleNameEditor(pole, defaultName, defaultLocationName, rawJoko)
             const sectionLineClass = poleNameMergedIntoPrevious ? ' pro-preview-section-line' : ''
+            const selected = selectedPoleIds.includes(pole.id)
             const rowClasses = [
               'pro-preview-body-row',
+              selected ? 'pro-preview-row-selected' : '',
               pole.override.rowShading || pole.override.majorStop ? 'pro-preview-row-shaded' : '',
               pole.override.stopNameBold || pole.override.majorStop ? 'pro-preview-stop-name-bold' : '',
               poleNameMergedIntoPrevious ? 'pro-preview-merged-stop-row' : '',
@@ -106,9 +118,12 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                     }`}
                   >
                     <td
-                      className={`pro-preview-dnd-handle${sectionLineClass}`}
+                      className={`pro-preview-dnd-handle${selected ? ' pro-preview-dnd-handle-selected' : ''}${sectionLineClass}`}
                       {...draggableProvided.dragHandleProps}
-                      title="ドラッグして移動・標柱上で統合"
+                      title="クリックで単独選択、⌘/Ctrl+クリックで複数選択、Shift+クリックで範囲選択"
+                      onClick={(event) =>
+                        onSelectPole(pole.id, poleIndex, event.shiftKey ? 'range' : event.metaKey || event.ctrlKey ? 'multiple' : 'single')
+                      }
                     >
                       <DragIndicatorIcon fontSize="small" />
                     </td>

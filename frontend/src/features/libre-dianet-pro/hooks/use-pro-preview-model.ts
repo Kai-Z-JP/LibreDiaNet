@@ -47,6 +47,7 @@ export function useProPreviewModel({
     routeEditor,
     cellEditor,
     hoveredTargetId,
+    selectedPoleIds,
     pendingPoleMerge,
   } = state
   const {
@@ -61,6 +62,7 @@ export function useProPreviewModel({
     setRouteEditor,
     setCellEditor,
     setHoveredTargetId,
+    setSelectedPoleIds,
     setPendingPoleMerge,
   } = setters
 
@@ -143,6 +145,11 @@ export function useProPreviewModel({
     weekday,
   ])
 
+  useEffect(() => {
+    const poleIds = new Set(preset.poles.map((pole) => pole.id))
+    setSelectedPoleIds((current) => current.filter((id) => poleIds.has(id)))
+  }, [preset.poles, setSelectedPoleIds])
+
   const updateRouteDisplayOverride = (
     routeKey: string,
     transform: (current: NonNullable<ProPreset['routeDisplayOverrides'][number]>) => ProPreset['routeDisplayOverrides'][number] | null,
@@ -219,6 +226,26 @@ export function useProPreviewModel({
   }
 
   const exportDisabled = preset.sourceIds.length === 0 || preset.sourceIds.some((sourceId) => !context.handles[sourceId])
+
+  const selectPreviewPole = (poleId: string, poleIndex: number, mode: 'single' | 'multiple' | 'range') => {
+    setSelectedPoleIds((current) => {
+      if (mode === 'single') {
+        return [poleId]
+      }
+
+      if (mode === 'range' && current.length > 0) {
+        const anchorIndex = preset.poles.findIndex((pole) => pole.id === current.at(-1))
+        if (anchorIndex >= 0) {
+          const [start, end] = [anchorIndex, poleIndex].toSorted((left, right) => left - right)
+          const rangeIds = preset.poles.slice(start, end + 1).map((pole) => pole.id)
+          return preset.poles.map((pole) => pole.id).filter((id) => current.includes(id) || rangeIds.includes(id))
+        }
+      }
+
+      return current.includes(poleId) ? current.filter((id) => id !== poleId) : [...current, poleId]
+    })
+  }
+
   const onPreviewPoleDragEnd = (result: DropResult) => {
     if (result.source.droppableId !== 'pro-preview-poles') {
       return
@@ -228,35 +255,42 @@ export function useProPreviewModel({
     if (!sourcePole) {
       return
     }
+    const selectedPoleIdSet = new Set(selectedPoleIds)
+    const draggingSelection = selectedPoleIds.length > 1 && selectedPoleIdSet.has(sourcePole.id)
+    const movingPoles = draggingSelection ? preset.poles.filter((pole) => selectedPoleIdSet.has(pole.id)) : [sourcePole]
+    const movingPoleIdSet = new Set(movingPoles.map((pole) => pole.id))
 
     if (result.combine) {
       const targetPoleId = result.combine.draggableId.replace(/^preview-pole-/, '')
-      if (targetPoleId === sourcePole.id) {
+      if (movingPoleIdSet.has(targetPoleId)) {
         return
       }
       const targetPole = preset.poles.find((pole) => pole.id === targetPoleId)
       if (!targetPole) {
         return
       }
+      const sourceStops = movingPoles.flatMap((pole) => pole.stops)
       const nextPreset = {
         ...preset,
         poles: preset.poles
-          .map((pole) => (pole.id === targetPole.id ? { ...pole, stops: mergeUniqueStops(pole.stops, sourcePole.stops) } : pole))
-          .filter((pole) => pole.id !== sourcePole.id),
+          .map((pole) => (pole.id === targetPole.id ? { ...pole, stops: mergeUniqueStops(pole.stops, sourceStops) } : pole))
+          .filter((pole) => !movingPoleIdSet.has(pole.id)),
       }
-      commitOrConfirmPoleMerge(nextPreset, targetPole.stops, sourcePole.stops)
+      setSelectedPoleIds([])
+      commitOrConfirmPoleMerge(nextPreset, targetPole.stops, sourceStops)
       return
     }
 
     if (!result.destination || result.destination.droppableId !== 'pro-preview-poles') {
       return
     }
-    const nextPoles = [...preset.poles]
-    const [moved] = nextPoles.splice(result.source.index, 1)
-    if (!moved) {
-      return
-    }
-    nextPoles.splice(result.destination.index, 0, moved)
+    const extraRemovedBeforeDestination = preset.poles
+      .slice(0, result.destination.index)
+      .filter((pole) => pole.id !== sourcePole.id && movingPoleIdSet.has(pole.id)).length
+    const destinationIndex = Math.max(0, result.destination.index - extraRemovedBeforeDestination)
+    const nextPoles = preset.poles.filter((pole) => !movingPoleIdSet.has(pole.id))
+    nextPoles.splice(destinationIndex, 0, ...movingPoles)
+    setSelectedPoleIds(draggingSelection ? movingPoles.map((pole) => pole.id) : [])
     onUpdate({ ...preset, poles: nextPoles })
   }
 
@@ -348,6 +382,7 @@ export function useProPreviewModel({
       routeEditor,
       cellEditor,
       hoveredTargetId,
+      selectedPoleIds,
       pendingPoleMerge,
     },
     derived: {
@@ -364,6 +399,7 @@ export function useProPreviewModel({
       setShowStaticPatterns,
       setShowActualTimetable,
       hoverTarget: setHoveredTargetId,
+      selectPreviewPole,
       openRouteEditor,
       openPoleNameEditor,
       openCellEditor,
@@ -403,10 +439,12 @@ export function useProPreviewModel({
           showStaticPatterns,
           showActualTimetable,
           hoveredTargetId,
+          selectedPoleIds,
         },
         actions: {
           onDragEnd: onPreviewPoleDragEnd,
           onHoverTarget: setHoveredTargetId,
+          onSelectPole: selectPreviewPole,
           onOpenRouteEditor: openRouteEditor,
           onOpenPoleNameEditor: openPoleNameEditor,
           onOpenCellEditor: openCellEditor,

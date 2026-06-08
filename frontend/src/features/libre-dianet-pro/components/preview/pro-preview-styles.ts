@@ -49,6 +49,7 @@ export const ProPreviewStyleScope = styled.div`
   }
 
   .pro-preview-dnd-handle {
+    position: relative;
     width: 1.35rem;
     min-width: 1.35rem;
     max-width: 1.35rem;
@@ -59,11 +60,41 @@ export const ProPreviewStyleScope = styled.div`
     line-height: 0;
   }
 
+  .pro-preview-dnd-handle-selected {
+    background: #d8ecff !important;
+    color: #0d47a1;
+  }
+
   .pro-preview-dnd-handle svg {
     display: block;
     width: 1rem;
     height: 1rem;
     margin: 0 auto;
+  }
+
+  .pro-preview-selection-count {
+    position: absolute;
+    top: -0.38rem;
+    right: -0.42rem;
+    z-index: 2;
+    display: grid;
+    min-width: 1rem;
+    height: 1rem;
+    place-items: center;
+    padding-inline: 0.2rem;
+    border: 1px solid #0d47a1;
+    border-radius: 999px;
+    background: #fff;
+    color: #0d47a1;
+    font-family: system-ui, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .pro-preview-row-selected > td {
+    background: #eef6ff !important;
+    box-shadow: inset 0 0 0 1px #64b5f6;
   }
 
   .pro-preview-row-dragging > td {

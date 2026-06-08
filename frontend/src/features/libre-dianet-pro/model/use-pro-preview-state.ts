@@ -58,6 +58,7 @@ type ProPreviewState = {
   routeEditor: ProRouteEditor | null
   cellEditor: ProStopCellEditor | null
   hoveredTargetId: string | null
+  selectedPoleIds: string[]
   pendingPoleMerge: ProPreviewPendingPoleMerge | null
 }
 
@@ -73,6 +74,7 @@ type ProPreviewAction =
   | { type: 'setRouteEditor'; value: SetStateAction<ProRouteEditor | null> }
   | { type: 'setCellEditor'; value: SetStateAction<ProStopCellEditor | null> }
   | { type: 'setHoveredTargetId'; value: SetStateAction<string | null> }
+  | { type: 'setSelectedPoleIds'; value: SetStateAction<string[]> }
   | { type: 'setPendingPoleMerge'; value: ProPreviewPendingPoleMerge | null }
 
 export function useProPreviewState(revisionDate: string) {
@@ -88,6 +90,7 @@ export function useProPreviewState(revisionDate: string) {
     routeEditor: null,
     cellEditor: null,
     hoveredTargetId: null,
+    selectedPoleIds: [],
     pendingPoleMerge: null,
   })
 
@@ -104,6 +107,7 @@ export function useProPreviewState(revisionDate: string) {
       setRouteEditor: (value: SetStateAction<ProRouteEditor | null>) => dispatch({ type: 'setRouteEditor', value }),
       setCellEditor: (value: SetStateAction<ProStopCellEditor | null>) => dispatch({ type: 'setCellEditor', value }),
       setHoveredTargetId: (value: SetStateAction<string | null>) => dispatch({ type: 'setHoveredTargetId', value }),
+      setSelectedPoleIds: (value: SetStateAction<string[]>) => dispatch({ type: 'setSelectedPoleIds', value }),
       setPendingPoleMerge: (value: ProPreviewPendingPoleMerge | null) => dispatch({ type: 'setPendingPoleMerge', value }),
     }),
     [],
@@ -140,6 +144,8 @@ function proPreviewReducer(state: ProPreviewState, action: ProPreviewAction): Pr
       return { ...state, cellEditor: applyStateAction(state.cellEditor, action.value) }
     case 'setHoveredTargetId':
       return { ...state, hoveredTargetId: applyStateAction(state.hoveredTargetId, action.value) }
+    case 'setSelectedPoleIds':
+      return { ...state, selectedPoleIds: applyStateAction(state.selectedPoleIds, action.value) }
     case 'setPendingPoleMerge':
       return { ...state, pendingPoleMerge: action.value }
   }
