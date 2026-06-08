@@ -135,6 +135,7 @@ export function useProPreviewModel({
     context.handles,
     date,
     preset.excludedStopPatterns,
+    preset.poles,
     preset.routes,
     preset.sourceIds,
     previewMode,
