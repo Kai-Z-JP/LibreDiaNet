@@ -168,11 +168,7 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                           return (
                             <td
                               key={`${route.sourceId}-${route.route.routeId}-${index}-${pole.id}`}
-                              className={`pro-preview-time-cell${
-                                excluded
-                                  ? sectionLineClass
-                                  : `${sectionLineClass} pro-preview-editable`
-                              }`}
+                              className={`pro-preview-time-cell${excluded ? sectionLineClass : `${sectionLineClass} pro-preview-editable`}`}
                               rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
                               title={excluded ? 'この停車パターンは使用しない' : 'クリックしてセル上書きを編集'}
                               onClick={() => !excluded && onOpenCellEditor(route, pattern, pole, name)}

@@ -77,6 +77,7 @@ export function VersionSettingsDialog({
               onSelectRepo={actions.selectRepoSource}
               onAddRepo={actions.addRepoSource}
               onAddRaw={actions.addRawSource}
+              onRenameSource={actions.renameSource}
               onDeleteSource={actions.removeSource}
               onReplaceRepoFile={actions.replaceRepoFile}
               onReplaceRawSource={actions.replaceRawSource}

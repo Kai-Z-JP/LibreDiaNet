@@ -244,6 +244,7 @@ export type PresetContext = {
 
 export type ProGtfsSource = {
   sourceId: string
+  displayName?: string | null
   info: RepoInfoV2 | RawInfoV2
 }
 

@@ -91,6 +91,7 @@ describe('Pro preset store', () => {
             gtfsSources: [
               {
                 sourceId: 'source-a',
+                displayName: '表示用フィード名',
                 info: {
                   kind: 'repo',
                   id: 'feed_org_file-uid',
@@ -161,6 +162,7 @@ describe('Pro preset store', () => {
     )
 
     expect(JSON.parse(storage.getItem(PRO_STORAGE_KEY) ?? '{}').version).toBe(1)
+    expect(loadProPresetStore(storage).versions[0]?.gtfsSources[0]?.displayName).toBe('表示用フィード名')
     expect(loadProPresetStore(storage).versions[0]?.presets[0]?.poles[0]).toEqual({
       id: 'pole-1',
       stops: [

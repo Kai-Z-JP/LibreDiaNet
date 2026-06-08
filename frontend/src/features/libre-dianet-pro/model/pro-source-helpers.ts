@@ -1,4 +1,4 @@
-import type { FeedOption, ProPreset } from '../../../types'
+import type { FeedOption, ProGtfsSource, ProPreset } from '../../../types'
 
 export function removeSourceFromPreset(preset: ProPreset, sourceId: string): ProPreset {
   return {
@@ -33,4 +33,12 @@ export function feedLabelForSource(info: { orgId: string; feedId: string; name: 
 
 export function sourceDisplayName(feedLabel: string, fileLabel: string | null): string {
   return [feedLabel, fileLabel?.trim()].filter(Boolean).join(' / ')
+}
+
+export function proGtfsSourceDisplayName(source: ProGtfsSource): string {
+  return source.displayName || source.info.name || source.info.id
+}
+
+export function normalizeProGtfsSourceDisplayName(value: string): string | null {
+  return value || null
 }

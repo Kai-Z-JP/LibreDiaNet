@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useRef, type SetStateAction } from 'rea
 import type { GtfsStop, ProPreset, ProPresetContext, ProVersion } from '../../../types'
 import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import type { ProConstructedRoute, ProRouteOption } from '../model/pro-types'
+import { proGtfsSourceDisplayName } from '../model/pro-source-helpers'
 
 type ProEditorState = {
   tab: number
@@ -125,7 +126,7 @@ export function useProEditorModel({
 
   const changed = JSON.stringify(versionForSave) !== JSON.stringify(version)
   const sourceNameMap = useMemo(
-    () => Object.fromEntries(draftVersion.gtfsSources.map((source) => [source.sourceId, source.info.name ?? source.info.id])),
+    () => Object.fromEntries(draftVersion.gtfsSources.map((source) => [source.sourceId, proGtfsSourceDisplayName(source)])),
     [draftVersion.gtfsSources],
   )
 
@@ -177,7 +178,7 @@ export function useProEditorModel({
           if (!handle) {
             return []
           }
-          const sourceName = source.info.name ?? source.info.id
+          const sourceName = proGtfsSourceDisplayName(source)
           const routes = await libreDiaNetRepository.listRoutesWithDirections(handle)
           return routes.map((route) => ({
             ...route,

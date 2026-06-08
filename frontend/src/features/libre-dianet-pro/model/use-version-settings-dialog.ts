@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react'
 import { fetchGtfsFeedFiles } from '../../../api'
 import type { FeedOption, GtfsFeedFileOption, ProGtfsSource, ProVersion, RepoInfoV2 } from '../../../types'
 import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
-import { feedLabelForSource, removeSourceFromPreset, repoFeedKey, repoInfoId, sourceDisplayName } from './pro-source-helpers'
+import {
+  feedLabelForSource,
+  normalizeProGtfsSourceDisplayName,
+  removeSourceFromPreset,
+  repoFeedKey,
+  repoInfoId,
+  sourceDisplayName,
+} from './pro-source-helpers'
 
 export function useVersionSettingsDialog({
   selectedVersion,
@@ -113,6 +120,17 @@ export function useVersionSettingsDialog({
       renameVersion: (name: string) => setDraftVersion((current) => (current ? { ...current, name } : current)),
       changeRevisionDate: (revisionDate: string) => setDraftVersion((current) => (current ? { ...current, revisionDate } : current)),
       selectRepoSource: setRepoSource,
+      renameSource: (source: ProGtfsSource, displayName: string) =>
+        setDraftVersion((current) =>
+          current
+            ? {
+                ...current,
+                gtfsSources: current.gtfsSources.map((item) =>
+                  item.sourceId === source.sourceId ? { ...item, displayName: normalizeProGtfsSourceDisplayName(displayName) } : item,
+                ),
+              }
+            : current,
+        ),
       addRepoSource: () => {
         if (!repoSource) {
           return

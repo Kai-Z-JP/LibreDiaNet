@@ -98,6 +98,7 @@ function parseProGtfsSources(value: unknown): ProGtfsSource[] {
     const record = asRecord(item)
     return {
       sourceId: asString(record.sourceId),
+      displayName: asOptionalString(record.displayName),
       info: parseProInfoV2(record.info),
     }
   })

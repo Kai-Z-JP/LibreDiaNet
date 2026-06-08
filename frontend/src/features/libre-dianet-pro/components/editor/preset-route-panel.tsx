@@ -2,6 +2,7 @@ import { Autocomplete, Box, Divider, TextField, Typography } from '@mui/material
 import type { ProPreset, ProRouteDetail, ProVersion } from '../../../../types'
 import { proRouteOptionDisplayLabel, proRouteOptionMeta } from '../../model/pro-preview-display-helpers'
 import { proRouteBaseKeyFromParts } from '../../model/pro-route-keys'
+import { proGtfsSourceDisplayName } from '../../model/pro-source-helpers'
 import type { ProRouteOption } from '../../model/pro-types'
 import { fieldLabelProps } from '../../model/pro-ui-constants'
 
@@ -32,7 +33,7 @@ export function PresetRoutePanel({
         disableCloseOnSelect
         options={version.gtfsSources}
         value={selectedSources}
-        getOptionLabel={(source) => source.info.name ?? source.info.id}
+        getOptionLabel={proGtfsSourceDisplayName}
         isOptionEqualToValue={(option, value) => option.sourceId === value.sourceId}
         onChange={(_, nextSources) => {
           const sourceIds = nextSources.map((source) => source.sourceId)
