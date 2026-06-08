@@ -178,6 +178,7 @@ export type DiaNetTripData = {
   routeId: string
   directionId: number | null
   serviceId: string
+  tripHeadsign?: string | null
 }
 
 export type DiaNetStopTimeData = {
@@ -217,6 +218,7 @@ export type ConstructedTrip = {
   routeId: string
   direction: number | null
   routeName: string
+  tripHeadsign?: string | null
   stopTime: GtfsStopTime[]
 }
 
@@ -259,6 +261,7 @@ export type ProRouteDisplayOverride = {
   routeNameOverride: string | null
   routeNameFont: ProDisplayFont | null
   destinationOverride: string | null
+  useTripHeadsignAsDestination: boolean
   stopCellOverrides: ProStopCellDisplayOverride[]
 }
 

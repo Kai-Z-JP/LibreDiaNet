@@ -25,7 +25,8 @@ const IMPORT_OPTIONS = {
 }
 
 type Db = ReturnType<AppGtfsLoader['db']>
-type TripRow = Pick<GtfsJpV4TableRow<'trips'>, 'trip_id' | 'route_id' | 'direction_id' | 'service_id' | 'jp_pattern_id'>
+type TripRow = Pick<GtfsJpV4TableRow<'trips'>, 'trip_id' | 'route_id' | 'direction_id' | 'service_id' | 'jp_pattern_id'> &
+  Partial<Pick<GtfsJpV4TableRow<'trips'>, 'trip_headsign'>>
 type StopTimeRow = Pick<GtfsJpV4TableRow<'stop_times'>, 'trip_id' | 'stop_id' | 'stop_sequence'> &
   Partial<Pick<GtfsJpV4TableRow<'stop_times'>, 'departure_time'>>
 type CalendarRow = Pick<
@@ -225,6 +226,7 @@ export class GtfsRepository {
       }
       const stopTimeRows = await this.loadStopTimeRows(db, tripIds, true)
       const patternIdByTripId = tripPatternIdMap(trips)
+      const tripById = new Map(trips.map((trip) => [String(trip.trip_id), trip]))
 
       const grouped = new Map<string, GtfsStopTime[]>()
       for (const row of stopTimeRows) {
@@ -248,10 +250,12 @@ export class GtfsRepository {
         if (excludedKeys.has(stopPatternKey(stopTimes))) {
           continue
         }
+        const trip = tripById.get(stopTimes[0]?.tripId ?? '')
         results.push({
           routeId: selectedRoute.id,
           direction: selectedRoute.direction,
           routeName: displayRouteName(route.shortName, route.longName),
+          tripHeadsign: asOptionalString(trip?.trip_headsign),
           stopTime: stopTimes,
         })
       }
@@ -340,6 +344,7 @@ export class GtfsRepository {
         routeId: String(row.route_id),
         directionId: toNullableNumber(row.direction_id),
         serviceId: String(row.service_id),
+        tripHeadsign: asOptionalString(row.trip_headsign),
       })),
       stopTimes: stopTimeRows.map((row) => ({
         tripId: String(row.trip_id),
@@ -372,7 +377,7 @@ export class GtfsRepository {
     const rows = (
       (await db
         .selectFrom('trips')
-        .select(['trip_id', 'route_id', 'direction_id', 'service_id', 'jp_pattern_id'])
+        .select(['trip_id', 'route_id', 'direction_id', 'service_id', 'jp_pattern_id', 'trip_headsign'])
         .$if(direction === null, (qb) => qb.where('direction_id', 'is', null))
         .$if(direction !== null, (qb) => qb.where('direction_id', '=', direction!))
         .where('route_id', '=', route.id)
@@ -548,6 +553,7 @@ function toTripRow(row: RawTripRow): TripRow {
     direction_id: toDirectionId(row.direction_id),
     service_id: asRequiredString(row.service_id),
     jp_pattern_id: asOptionalString(row.jp_pattern_id),
+    trip_headsign: asOptionalString(row.trip_headsign),
   }
 }
 

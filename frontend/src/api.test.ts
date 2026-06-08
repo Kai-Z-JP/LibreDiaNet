@@ -173,7 +173,16 @@ describe('buildProCreateFromDataRequest', () => {
         { sourceId: 'source-a', id: 'route', direction: 0 },
         { sourceId: 'source-b', id: 'route', direction: 1 },
       ],
-      routeDisplayOverrides: [],
+      routeDisplayOverrides: [
+        {
+          routeKey: `source-a::route::0::${sourceAPatternKey}`,
+          routeNameOverride: null,
+          routeNameFont: null,
+          destinationOverride: null,
+          useTripHeadsignAsDestination: true,
+          stopCellOverrides: [],
+        },
+      ],
       poles: [
         {
           id: 'merged-pole',
@@ -205,7 +214,7 @@ describe('buildProCreateFromDataRequest', () => {
           agencyName: 'Agency A',
           stops: [{ id: 'same-stop', name: 'Stop A', platformCode: '1' }],
           routes: [{ id: 'route', shortName: 'A', longName: null }],
-          trips: [{ tripId: 'trip', routeId: 'route', directionId: 0, serviceId: 'svc' }],
+          trips: [{ tripId: 'trip', routeId: 'route', directionId: 0, serviceId: 'svc', tripHeadsign: 'Headsign A' }],
           stopTimes: [
             { tripId: 'trip', stopId: 'same-stop', stopSequence: 1, departureTime: '08:00:00' },
             { tripId: 'trip', stopId: 'same-stop', stopSequence: 2, departureTime: '08:05:00' },
@@ -229,7 +238,7 @@ describe('buildProCreateFromDataRequest', () => {
           agencyName: 'Agency B',
           stops: [{ id: 'same-stop', name: 'Stop B', platformCode: '2' }],
           routes: [{ id: 'route', shortName: 'B', longName: null }],
-          trips: [{ tripId: 'trip', routeId: 'route', directionId: 1, serviceId: 'svc' }],
+          trips: [{ tripId: 'trip', routeId: 'route', directionId: 1, serviceId: 'svc', tripHeadsign: 'Headsign B' }],
           stopTimes: [{ tripId: 'trip', stopId: 'same-stop', stopSequence: 1, departureTime: '09:00:00' }],
           calendars: [
             {
@@ -261,7 +270,10 @@ describe('buildProCreateFromDataRequest', () => {
       },
     ])
     expect(payload.gtfs.routes.map((route) => route.id)).toEqual(['source-a::route', 'source-b::route'])
-    expect(payload.gtfs.trips.map((trip) => trip.tripId)).toEqual(['source-a::trip', 'source-b::trip'])
+    expect(payload.gtfs.trips).toEqual([
+      { tripId: 'source-a::trip', routeId: 'source-a::route', directionId: 0, serviceId: 'source-a::svc', tripHeadsign: 'Headsign A' },
+      { tripId: 'source-b::trip', routeId: 'source-b::route', directionId: 1, serviceId: 'source-b::svc', tripHeadsign: null },
+    ])
     expect(payload.gtfs.calendars.map((calendar) => calendar.id)).toEqual(['source-a::svc', 'source-b::svc'])
     expect(payload.gtfs.stopTimes.map((stopTime) => stopTime.stopId)).toEqual([
       'pole::merged-pole',

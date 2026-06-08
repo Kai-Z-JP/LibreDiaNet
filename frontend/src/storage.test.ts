@@ -129,6 +129,7 @@ describe('Pro preset store', () => {
                     routeNameOverride: 'A1',
                     routeNameFont: 'NADIA_R',
                     destinationOverride: '終点',
+                    useTripHeadsignAsDestination: false,
                     stopCellOverrides: [],
                   },
                 ],
@@ -187,9 +188,50 @@ describe('Pro preset store', () => {
         routeNameOverride: 'A1',
         routeNameFont: 'NADIA_R',
         destinationOverride: '終点',
+        useTripHeadsignAsDestination: false,
         stopCellOverrides: [],
       },
     ])
+  })
+
+  it('defaults old Pro route display overrides to not using trip headsign', () => {
+    const storage = new MemoryStorage()
+    storage.setItem(
+      PRO_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        versions: [
+          {
+            id: 'version-1',
+            name: '2026春改正',
+            revisionDate: '2026-04-01',
+            gtfsSources: [],
+            presets: [
+              {
+                id: 'preset-1',
+                name: '統合プリセット',
+                index: 1,
+                sourceIds: [],
+                routes: [],
+                routeDisplayOverrides: [
+                  {
+                    routeKey: 'source-a::route-a::0::pattern',
+                    routeNameOverride: null,
+                    routeNameFont: null,
+                    destinationOverride: '終点',
+                    stopCellOverrides: [],
+                  },
+                ],
+                poles: [],
+                excludedStopPatterns: [],
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    expect(loadProPresetStore(storage).versions[0]?.presets[0]?.routeDisplayOverrides[0]?.useTripHeadsignAsDestination).toBe(false)
   })
 })
 

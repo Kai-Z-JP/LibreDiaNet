@@ -41,7 +41,8 @@ data class DiaNetTripData(
     val tripId: String,
     val routeId: String,
     val directionId: Int? = null,
-    val serviceId: String
+    val serviceId: String,
+    val tripHeadsign: String? = null
 )
 
 @Serializable

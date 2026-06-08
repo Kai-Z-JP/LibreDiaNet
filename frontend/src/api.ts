@@ -204,6 +204,7 @@ function mergeProGtfsExportData(preset: ProPreset, gtfsBySourceId: Record<string
   const stopTimes: DiaNetGtfsExportData['stopTimes'] = []
   const calendars: DiaNetGtfsExportData['calendars'] = []
   const agencyNames: string[] = []
+  const routeDisplayOverridesByKey = new Map(preset.routeDisplayOverrides.map((override) => [override.routeKey, override]))
 
   for (const sourceId of preset.sourceIds) {
     const gtfs = gtfsBySourceId[sourceId]
@@ -224,15 +225,21 @@ function mergeProGtfsExportData(preset: ProPreset, gtfsBySourceId: Record<string
         id: namespaceId(sourceId, route.id),
       })),
     )
-    trips.push(
-      ...gtfs.trips.map((trip) => ({
-        ...trip,
-        tripId: namespaceId(sourceId, trip.tripId),
-        routeId: namespaceId(sourceId, trip.routeId),
-        serviceId: namespaceId(sourceId, trip.serviceId),
-      })),
-    )
     const stopTimesByTripId = groupStopTimesByTripId(gtfs.stopTimes)
+    trips.push(
+      ...gtfs.trips.map((trip) => {
+        const tripStopTimes = stopTimesByTripId.get(trip.tripId) ?? []
+        const routeKey = proRouteExportKey(sourceId, trip.routeId, trip.directionId, stopPatternKey(tripStopTimes))
+        const useTripHeadsignAsDestination = routeDisplayOverridesByKey.get(routeKey)?.useTripHeadsignAsDestination ?? false
+        return {
+          ...trip,
+          tripId: namespaceId(sourceId, trip.tripId),
+          routeId: namespaceId(sourceId, trip.routeId),
+          serviceId: namespaceId(sourceId, trip.serviceId),
+          tripHeadsign: useTripHeadsignAsDestination ? (trip.tripHeadsign ?? null) : null,
+        }
+      }),
+    )
     stopTimes.push(
       ...gtfs.stopTimes.map((stopTime) => {
         const namespacedStopId = namespaceId(sourceId, stopTime.stopId)
@@ -291,6 +298,10 @@ function proPoleExportId(pole: ProPoleDetail): string {
 
 function proPatternStopRefKey(sourceId: string, patternKey: string, stopIndex: number, stopId: string): string {
   return `${sourceId}::${patternKey}::${stopIndex}::${stopId}`
+}
+
+function proRouteExportKey(sourceId: string, routeId: string, direction: number | null, patternKey: string): string {
+  return `${namespaceId(sourceId, routeId)}::${direction ?? 'null'}::${patternKey}`
 }
 
 function groupStopTimesByTripId(stopTimes: DiaNetGtfsExportData['stopTimes']): Map<string, DiaNetGtfsExportData['stopTimes']> {

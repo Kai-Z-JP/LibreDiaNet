@@ -167,6 +167,7 @@ function parseProRouteDisplayOverrides(value: unknown): ProRouteDisplayOverride[
       routeNameOverride: asNullableString(record.routeNameOverride),
       routeNameFont: parseNullableProDisplayFont(record.routeNameFont),
       destinationOverride: asNullableString(record.destinationOverride),
+      useTripHeadsignAsDestination: asBoolean(record.useTripHeadsignAsDestination, false),
       stopCellOverrides: parseProStopCellDisplayOverrides(record.stopCellOverrides),
     }
   })
@@ -444,7 +445,10 @@ function asNumber(value: unknown): number {
   return value
 }
 
-function asBoolean(value: unknown): boolean {
+function asBoolean(value: unknown, fallback?: boolean): boolean {
+  if (value === undefined && fallback !== undefined) {
+    return fallback
+  }
   if (typeof value !== 'boolean') {
     throw new Error('Expected boolean')
   }

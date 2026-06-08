@@ -6,6 +6,7 @@ import {
   hasProRouteNameOverride,
   isProPatternExcluded,
   proDisplayFontCss,
+  proDestinationDisplay,
   splitDestinationColumns,
 } from '../../model/pro-preview-display-helpers'
 import { proRouteKey, proTripRouteKey } from '../../model/pro-route-keys'
@@ -145,7 +146,7 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
               const excluded = isProPatternExcluded(preset, route, pattern)
               const override = routeDisplayOverridesByKey[routeKey]
               const defaultDestination = pattern.at(-1)?.name ?? ''
-              const destinations = splitDestinationColumns(override?.destinationOverride ?? defaultDestination)
+              const destinations = splitDestinationColumns(override?.useTripHeadsignAsDestination ? '※' : proDestinationDisplay(override, defaultDestination))
               return (
                 <td
                   key={`dest-${route.sourceId}-${route.route.routeId}-${index}`}
@@ -172,7 +173,7 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
             const override = routeDisplayOverridesByKey[routeKey]
             const destinationStopId = trip.stopTime.at(-1)?.stopId
             const defaultDestination = destinationStopId ? (stopMap[`${trip.sourceId}::${destinationStopId}`]?.name ?? '') : ''
-            const destination = override?.destinationOverride ?? defaultDestination
+            const destination = proDestinationDisplay(override, defaultDestination, trip.tripHeadsign)
             return (
               <td key={`actual-dest-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}`} className="pro-preview-destination-cell">
                 <DestinationPreview destinations={splitDestinationColumns(destination)} />

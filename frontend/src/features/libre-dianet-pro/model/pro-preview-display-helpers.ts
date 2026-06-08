@@ -27,7 +27,8 @@ export function normalizeProRouteDisplayOverride(
     return null
   }
   const routeNameOverride = override.routeNameOverride?.trim() || null
-  const destinationOverride = override.destinationOverride?.trim() || null
+  const useTripHeadsignAsDestination = override.useTripHeadsignAsDestination
+  const destinationOverride = useTripHeadsignAsDestination ? null : override.destinationOverride?.trim() || null
   const stopCellOverrides = override.stopCellOverrides
     .filter((cell) => cell.text.trim() !== '')
     .map((cell) => ({
@@ -36,7 +37,7 @@ export function normalizeProRouteDisplayOverride(
       rowSpan: Math.max(cell.rowSpan, 1),
     }))
 
-  if (!routeNameOverride && !destinationOverride) {
+  if (!routeNameOverride && !destinationOverride && !useTripHeadsignAsDestination) {
     return stopCellOverrides.length === 0
       ? null
       : {
@@ -44,6 +45,7 @@ export function normalizeProRouteDisplayOverride(
           routeNameOverride: null,
           routeNameFont: null,
           destinationOverride: null,
+          useTripHeadsignAsDestination: false,
           stopCellOverrides,
         }
   }
@@ -53,6 +55,7 @@ export function normalizeProRouteDisplayOverride(
     routeNameOverride,
     routeNameFont: routeNameOverride ? override.routeNameFont : null,
     destinationOverride,
+    useTripHeadsignAsDestination,
     stopCellOverrides,
   }
 }
@@ -89,7 +92,24 @@ export function hasProDestinationOverride(
   override: ProPreset['routeDisplayOverrides'][number] | undefined,
   defaultDestination: string,
 ): boolean {
-  return Boolean(override?.destinationOverride && override.destinationOverride.trim() !== defaultDestination.trim())
+  return Boolean(
+    override?.useTripHeadsignAsDestination ||
+    (override?.destinationOverride && override.destinationOverride.trim() !== defaultDestination.trim()),
+  )
+}
+
+export function proDestinationDisplay(
+  override: ProPreset['routeDisplayOverrides'][number] | undefined,
+  defaultDestination: string,
+  tripHeadsign?: string | null,
+): string {
+  if (override?.destinationOverride) {
+    return override.destinationOverride
+  }
+  if (override?.useTripHeadsignAsDestination) {
+    return tripHeadsign?.trim() || defaultDestination
+  }
+  return defaultDestination
 }
 
 export function isProPatternExcluded(preset: ProPreset, route: ProConstructedRoute, pattern: GtfsStop[]): boolean {

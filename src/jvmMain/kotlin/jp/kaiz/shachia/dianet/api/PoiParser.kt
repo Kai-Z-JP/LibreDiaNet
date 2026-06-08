@@ -96,7 +96,8 @@ private data class DiaNetWorkbookTrip(
     val tripId: String,
     val routeId: String,
     val directionId: Int?,
-    val serviceId: String
+    val serviceId: String,
+    val tripHeadsign: String? = null
 )
 
 private data class DiaNetWorkbookStopTime(
@@ -133,6 +134,7 @@ private data class DiaNetPreviewStopPattern(
 
 private data class DiaNetPreviewTrip(
     val route: DiaNetWorkbookRoute,
+    val trip: DiaNetWorkbookTrip,
     val stopTime: List<DiaNetWorkbookStopTime>
 )
 
@@ -175,7 +177,7 @@ private fun DiaNetGtfsExportData.toWorkbookData() = DiaNetWorkbookData(
     agencyName = agencyName,
     stops = stops.map { DiaNetWorkbookStop(it.id, it.name, it.platformCode, it.jokoOverride) },
     routes = routes.map { DiaNetWorkbookRoute(it.id, it.shortName, it.longName) },
-    trips = trips.map { DiaNetWorkbookTrip(it.tripId, it.routeId, it.directionId, it.serviceId) },
+    trips = trips.map { DiaNetWorkbookTrip(it.tripId, it.routeId, it.directionId, it.serviceId, it.tripHeadsign) },
     stopTimes = stopTimes.map { DiaNetWorkbookStopTime(it.tripId, it.stopId, it.stopSequence, it.departureTime, it.stopPatternId) },
     calendars = calendars.map {
         DiaNetWorkbookCalendar(
@@ -271,14 +273,15 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
             val route = gtfs.routes.first { it.id == detail.id }
             val trips = gtfs.trips
                 .filter { it.routeId == detail.id && it.directionId == detail.direction && it.serviceId in calendars }
-            trips.map { trip ->
-                gtfs.stopTimes
+            trips.mapNotNull { trip ->
+                val stopTimes = gtfs.stopTimes
                     .filter { it.tripId == trip.tripId }
                     .sortedBy { it.stopSequence }
-            }.filter { stopTimes ->
-                stopTimes.stopPatternKey() !in excludedStopPatternKeys
-            }.map { stopTimes ->
-                DiaNetPreviewTrip(route = route, stopTime = stopTimes)
+                if (stopTimes.stopPatternKey() in excludedStopPatternKeys) {
+                    null
+                } else {
+                    DiaNetPreviewTrip(route = route, trip = trip, stopTime = stopTimes)
+                }
             }
         }
     }
@@ -575,7 +578,7 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
                             cellStyle = headerDestStyle
                             val stopId = suji.stopTime.last().stopId
                             val stop = poles.map { it.second }.find { it.id == stopId }
-                            +(stop?.name ?: "")
+                            +(suji.trip.tripHeadsign?.takeIf { it.isNotBlank() } ?: stop?.name ?: "")
                         }
                     }
                     repeat(spacing) {
