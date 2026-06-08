@@ -1,6 +1,5 @@
 import { DragDropContext, type OnDragEndResponder } from '@hello-pangea/dnd'
 import { Box } from '@mui/material'
-import type { Dispatch, SetStateAction } from 'react'
 import type { GtfsStop, ProPreset } from '../../../../types'
 import type { ProConstructedRoute, ProConstructedTrip } from '../../model/pro-types'
 import { ProPreviewTableBody } from './pro-preview-table-body'
@@ -20,12 +19,10 @@ export type ProPreviewTableProps = {
     previewTimesByTripKey: Record<string, string[]>
     showStaticPatterns: boolean
     showActualTimetable: boolean
-    hoveredTargetId: string | null
     selectedPoleIds: string[]
   }
   actions: {
     onDragEnd: OnDragEndResponder
-    onHoverTarget: Dispatch<SetStateAction<string | null>>
     onSelectPole: (poleId: string, poleIndex: number, mode: 'single' | 'multiple' | 'range') => void
     onOpenRouteEditor: (route: ProConstructedRoute, pattern: GtfsStop[]) => void
     onOpenPoleNameEditor: (pole: ProPreset['poles'][number], defaultName: string, defaultLocationName: string, defaultJoko: string) => void

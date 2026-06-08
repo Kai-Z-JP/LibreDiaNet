@@ -6,7 +6,6 @@ import {
   disabledPreviewCellStyle,
   isProPatternExcluded,
   justifyTextClass,
-  previewHoverClass,
   proDisplayFontCss,
 } from '../../model/pro-preview-display-helpers'
 import { proPoleDefaultLocationName, proPoleDisplayLocationName, proPoleDisplayName } from '../../model/pro-pole-stop-helpers'
@@ -27,10 +26,9 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
     previewTimesByTripKey,
     showStaticPatterns,
     showActualTimetable,
-    hoveredTargetId,
     selectedPoleIds,
   } = data
-  const { onHoverTarget, onSelectPole, onOpenPoleNameEditor, onOpenCellEditor } = actions
+  const { onSelectPole, onOpenPoleNameEditor, onOpenCellEditor } = actions
 
   return (
     <Droppable
@@ -87,7 +85,6 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
             const poleNameMergedIntoPrevious = poleIndex > 0 && proPoleDisplayName(preset.poles[poleIndex - 1], stopMap) === name
             const poleNameRowSpan = poleNameMergedIntoPrevious ? 1 : countConsecutivePoleNames(preset.poles, poleIndex, stopMap)
             const terminalName = preset.poles.slice(poleIndex + 1).every((candidate) => proPoleDisplayName(candidate, stopMap) === name)
-            const poleNameTargetId = `pole-name-${pole.id}`
             const rawJoko = proPoleRawJoko(preset.poles, poleIndex, constructedRoutes, stopMap)
             const previousRawJoko = poleIndex > 0 ? proPoleRawJoko(preset.poles, poleIndex - 1, constructedRoutes, stopMap) : null
             const joko = previousRawJoko === null ? rawJoko : previousRawJoko === rawJoko ? '〃' : rawJoko
@@ -129,11 +126,9 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                     </td>
                     {!poleNameMergedIntoPrevious && (
                       <td
-                        className={`pro-preview-pole-name pro-preview-editable${previewHoverClass(poleNameTargetId, hoveredTargetId)}`}
+                        className="pro-preview-pole-name pro-preview-editable"
                         rowSpan={poleNameRowSpan > 1 ? poleNameRowSpan : undefined}
                         title="クリックして標柱設定を編集"
-                        onMouseEnter={() => onHoverTarget(poleNameTargetId)}
-                        onMouseLeave={() => onHoverTarget((current) => (current === poleNameTargetId ? null : current))}
                         onClick={openPoleEditor}
                         style={{ backgroundColor: pole.override.nameOverride ? '#fff3cd' : undefined }}
                       >
@@ -143,20 +138,16 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                       </td>
                     )}
                     <td
-                      className={`pro-preview-platform pro-preview-editable${sectionLineClass}${previewHoverClass(`pole-location-${pole.id}`, hoveredTargetId)}`}
+                      className={`pro-preview-platform pro-preview-editable${sectionLineClass}`}
                       title="クリックして標柱設定を編集"
-                      onMouseEnter={() => onHoverTarget(`pole-location-${pole.id}`)}
-                      onMouseLeave={() => onHoverTarget((current) => (current === `pole-location-${pole.id}` ? null : current))}
                       onClick={openPoleEditor}
                       style={{ backgroundColor: pole.override.locationNameOverride ? '#fff3cd' : undefined }}
                     >
                       {locationName}
                     </td>
                     <td
-                      className={`pro-preview-joko pro-preview-editable${sectionLineClass}${previewHoverClass(`pole-joko-${pole.id}`, hoveredTargetId)}`}
+                      className={`pro-preview-joko pro-preview-editable${sectionLineClass}`}
                       title="クリックして標柱設定を編集"
-                      onMouseEnter={() => onHoverTarget(`pole-joko-${pole.id}`)}
-                      onMouseLeave={() => onHoverTarget((current) => (current === `pole-joko-${pole.id}` ? null : current))}
                       onClick={openPoleEditor}
                       style={{ backgroundColor: pole.override.jokoOverride ? '#fff3cd' : undefined }}
                     >
@@ -171,7 +162,6 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
 
                           if (cellDisplay.hidden) return null
 
-                          const targetId = `cell-${routeKey}-${pole.id}`
                           const text = cellDisplay.textOverride ?? previewTimesByPatternKey[routeKey]?.[poleIndex] ?? ''
                           const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '——' : text
 
@@ -181,12 +171,10 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                               className={`pro-preview-time-cell${
                                 excluded
                                   ? sectionLineClass
-                                  : `${sectionLineClass} pro-preview-editable${previewHoverClass(targetId, hoveredTargetId)}`
+                                  : `${sectionLineClass} pro-preview-editable`
                               }`}
                               rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
                               title={excluded ? 'この停車パターンは使用しない' : 'クリックしてセル上書きを編集'}
-                              onMouseEnter={() => !excluded && onHoverTarget(targetId)}
-                              onMouseLeave={() => onHoverTarget((current) => (current === targetId ? null : current))}
                               onClick={() => !excluded && onOpenCellEditor(route, pattern, pole, name)}
                               style={{
                                 ...(excluded ? disabledPreviewCellStyle : {}),

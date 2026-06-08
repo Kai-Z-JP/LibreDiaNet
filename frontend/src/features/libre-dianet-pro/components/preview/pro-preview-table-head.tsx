@@ -5,7 +5,6 @@ import {
   hasProDestinationOverride,
   hasProRouteNameOverride,
   isProPatternExcluded,
-  previewHoverClass,
   proDisplayFontCss,
   splitDestinationColumns,
 } from '../../model/pro-preview-display-helpers'
@@ -22,9 +21,8 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
     routeDisplayOverridesByKey,
     showStaticPatterns,
     showActualTimetable,
-    hoveredTargetId,
   } = data
-  const { onHoverTarget, onOpenRouteEditor } = actions
+  const { onOpenRouteEditor } = actions
 
   return (
     <thead>
@@ -68,17 +66,14 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
             route.stopPatterns.map((pattern, index) => {
               const routeKey = proRouteKey(route, pattern)
               const excluded = isProPatternExcluded(preset, route, pattern)
-              const targetId = `route-name-${routeKey}`
               const override = routeDisplayOverridesByKey[routeKey]
               const defaultRouteName = displayRouteName(route.route.shortName, route.route.longName)
               const routeName = override?.routeNameOverride ?? defaultRouteName
               return (
                 <td
                   key={`name-${route.sourceId}-${route.route.routeId}-${index}`}
-                  className={`pro-preview-route-cell${excluded ? '' : ` pro-preview-editable${previewHoverClass(targetId, hoveredTargetId)}`}`}
+                  className={`pro-preview-route-cell${excluded ? '' : ' pro-preview-editable'}`}
                   title={excluded ? 'この停車パターンは使用しない' : 'クリックして路線表示設定を編集'}
-                  onMouseEnter={() => !excluded && onHoverTarget(targetId)}
-                  onMouseLeave={() => onHoverTarget((current) => (current === targetId ? null : current))}
                   onClick={() => !excluded && onOpenRouteEditor(route, pattern)}
                   style={{
                     ...(excluded ? disabledPreviewCellStyle : {}),
@@ -148,17 +143,14 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
             route.stopPatterns.map((pattern, index) => {
               const routeKey = proRouteKey(route, pattern)
               const excluded = isProPatternExcluded(preset, route, pattern)
-              const targetId = `route-destination-${routeKey}`
               const override = routeDisplayOverridesByKey[routeKey]
               const defaultDestination = pattern.at(-1)?.name ?? ''
               const destinations = splitDestinationColumns(override?.destinationOverride ?? defaultDestination)
               return (
                 <td
                   key={`dest-${route.sourceId}-${route.route.routeId}-${index}`}
-                  className={`pro-preview-destination-cell${excluded ? '' : ` pro-preview-editable${previewHoverClass(targetId, hoveredTargetId)}`}`}
+                  className={`pro-preview-destination-cell${excluded ? '' : ' pro-preview-editable'}`}
                   title={excluded ? 'この停車パターンは使用しない' : 'クリックして路線表示設定を編集'}
-                  onMouseEnter={() => !excluded && onHoverTarget(targetId)}
-                  onMouseLeave={() => onHoverTarget((current) => (current === targetId ? null : current))}
                   onClick={() => !excluded && onOpenRouteEditor(route, pattern)}
                   style={{
                     ...(excluded ? disabledPreviewCellStyle : {}),

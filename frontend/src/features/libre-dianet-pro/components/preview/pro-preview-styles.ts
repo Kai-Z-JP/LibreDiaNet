@@ -135,8 +135,7 @@ export const ProPreviewStyleScope = styled.div`
       box-shadow 120ms ease;
   }
 
-  .pro-preview-editable:hover,
-  .pro-preview-hovered {
+  .pro-preview-editable:hover {
     z-index: 1;
     background: #eef6ff !important;
     box-shadow:

@@ -174,10 +174,6 @@ export function splitDestinationColumns(value: string): string[] {
     .slice(0, 2)
 }
 
-export function previewHoverClass(targetId: string, hoveredTargetId: string | null) {
-  return hoveredTargetId === targetId ? ' pro-preview-hovered' : ''
-}
-
 export function justifyTextClass(text: string) {
   return text.trim().length <= 1 ? 'pro-preview-text-center' : 'pro-preview-text-justify'
 }
