@@ -21,7 +21,7 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
       if (sorted.length === 0) {
         addIndex = 0
       } else {
-        sortedLoop: for (let sortedIndex = 0; sortedIndex < sorted.length; sortedIndex += 1) {
+        for (let sortedIndex = 0; sortedIndex < sorted.length; sortedIndex += 1) {
           const target = sorted[sortedIndex]
 
           for (let poleIndex = 0; poleIndex < poles.length; poleIndex += 1) {
@@ -32,12 +32,12 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
               if (checkTime < targetTime) {
                 if (firstSortedIndexWithValue(sorted, poleIndex) === sortedIndex && addIndex === -1) {
                   addIndex = sortedIndex
-                  break sortedLoop
+                  break
                 }
-                break sortedLoop
+                break
               }
               addIndex = sortedIndex + 1
-              break sortedLoop
+              break
             }
 
             const colSpan = poles[poleIndex]?.colSpan ?? 1
@@ -58,11 +58,11 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
                     if (targetFirstTime > checkLastTime) {
                       if (sortedIndex === 0) {
                         addIndex = 0
-                        break sortedLoop
+                        break
                       }
                     } else if (targetFirstTime < checkLastTime) {
                       addIndex = sortedIndex + 1
-                      break sortedLoop
+                      break
                     }
                   }
                 } else if (targetLastIndex < checkFirstIndex) {
@@ -71,11 +71,11 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
                   if (targetLastTime !== null && checkFirstTime !== null) {
                     if (targetLastTime < checkFirstTime) {
                       addIndex = sortedIndex + 1
-                      break sortedLoop
+                      break
                     } else if (targetLastTime > checkFirstTime) {
                       if (sortedIndex === 0) {
                         addIndex = 0
-                        break sortedLoop
+                        break
                       }
                     }
                   }

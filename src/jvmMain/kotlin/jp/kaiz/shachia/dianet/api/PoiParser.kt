@@ -684,7 +684,7 @@ private fun <T> sortTimetableColumns(columns: List<TimetableSortColumn<T>>, pole
             if (sorted.isEmpty()) {
                 addIndex = 0
             } else {
-                sortedLoop@ for ((sortedIndex, target) in sorted.withIndex()) {
+                for ((sortedIndex, target) in sorted.withIndex()) {
                     var poleIndex = 0
                     while (poleIndex < poleSpans.size) {
                         val targetTime = target.compareValueAt(poleIndex)
@@ -694,12 +694,12 @@ private fun <T> sortTimetableColumns(columns: List<TimetableSortColumn<T>>, pole
                             if (checkTime < targetTime) {
                                 if (sorted.indexOfFirst { it.compareValueAt(poleIndex) != null } == sortedIndex && addIndex == -1) {
                                     addIndex = sortedIndex
-                                    break@sortedLoop
+                                    break
                                 }
-                                break@sortedLoop
+                                break
                             }
                             addIndex = sortedIndex + 1
-                            break@sortedLoop
+                            break
                         }
 
                         val colSpan = poleSpans.getOrNull(poleIndex) ?: 1
@@ -720,11 +720,11 @@ private fun <T> sortTimetableColumns(columns: List<TimetableSortColumn<T>>, pole
                                     if (targetFirstTime > checkLastTime) {
                                         if (sortedIndex == 0) {
                                             addIndex = 0
-                                            break@sortedLoop
+                                            break
                                         }
                                     } else if (targetFirstTime < checkLastTime) {
                                         addIndex = sortedIndex + 1
-                                        break@sortedLoop
+                                        break
                                     }
                                 } else if (targetLastIndex < checkFirstIndex) {
                                     val targetLastTime = targetTimes[targetLastIndex]!!
@@ -732,11 +732,11 @@ private fun <T> sortTimetableColumns(columns: List<TimetableSortColumn<T>>, pole
 
                                     if (targetLastTime < checkFirstTime) {
                                         addIndex = sortedIndex + 1
-                                        break@sortedLoop
+                                        break
                                     } else if (targetLastTime > checkFirstTime) {
                                         if (sortedIndex == 0) {
                                             addIndex = 0
-                                            break@sortedLoop
+                                            break
                                         }
                                     }
                                 }
