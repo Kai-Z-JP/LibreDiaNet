@@ -7,10 +7,13 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  IconButton,
   MenuItem,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
+import UndoIcon from '@mui/icons-material/Undo'
 import type { Dispatch, SetStateAction } from 'react'
 import type { ProPreset } from '../../../../types'
 import type { ProPoleNameEditor } from '../../hooks/use-pro-preview-model'
@@ -37,24 +40,66 @@ export function ProPreviewPoleNameDialog({
               <Typography variant="body2" color="text.secondary">
                 既定: {editor.defaultName}
               </Typography>
-              <TextField
-                fullWidth
-                label="停留所名称"
-                value={editor.name}
-                placeholder={editor.defaultName}
-                onChange={(event) => updateEditor((current) => (current ? { ...current, name: event.target.value } : current))}
-                slotProps={{ inputLabel: fieldLabelProps }}
-                sx={{ backgroundColor: 'white' }}
-              />
-              <TextField
-                fullWidth
-                label="乗り場"
-                value={editor.locationName}
-                placeholder={editor.defaultLocationName}
-                onChange={(event) => updateEditor((current) => (current ? { ...current, locationName: event.target.value } : current))}
-                slotProps={{ inputLabel: fieldLabelProps }}
-                sx={{ backgroundColor: 'white' }}
-              />
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 1, alignItems: 'center' }}>
+                <TextField
+                  fullWidth
+                  label="停留所名称"
+                  value={editor.name}
+                  onChange={(event) => updateEditor((current) => (current ? { ...current, name: event.target.value } : current))}
+                  slotProps={{ inputLabel: fieldLabelProps }}
+                  sx={{ backgroundColor: 'white' }}
+                />
+                <Tooltip title="停留所名称を元に戻す">
+                  <span>
+                    <IconButton
+                      aria-label="停留所名称を元に戻す"
+                      disabled={editor.name.trim() === editor.defaultName.trim()}
+                      onClick={() =>
+                        updateEditor((current) =>
+                          current
+                            ? {
+                                ...current,
+                                name: current.defaultName,
+                              }
+                            : current,
+                        )
+                      }
+                    >
+                      <UndoIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 1, alignItems: 'center' }}>
+                <TextField
+                  fullWidth
+                  label="乗り場"
+                  value={editor.locationName}
+                  onChange={(event) => updateEditor((current) => (current ? { ...current, locationName: event.target.value } : current))}
+                  slotProps={{ inputLabel: fieldLabelProps }}
+                  sx={{ backgroundColor: 'white' }}
+                />
+                <Tooltip title="乗り場を元に戻す">
+                  <span>
+                    <IconButton
+                      aria-label="乗り場を元に戻す"
+                      disabled={editor.locationName.trim() === editor.defaultLocationName.trim()}
+                      onClick={() =>
+                        updateEditor((current) =>
+                          current
+                            ? {
+                                ...current,
+                                locationName: current.defaultLocationName,
+                              }
+                            : current,
+                        )
+                      }
+                    >
+                      <UndoIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
               <TextField
                 fullWidth
                 select
@@ -143,6 +188,8 @@ export function ProPreviewPoleNameDialog({
                 const defaultName = editor.defaultName.trim()
                 const nextLocationName = editor.locationName.trim()
                 const defaultLocationName = editor.defaultLocationName.trim()
+                const nameOverride = nextName === defaultName ? null : nextName
+                const locationNameOverride = nextLocationName === defaultLocationName ? null : nextLocationName
                 onUpdate({
                   ...preset,
                   poles: preset.poles.map((pole) =>
@@ -151,8 +198,8 @@ export function ProPreviewPoleNameDialog({
                           ...pole,
                           override: {
                             ...pole.override,
-                            nameOverride: nextName && nextName !== defaultName ? nextName : null,
-                            locationNameOverride: nextLocationName && nextLocationName !== defaultLocationName ? nextLocationName : null,
+                            nameOverride,
+                            locationNameOverride,
                             jokoOverride: editor.joko === '発' || editor.joko === '着' ? editor.joko : null,
                             majorStop: false,
                             rowShading: editor.rowShading,

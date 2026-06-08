@@ -25,6 +25,7 @@ export type ProRouteEditor = {
   routeLabel: string
   routeName: string
   routeNameFont: ProDisplayFont
+  defaultRouteName: string
   destination: string
   useTripHeadsignAsDestination: boolean
   defaultDestination: string

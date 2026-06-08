@@ -130,7 +130,7 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                         rowSpan={poleNameRowSpan > 1 ? poleNameRowSpan : undefined}
                         title="クリックして標柱設定を編集"
                         onClick={openPoleEditor}
-                        style={{ backgroundColor: pole.override.nameOverride ? '#fff3cd' : undefined }}
+                        style={{ backgroundColor: pole.override.nameOverride !== null ? '#fff3cd' : undefined }}
                       >
                         <Box component="span" className={`pro-preview-pole-name-text ${justifyTextClass(name)}`}>
                           {name}
@@ -141,7 +141,7 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                       className={`pro-preview-platform pro-preview-editable${sectionLineClass}`}
                       title="クリックして標柱設定を編集"
                       onClick={openPoleEditor}
-                      style={{ backgroundColor: pole.override.locationNameOverride ? '#fff3cd' : undefined }}
+                      style={{ backgroundColor: pole.override.locationNameOverride !== null ? '#fff3cd' : undefined }}
                     >
                       {locationName}
                     </td>

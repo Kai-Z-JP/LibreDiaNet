@@ -26,7 +26,8 @@ export function normalizeProRouteDisplayOverride(
   if (!override) {
     return null
   }
-  const routeNameOverride = override.routeNameOverride?.trim() || null
+  const routeNameOverride = override.routeNameOverride === null ? null : override.routeNameOverride.trim()
+  const hasRouteNameOverride = routeNameOverride !== null
   const useTripHeadsignAsDestination = override.useTripHeadsignAsDestination
   const destinationOverride = useTripHeadsignAsDestination ? null : override.destinationOverride?.trim() || null
   const stopCellOverrides = override.stopCellOverrides
@@ -37,7 +38,7 @@ export function normalizeProRouteDisplayOverride(
       rowSpan: Math.max(cell.rowSpan, 1),
     }))
 
-  if (!routeNameOverride && !destinationOverride && !useTripHeadsignAsDestination) {
+  if (!hasRouteNameOverride && !destinationOverride && !useTripHeadsignAsDestination) {
     return stopCellOverrides.length === 0
       ? null
       : {
@@ -53,7 +54,7 @@ export function normalizeProRouteDisplayOverride(
   return {
     ...override,
     routeNameOverride,
-    routeNameFont: routeNameOverride ? override.routeNameFont : null,
+    routeNameFont: hasRouteNameOverride && routeNameOverride !== '' ? override.routeNameFont : null,
     destinationOverride,
     useTripHeadsignAsDestination,
     stopCellOverrides,
@@ -85,7 +86,11 @@ export function hasProRouteNameOverride(
   override: ProPreset['routeDisplayOverrides'][number] | undefined,
   defaultRouteName: string,
 ): boolean {
-  return Boolean(override?.routeNameOverride && override.routeNameOverride.trim() !== defaultRouteName.trim())
+  return (
+    override?.routeNameOverride !== null &&
+    override?.routeNameOverride !== undefined &&
+    override.routeNameOverride.trim() !== defaultRouteName.trim()
+  )
 }
 
 export function hasProDestinationOverride(

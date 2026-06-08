@@ -1,14 +1,11 @@
-import type { GtfsStop } from '../../../types'
+import type { GtfsStop, ProPoleDetail } from '../../../types'
 import { stopPatternKey } from '../../../utils'
-import { proRoutePatternEntries, proStopDisplayLabel } from './pro-pole-stop-helpers'
+import { proPoleDisplayLocationName, proPoleDisplayName, proRoutePatternEntries, proStopDisplayLabel } from './pro-pole-stop-helpers'
 import type { ProConstructedRoute } from './pro-types'
 
 describe('proRoutePatternEntries', () => {
   it('numbers patterns consecutively across routes in a preset', () => {
-    const routes = [
-      route('source-a', 'route-a', [pattern('a-1'), pattern('a-2')]),
-      route('source-a', 'route-b', [pattern('b-1')]),
-    ]
+    const routes = [route('source-a', 'route-a', [pattern('a-1'), pattern('a-2')]), route('source-a', 'route-b', [pattern('b-1')])]
 
     expect(proRoutePatternEntries(routes).map((entry) => entry.presetPatternIndex)).toEqual([0, 1, 2])
   })
@@ -36,6 +33,22 @@ describe('proStopDisplayLabel', () => {
   })
 })
 
+describe('proPoleDisplayName', () => {
+  it('keeps an empty name override as an explicit blank display', () => {
+    const pole = poleDetail({ nameOverride: '' })
+
+    expect(proPoleDisplayName(pole, { 'source-a::stop-a': stop('stop-a', 'Stop A') })).toBe('')
+  })
+})
+
+describe('proPoleDisplayLocationName', () => {
+  it('keeps an empty location name override as an explicit blank display', () => {
+    const pole = poleDetail({ locationNameOverride: '' })
+
+    expect(proPoleDisplayLocationName(pole, { 'source-a::stop-a': { ...stop('stop-a', 'Stop A'), platformCode: '1' } })).toBe('')
+  })
+})
+
 function route(sourceId: string, routeId: string, stopPatterns: GtfsStop[][]): ProConstructedRoute {
   return {
     sourceId,
@@ -59,5 +72,24 @@ function stop(stopId: string, name: string): GtfsStop {
     stopId,
     name,
     platformCode: null,
+  }
+}
+
+function poleDetail(override: Partial<ProPoleDetail['override']>): ProPoleDetail {
+  return {
+    id: 'pole-a',
+    stops: [{ sourceId: 'source-a', id: 'stop-a', stopSequence: 1, stopPatternKey: 'pattern', stopIndex: 0 }],
+    override: {
+      majorStop: false,
+      branchStart: false,
+      branchEnd: false,
+      nameOverride: null,
+      locationNameOverride: null,
+      jokoOverride: null,
+      rowShading: false,
+      stopNameBold: false,
+      horizontalLine: false,
+      ...override,
+    },
   }
 }

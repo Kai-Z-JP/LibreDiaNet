@@ -2,7 +2,7 @@ import type { DropResult } from '@hello-pangea/dnd'
 import { useEffect, useMemo } from 'react'
 import { buildProCreateFromDataRequest, requestDiaNetXlsx } from '../../../api'
 import type { DayMapping, GtfsStop, ProPoleDetail, ProPreset, ProPresetContext, ProVersion } from '../../../types'
-import { todayIsoDate } from '../../../utils'
+import { displayRouteName, todayIsoDate } from '../../../utils'
 import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import { proExcludedStopPatternsForSource, proRouteDisplayLabel, sameProPoleStop } from '../model/pro-pole-stop-helpers'
 import {
@@ -173,16 +173,22 @@ export function useProPreviewModel({
 
   const openRouteEditor = (route: ProConstructedRoute, pattern: GtfsStop[]) => {
     const routeKey = proRouteKey(route, pattern)
-    openRouteEditorByRouteKey(routeKey, proRouteDisplayLabel(route, includeSourceNameInRoute), pattern.at(-1)?.name ?? '')
+    openRouteEditorByRouteKey(
+      routeKey,
+      proRouteDisplayLabel(route, includeSourceNameInRoute),
+      displayRouteName(route.route.shortName, route.route.longName),
+      pattern.at(-1)?.name ?? '',
+    )
   }
 
-  const openRouteEditorByRouteKey = (routeKey: string, routeLabel: string, defaultDestination: string) => {
+  const openRouteEditorByRouteKey = (routeKey: string, routeLabel: string, defaultRouteName: string, defaultDestination: string) => {
     const override = routeDisplayOverridesByKey[routeKey]
     setRouteEditor({
       routeKey,
       routeLabel,
-      routeName: override?.routeNameOverride ?? '',
+      routeName: override?.routeNameOverride ?? defaultRouteName,
       routeNameFont: override?.routeNameFont ?? 'HEISEI_MINCHO_STD_W3',
+      defaultRouteName,
       destination: override?.destinationOverride ?? defaultDestination,
       useTripHeadsignAsDestination: override?.useTripHeadsignAsDestination ?? false,
       defaultDestination,
@@ -195,8 +201,8 @@ export function useProPreviewModel({
       defaultName,
       defaultLocationName,
       defaultJoko,
-      name: pole.override.nameOverride ?? '',
-      locationName: pole.override.locationNameOverride ?? '',
+      name: pole.override.nameOverride ?? defaultName,
+      locationName: pole.override.locationNameOverride ?? defaultLocationName,
       joko: pole.override.jokoOverride ?? '',
       rowShading: pole.override.rowShading || pole.override.majorStop,
       stopNameBold: pole.override.stopNameBold || pole.override.majorStop,
