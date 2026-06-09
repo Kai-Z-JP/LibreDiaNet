@@ -55,9 +55,7 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
           })}
         {showActualTimetable &&
           constructedTrips.map((trip, index) => (
-            <td key={`actual-route-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}`} className="pro-preview-route-cell">
-              {trip.routeName || ' '}
-            </td>
+            <td key={`actual-route-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}`} className="pro-preview-route-cell"></td>
           ))}
       </tr>
       <tr>
