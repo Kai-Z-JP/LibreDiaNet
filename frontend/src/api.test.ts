@@ -110,7 +110,6 @@ describe('buildProCreateFromDataRequest', () => {
         {
           routeKey: `source-a::route::0::${sourceAPatternKey}`,
           routeNameOverride: null,
-          routeNameFont: null,
           destinationOverride: null,
           useTripHeadsignAsDestination: true,
           stopCellOverrides: [],

@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react'
-import { fetchGtfsFeedFiles } from '../../../api'
-import type { FeedOption, GtfsFeedFileOption, ProGtfsSource, ProVersion, RepoInfoV2 } from '../../../types'
-import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
+import type { FeedOption, GtfsFeedFileOption, ProGtfsSource, ProVersion } from '../../../types'
 import {
   feedLabelForSource,
   normalizeProGtfsSourceDisplayName,
   removeSourceFromPreset,
-  repoFeedKey,
   repoInfoId,
   sourceDisplayName,
 } from './pro-source-helpers'
+import { useRepoFeedFileOptions } from './use-repo-feed-file-options'
+import { useRepoSourceReload } from './use-repo-source-reload'
 
 export function useVersionSettingsDialog({
   selectedVersion,
@@ -28,46 +27,13 @@ export function useVersionSettingsDialog({
 }) {
   const [draftVersion, setDraftVersion] = useState<ProVersion | null>(selectedVersion)
   const [repoSource, setRepoSource] = useState<FeedOption | null>(null)
-  const [repoFileOptionsByFeedKey, setRepoFileOptionsByFeedKey] = useState<Record<string, GtfsFeedFileOption[]>>({})
-  const [reloadingSourceIds, setReloadingSourceIds] = useState<string[]>([])
+  const repoFileOptionsByFeedKey = useRepoFeedFileOptions(draftVersion)
+  const { reloadingSourceIds, reloadRepoSource } = useRepoSourceReload()
 
   useEffect(() => {
     setDraftVersion(selectedVersion)
     setRepoSource(null)
   }, [selectedVersion])
-
-  useEffect(() => {
-    if (!draftVersion) {
-      return
-    }
-    const repoSources = draftVersion.gtfsSources.filter(
-      (source): source is ProGtfsSource & { info: RepoInfoV2 } => source.info.kind === 'repo',
-    )
-    const missingSources = repoSources.filter((source) => !repoFileOptionsByFeedKey[repoFeedKey(source.info.orgId, source.info.feedId)])
-    if (missingSources.length === 0) {
-      return
-    }
-    let cancelled = false
-    const load = async () => {
-      const entries = await Promise.all(
-        missingSources.map(async (source) => {
-          const key = repoFeedKey(source.info.orgId, source.info.feedId)
-          try {
-            return [key, await fetchGtfsFeedFiles(source.info.orgId, source.info.feedId)] as const
-          } catch {
-            return [key, []] as const
-          }
-        }),
-      )
-      if (!cancelled) {
-        setRepoFileOptionsByFeedKey((current) => ({ ...current, ...Object.fromEntries(entries) }))
-      }
-    }
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [draftVersion, repoFileOptionsByFeedKey])
 
   const changed = Boolean(draftVersion && selectedVersion && JSON.stringify(draftVersion) !== JSON.stringify(selectedVersion))
 
@@ -94,18 +60,6 @@ export function useVersionSettingsDialog({
         : current,
     )
     await reloadRepoSource(nextSource)
-  }
-
-  const reloadRepoSource = async (source: ProGtfsSource) => {
-    if (source.info.kind !== 'repo') {
-      return
-    }
-    setReloadingSourceIds((current) => [...current, source.sourceId])
-    try {
-      await libreDiaNetRepository.reloadRepoFeed(source.info)
-    } finally {
-      setReloadingSourceIds((current) => current.filter((sourceId) => sourceId !== source.sourceId))
-    }
   }
 
   return {
