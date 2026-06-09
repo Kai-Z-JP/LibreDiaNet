@@ -244,7 +244,6 @@ export const ProPreviewStyleScope = styled.div`
 
   .pro-preview-destination-columns {
     flex-direction: row-reverse;
-    gap: 4px;
   }
 
   .pro-preview-vertical-text {
