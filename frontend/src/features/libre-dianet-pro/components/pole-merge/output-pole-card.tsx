@@ -47,12 +47,7 @@ export const OutputPoleCard = memo(function OutputPoleCard({
             cursor: 'pointer',
           }}
         >
-          <OutputPoleSummary
-            pole={pole}
-            name={pole.override.nameOverride ?? primary?.name ?? pole.id}
-            onUpdate={onUpdate}
-            preset={preset}
-          />
+          <OutputPoleSummary pole={pole} name={primary?.name ?? pole.id} onUpdate={onUpdate} preset={preset} />
           {open && (
             <OutputPoleDetails
               pole={pole}

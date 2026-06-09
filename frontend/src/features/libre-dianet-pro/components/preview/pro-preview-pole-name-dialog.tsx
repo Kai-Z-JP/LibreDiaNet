@@ -73,16 +73,16 @@ export function ProPreviewPoleNameDialog({
               <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 1, alignItems: 'center' }}>
                 <TextField
                   fullWidth
-                  label="乗り場"
+                  label="のりば"
                   value={editor.locationName}
                   onChange={(event) => updateEditor((current) => (current ? { ...current, locationName: event.target.value } : current))}
                   slotProps={{ inputLabel: fieldLabelProps }}
                   sx={{ backgroundColor: 'white' }}
                 />
-                <Tooltip title="乗り場を元に戻す">
+                <Tooltip title="のりばを元に戻す">
                   <span>
                     <IconButton
-                      aria-label="乗り場を元に戻す"
+                      aria-label="のりばを元に戻す"
                       disabled={editor.locationName.trim() === editor.defaultLocationName.trim()}
                       onClick={() =>
                         updateEditor((current) =>

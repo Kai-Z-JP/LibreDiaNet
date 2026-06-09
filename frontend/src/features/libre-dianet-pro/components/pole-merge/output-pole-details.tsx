@@ -1,5 +1,5 @@
 import DeleteIcon from '@mui/icons-material/Delete'
-import { Box, Checkbox, FormControlLabel, IconButton, Typography } from '@mui/material'
+import { Box, Chip, IconButton, Typography } from '@mui/material'
 import type { GtfsStop, ProPoleDetail, ProPreset } from '../../../../types'
 import { proPoleStopKey, proStopDisplayLabel, sameProPoleStop, type ProRoutePatternMap } from '../../model/pro-pole-stop-helpers'
 import type { ProConstructedRoute } from '../../model/pro-types'
@@ -38,7 +38,8 @@ export function OutputPoleDetails({
           />
         ))}
       </Box>
-      <PoleOverrideFlags preset={preset} pole={pole} onUpdate={onUpdate} />
+      <PoleTextOverrides pole={pole} />
+      <PoleOverrideFlags pole={pole} />
     </Box>
   )
 }
@@ -86,59 +87,51 @@ function OutputPoleStopChip({
   )
 }
 
-function PoleOverrideFlags({ preset, pole, onUpdate }: { preset: ProPreset; pole: ProPoleDetail; onUpdate: (preset: ProPreset) => void }) {
+function PoleTextOverrides({ pole }: { pole: ProPoleDetail }) {
+  const overrides = [
+    { label: '標柱名', value: pole.override.nameOverride },
+    { label: 'のりば名', value: pole.override.locationNameOverride },
+    { label: '発着', value: pole.override.jokoOverride },
+  ].filter((override): override is { label: string; value: string } => override.value !== null)
+
+  if (overrides.length === 0) {
+    return null
+  }
+
   return (
-    <>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-        <FormControlLabel
-          label="網掛け"
-          control={
-            <Checkbox
-              checked={pole.override.rowShading || pole.override.majorStop}
-              onChange={(_, checked) => updatePoleFlags(preset, pole.id, { majorStop: false, rowShading: checked }, onUpdate)}
-            />
-          }
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
+      {overrides.map((override) => (
+        <Chip
+          key={override.label}
+          size="small"
+          variant="outlined"
+          color="warning"
+          label={`出力${override.label}: ${override.value === '' ? '空欄' : override.value}`}
         />
-        <FormControlLabel
-          label="停留所名太字"
-          control={
-            <Checkbox
-              checked={pole.override.stopNameBold || pole.override.majorStop}
-              onChange={(_, checked) => updatePoleFlags(preset, pole.id, { majorStop: false, stopNameBold: checked }, onUpdate)}
-            />
-          }
-        />
-        <FormControlLabel
-          label="横線"
-          control={
-            <Checkbox
-              checked={pole.override.horizontalLine}
-              onChange={(_, checked) => updatePoleFlag(preset, pole.id, 'horizontalLine', checked, onUpdate)}
-            />
-          }
-        />
-      </Box>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-        <FormControlLabel
-          label="上付二重線"
-          control={
-            <Checkbox
-              checked={pole.override.branchStart}
-              onChange={(_, checked) => updatePoleFlag(preset, pole.id, 'branchStart', checked, onUpdate)}
-            />
-          }
-        />
-        <FormControlLabel
-          label="下付二重線"
-          control={
-            <Checkbox
-              checked={pole.override.branchEnd}
-              onChange={(_, checked) => updatePoleFlag(preset, pole.id, 'branchEnd', checked, onUpdate)}
-            />
-          }
-        />
-      </Box>
-    </>
+      ))}
+    </Box>
+  )
+}
+
+function PoleOverrideFlags({ pole }: { pole: ProPoleDetail }) {
+  const flags = [
+    pole.override.rowShading || pole.override.majorStop ? '網掛け' : null,
+    pole.override.stopNameBold || pole.override.majorStop ? '停留所名太字' : null,
+    pole.override.horizontalLine ? '横線' : null,
+    pole.override.branchStart ? '上付二重線' : null,
+    pole.override.branchEnd ? '下付二重線' : null,
+  ].filter((flag): flag is string => flag !== null)
+
+  if (flags.length === 0) {
+    return null
+  }
+
+  return (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
+      {flags.map((flag) => (
+        <Chip key={flag} size="small" variant="outlined" color="warning" label={flag} />
+      ))}
+    </Box>
   )
 }
 
@@ -159,26 +152,4 @@ function removeStopFromPole(
     )
     .filter((item) => item.stops.length > 0)
   onUpdate({ ...preset, poles: nextPoles })
-}
-
-function updatePoleFlag(
-  preset: ProPreset,
-  poleId: string,
-  flag: 'majorStop' | 'rowShading' | 'stopNameBold' | 'horizontalLine' | 'branchStart' | 'branchEnd',
-  checked: boolean,
-  onUpdate: (preset: ProPreset) => void,
-) {
-  updatePoleFlags(preset, poleId, { [flag]: checked }, onUpdate)
-}
-
-function updatePoleFlags(
-  preset: ProPreset,
-  poleId: string,
-  flags: Partial<ProPoleDetail['override']>,
-  onUpdate: (preset: ProPreset) => void,
-) {
-  onUpdate({
-    ...preset,
-    poles: preset.poles.map((item) => (item.id === poleId ? { ...item, override: { ...item.override, ...flags } } : item)),
-  })
 }
