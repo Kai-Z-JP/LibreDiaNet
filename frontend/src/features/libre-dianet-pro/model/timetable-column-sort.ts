@@ -63,6 +63,9 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
                     } else if (targetFirstTime < checkLastTime) {
                       addIndex = sortedIndex + 1
                       break
+                    } else if (targetFirstTime === checkLastTime) {
+                      addIndex = sortedIndex + 1
+                      break
                     }
                   }
                 } else if (targetLastIndex < checkFirstIndex) {
@@ -77,6 +80,9 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
                         addIndex = 0
                         break
                       }
+                    } else if (targetLastTime === checkFirstTime) {
+                      addIndex = sortedIndex
+                      break
                     }
                   }
                 }

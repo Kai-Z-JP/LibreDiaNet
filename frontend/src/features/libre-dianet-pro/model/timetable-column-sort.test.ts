@@ -39,6 +39,30 @@ describe('sortTimetableColumns', () => {
     expect(sorted).toEqual(['upper-row-trip', 'lower-row-trip'])
   })
 
+  it('orders same-time departure before arrival inside a multi-row stop interval', () => {
+    const sorted = sortTimetableColumns(
+      [
+        { item: 'arrival', compareValues: [900, null] },
+        { item: 'departure', compareValues: [null, 900] },
+      ],
+      [{ colSpan: 2 }, { colSpan: 1 }],
+    )
+
+    expect(sorted).toEqual(['departure', 'arrival'])
+  })
+
+  it('keeps same-time departure before arrival when departure is already sorted first', () => {
+    const sorted = sortTimetableColumns(
+      [
+        { item: 'departure', compareValues: [null, 900] },
+        { item: 'arrival', compareValues: [900, null] },
+      ],
+      [{ colSpan: 2 }, { colSpan: 1 }],
+    )
+
+    expect(sorted).toEqual(['departure', 'arrival'])
+  })
+
   it('keeps unresolved columns in their conservative input order', () => {
     const sorted = sortTimetableColumns(
       [
