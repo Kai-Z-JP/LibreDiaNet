@@ -1,36 +1,35 @@
 import { Draggable } from '@hello-pangea/dnd'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { Box, Card, IconButton, Typography } from '@mui/material'
-import type { Dispatch, SetStateAction } from 'react'
+import { memo, useState } from 'react'
 import type { GtfsStop, ProPoleDetail, ProPreset } from '../../../../types'
-import { hasVisibleProOverride } from '../../model/pro-pole-stop-helpers'
+import { hasVisibleProOverride, type ProRoutePatternMap } from '../../model/pro-pole-stop-helpers'
 import type { ProConstructedRoute } from '../../model/pro-types'
 import { OutputPoleDetails } from './output-pole-details'
 
-export function OutputPoleCard({
+export const OutputPoleCard = memo(function OutputPoleCard({
   preset,
   pole,
   index,
   stopMap,
   constructedRoutes,
+  routePatternMap,
   includeSourceNameInRoute,
-  poleOpenMap,
   onUpdate,
-  onUpdatePoleOpenMap,
 }: {
   preset: ProPreset
   pole: ProPoleDetail
   index: number
   stopMap: Record<string, GtfsStop>
   constructedRoutes: ProConstructedRoute[]
+  routePatternMap: ProRoutePatternMap
   includeSourceNameInRoute: boolean
-  poleOpenMap: Record<string, boolean>
   onUpdate: (preset: ProPreset) => void
-  onUpdatePoleOpenMap: Dispatch<SetStateAction<Record<string, boolean>>>
 }) {
+  const [manualOpen, setManualOpen] = useState<boolean | null>(null)
+  const open = manualOpen ?? hasVisibleProOverride(pole)
   const primaryStop = pole.stops[0]
   const primary = primaryStop ? stopMap[`${primaryStop.sourceId}::${primaryStop.id}`] : null
-  const open = poleOpenMap[pole.id] ?? (hasVisibleProOverride(pole) || pole.stops.length > 1)
 
   return (
     <Draggable draggableId={`pole-${pole.id}`} index={index}>
@@ -40,7 +39,7 @@ export function OutputPoleCard({
           {...draggableProvided.draggableProps}
           {...draggableProvided.dragHandleProps}
           variant="outlined"
-          onClick={() => onUpdatePoleOpenMap((current) => ({ ...current, [pole.id]: !open }))}
+          onClick={() => setManualOpen(!open)}
           sx={{
             p: 1,
             backgroundColor: snapshot.combineTargetFor ? '#d8ecff' : 'white',
@@ -51,7 +50,6 @@ export function OutputPoleCard({
           <OutputPoleSummary
             pole={pole}
             name={pole.override.nameOverride ?? primary?.name ?? pole.id}
-            open={open}
             onUpdate={onUpdate}
             preset={preset}
           />
@@ -61,6 +59,7 @@ export function OutputPoleCard({
               preset={preset}
               stopMap={stopMap}
               constructedRoutes={constructedRoutes}
+              routePatternMap={routePatternMap}
               includeSourceNameInRoute={includeSourceNameInRoute}
               onUpdate={onUpdate}
             />
@@ -69,29 +68,25 @@ export function OutputPoleCard({
       )}
     </Draggable>
   )
-}
+})
 
 function OutputPoleSummary({
   preset,
   pole,
   name,
-  open,
   onUpdate,
 }: {
   preset: ProPreset
   pole: ProPoleDetail
   name: string
-  open: boolean
   onUpdate: (preset: ProPreset) => void
 }) {
   return (
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'space-between' }}>
       <Typography sx={{ flex: 1 }}>{name}</Typography>
-      {!open && pole.stops.length > 1 && (
-        <Typography variant="body2" color="text.secondary">
-          {pole.stops.length}件
-        </Typography>
-      )}
+      <Typography variant="body2" color="text.secondary">
+        {pole.stops.length}標柱
+      </Typography>
       <IconButton
         size="small"
         onClick={(event) => {

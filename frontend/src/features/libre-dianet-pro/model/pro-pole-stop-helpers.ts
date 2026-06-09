@@ -27,6 +27,25 @@ export function proPoleStopKey(stop: Pick<ProPoleStop, 'sourceId' | 'id' | 'stop
   return `${stop.sourceId}::${stop.stopPatternKey}::${stop.stopIndex}::${stop.id}`
 }
 
+export type ProRoutePatternMap = Record<string, ProRoutePatternEntry>
+
+export function proRoutePatternMap(routes: ProConstructedRoute[]): ProRoutePatternMap {
+  return Object.fromEntries(
+    proRoutePatternEntries(routes).flatMap((entry) => {
+      const patternKey = stopPatternKey(entry.pattern)
+      return entry.pattern.map((stop, stopIndex) => [
+        proPoleStopKey({
+          sourceId: entry.route.sourceId,
+          id: stop.stopId,
+          stopPatternKey: patternKey,
+          stopIndex,
+        }),
+        entry,
+      ])
+    }),
+  )
+}
+
 export function proStopIdKey(sourceId: string, stopId: string): string {
   return `${sourceId}::${stopId}`
 }
@@ -111,9 +130,9 @@ export function proStopDisplayLabel(
   stopMap: Record<string, GtfsStop>,
   routes: ProConstructedRoute[],
   includeSourceName: boolean,
+  routePattern: ProRoutePatternEntry | null = proRoutePatternForPoleStop(stop, routes),
 ): string {
   const stopName = stopMap[`${stop.sourceId}::${stop.id}`]?.name ?? `存在しない停留所`
-  const routePattern = proRoutePatternForPoleStop(stop, routes)
   const routeLabel = routePattern ? proRouteDisplayLabel(routePattern.route, includeSourceName) : ''
   const patternLabel = routePattern ? `P${routePattern.presetPatternIndex + 1}: ` : ''
   const indexLabel = `#${stop.stopIndex + 1}`

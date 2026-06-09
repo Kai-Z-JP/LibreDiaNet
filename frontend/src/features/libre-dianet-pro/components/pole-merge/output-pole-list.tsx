@@ -1,8 +1,8 @@
 import { Droppable } from '@hello-pangea/dnd'
 import MergeIcon from '@mui/icons-material/Merge'
 import { Box, Button, Card, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material'
-import type { Dispatch, SetStateAction } from 'react'
 import type { GtfsStop, ProPreset } from '../../../../types'
+import type { ProRoutePatternMap } from '../../model/pro-pole-stop-helpers'
 import type { ProConstructedRoute } from '../../model/pro-types'
 import { OutputPoleCard } from './output-pole-card'
 
@@ -11,8 +11,8 @@ type OutputPoleListProps = {
     preset: ProPreset
     stopMap: Record<string, GtfsStop>
     constructedRoutes: ProConstructedRoute[]
+    routePatternMap: ProRoutePatternMap
     includeSourceNameInRoute: boolean
-    poleOpenMap: Record<string, boolean>
     pendingMerge: {
       sourceNames: string[]
       targetNames: string[]
@@ -20,7 +20,6 @@ type OutputPoleListProps = {
   }
   actions: {
     onUpdate: (preset: ProPreset) => void
-    onUpdatePoleOpenMap: Dispatch<SetStateAction<Record<string, boolean>>>
     onMergePolesByStopId: () => void
     onConfirmPendingMerge: () => void
     onCancelPendingMerge: () => void
@@ -28,8 +27,8 @@ type OutputPoleListProps = {
 }
 
 export function OutputPoleList({ data, actions }: OutputPoleListProps) {
-  const { preset, stopMap, constructedRoutes, includeSourceNameInRoute, poleOpenMap, pendingMerge } = data
-  const { onUpdate, onUpdatePoleOpenMap, onMergePolesByStopId, onConfirmPendingMerge, onCancelPendingMerge } = actions
+  const { preset, stopMap, constructedRoutes, routePatternMap, includeSourceNameInRoute, pendingMerge } = data
+  const { onUpdate, onMergePolesByStopId, onConfirmPendingMerge, onCancelPendingMerge } = actions
 
   return (
     <Card elevation={0} sx={{ p: 1, minHeight: 400, backgroundColor: '#eaeef6' }}>
@@ -71,10 +70,9 @@ export function OutputPoleList({ data, actions }: OutputPoleListProps) {
                 index={index}
                 stopMap={stopMap}
                 constructedRoutes={constructedRoutes}
+                routePatternMap={routePatternMap}
                 includeSourceNameInRoute={includeSourceNameInRoute}
-                poleOpenMap={poleOpenMap}
                 onUpdate={onUpdate}
-                onUpdatePoleOpenMap={onUpdatePoleOpenMap}
               />
             ))}
             {provided.placeholder}

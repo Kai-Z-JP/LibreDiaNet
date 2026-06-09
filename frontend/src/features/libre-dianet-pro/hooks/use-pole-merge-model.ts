@@ -1,11 +1,12 @@
 import type { DropResult } from '@hello-pangea/dnd'
-import { useMemo, useReducer, type SetStateAction } from 'react'
+import { useCallback, useMemo, useReducer, type SetStateAction } from 'react'
 import { EMPTY_OVERRIDE } from '../../../types'
 import type { GtfsStop, ProPoleDetail, ProPreset } from '../../../types'
 import {
   proExcludedPatternKey,
   proPoleStopFromPatternStop,
   proPoleStopKey,
+  proRoutePatternMap,
   proRoutePatternEntries,
   proStopIdKey,
   sameProPoleStop,
@@ -14,7 +15,6 @@ import type { ProConstructedRoute } from '../model/pro-types'
 
 type PoleMergeState = {
   selectedStopMap: Record<string, number[]>
-  poleOpenMap: Record<string, boolean>
   pendingMerge: PendingPoleMerge | null
 }
 
@@ -37,7 +37,6 @@ export type PolePatternMap = Record<
 
 type PoleMergeAction =
   | { type: 'setSelectedStopMap'; value: SetStateAction<Record<string, number[]>> }
-  | { type: 'setPoleOpenMap'; value: SetStateAction<Record<string, boolean>> }
   | { type: 'setPendingMerge'; value: PendingPoleMerge | null }
 
 function applyStateAction<T>(current: T, value: SetStateAction<T>): T {
@@ -48,8 +47,6 @@ function poleMergeReducer(state: PoleMergeState, action: PoleMergeAction): PoleM
   switch (action.type) {
     case 'setSelectedStopMap':
       return { ...state, selectedStopMap: applyStateAction(state.selectedStopMap, action.value) }
-    case 'setPoleOpenMap':
-      return { ...state, poleOpenMap: applyStateAction(state.poleOpenMap, action.value) }
     case 'setPendingMerge':
       return { ...state, pendingMerge: action.value }
   }
@@ -68,13 +65,14 @@ export function usePoleMergeModel({
 }) {
   const [state, dispatch] = useReducer(poleMergeReducer, {
     selectedStopMap: {},
-    poleOpenMap: {},
     pendingMerge: null,
   })
-  const { selectedStopMap, poleOpenMap, pendingMerge } = state
-  const setSelectedStopMap = (value: SetStateAction<Record<string, number[]>>) => dispatch({ type: 'setSelectedStopMap', value })
-  const setPoleOpenMap = (value: SetStateAction<Record<string, boolean>>) => dispatch({ type: 'setPoleOpenMap', value })
-  const setPendingMerge = (value: PendingPoleMerge | null) => dispatch({ type: 'setPendingMerge', value })
+  const { selectedStopMap, pendingMerge } = state
+  const setSelectedStopMap = useCallback(
+    (value: SetStateAction<Record<string, number[]>>) => dispatch({ type: 'setSelectedStopMap', value }),
+    [],
+  )
+  const setPendingMerge = useCallback((value: PendingPoleMerge | null) => dispatch({ type: 'setPendingMerge', value }), [])
 
   const includeSourceNameInRoute = preset.sourceIds.length > 1
   const usedPoleStopKeys = useMemo(
@@ -91,6 +89,7 @@ export function usePoleMergeModel({
       ),
     [constructedRoutes],
   )
+  const routePatternMap = useMemo(() => proRoutePatternMap(constructedRoutes), [constructedRoutes])
 
   const duplicateStopIdKeys = useMemo(() => {
     const duplicateKeys = new Set<string>()
@@ -334,17 +333,16 @@ export function usePoleMergeModel({
   return {
     state: {
       selectedStopMap,
-      poleOpenMap,
       pendingMerge,
     },
     derived: {
       includeSourceNameInRoute,
       usedPoleStopKeys,
       patternMap,
+      routePatternMap,
     },
     actions: {
       updateSelectedStops: setSelectedStopMap,
-      updatePoleOpenMap: setPoleOpenMap,
       addPatternStops,
       toggleExcludedPattern,
       mergePolesByStopId,
@@ -372,13 +370,12 @@ export function usePoleMergeModel({
           preset,
           stopMap,
           constructedRoutes,
+          routePatternMap,
           includeSourceNameInRoute,
-          poleOpenMap,
           pendingMerge,
         },
         actions: {
           onUpdate,
-          onUpdatePoleOpenMap: setPoleOpenMap,
           onMergePolesByStopId: mergePolesByStopId,
           onConfirmPendingMerge: confirmPendingMerge,
           onCancelPendingMerge: () => setPendingMerge(null),

@@ -1,7 +1,7 @@
 import DeleteIcon from '@mui/icons-material/Delete'
 import { Box, Checkbox, FormControlLabel, IconButton, Typography } from '@mui/material'
 import type { GtfsStop, ProPoleDetail, ProPreset } from '../../../../types'
-import { proPoleStopKey, proStopDisplayLabel, sameProPoleStop } from '../../model/pro-pole-stop-helpers'
+import { proPoleStopKey, proStopDisplayLabel, sameProPoleStop, type ProRoutePatternMap } from '../../model/pro-pole-stop-helpers'
 import type { ProConstructedRoute } from '../../model/pro-types'
 
 export function OutputPoleDetails({
@@ -9,6 +9,7 @@ export function OutputPoleDetails({
   pole,
   stopMap,
   constructedRoutes,
+  routePatternMap,
   includeSourceNameInRoute,
   onUpdate,
 }: {
@@ -16,6 +17,7 @@ export function OutputPoleDetails({
   pole: ProPoleDetail
   stopMap: Record<string, GtfsStop>
   constructedRoutes: ProConstructedRoute[]
+  routePatternMap: ProRoutePatternMap
   includeSourceNameInRoute: boolean
   onUpdate: (preset: ProPreset) => void
 }) {
@@ -30,6 +32,7 @@ export function OutputPoleDetails({
             stop={stop}
             stopMap={stopMap}
             constructedRoutes={constructedRoutes}
+            routePatternMap={routePatternMap}
             includeSourceNameInRoute={includeSourceNameInRoute}
             onUpdate={onUpdate}
           />
@@ -46,6 +49,7 @@ function OutputPoleStopChip({
   stop,
   stopMap,
   constructedRoutes,
+  routePatternMap,
   includeSourceNameInRoute,
   onUpdate,
 }: {
@@ -54,9 +58,12 @@ function OutputPoleStopChip({
   stop: ProPoleDetail['stops'][number]
   stopMap: Record<string, GtfsStop>
   constructedRoutes: ProConstructedRoute[]
+  routePatternMap: ProRoutePatternMap
   includeSourceNameInRoute: boolean
   onUpdate: (preset: ProPreset) => void
 }) {
+  const stopKey = proPoleStopKey(stop)
+
   return (
     <Box
       sx={{
@@ -69,7 +76,9 @@ function OutputPoleStopChip({
         alignItems: 'center',
       }}
     >
-      <Typography variant="body2">{proStopDisplayLabel(stop, stopMap, constructedRoutes, includeSourceNameInRoute)}</Typography>
+      <Typography variant="body2">
+        {proStopDisplayLabel(stop, stopMap, constructedRoutes, includeSourceNameInRoute, routePatternMap[stopKey] ?? null)}
+      </Typography>
       <IconButton size="small" sx={{ p: 0.25 }} onClick={() => removeStopFromPole(preset, pole, stop, onUpdate)}>
         <DeleteIcon sx={{ fontSize: 16 }} />
       </IconButton>
