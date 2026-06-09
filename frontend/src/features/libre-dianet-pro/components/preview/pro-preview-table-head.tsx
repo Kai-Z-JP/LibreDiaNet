@@ -94,7 +94,7 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
           constructedTrips.map((trip, index) => {
             const routeKey = proTripRouteKey(trip)
             const override = routeDisplayOverridesByKey[routeKey]
-            const routeName = override?.routeNameOverride ?? ''
+            const routeName = override?.routeNameOverride ?? trip.routeName
             return (
               <td key={`actual-name-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}`} className="pro-preview-route-cell">
                 <span className="pro-preview-route-name">{routeName || ' '}</span>

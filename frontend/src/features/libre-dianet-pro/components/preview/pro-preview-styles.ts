@@ -43,9 +43,9 @@ export const ProPreviewStyleScope = styled.div`
 
   .pro-preview-route-cell,
   .pro-preview-time-cell {
-    width: 3rem;
-    min-width: 3rem;
-    max-width: 3rem;
+    width: 2.5rem;
+    min-width: 2.5rem;
+    max-width: 2.5rem;
   }
 
   .pro-preview-dnd-handle {
@@ -120,8 +120,8 @@ export const ProPreviewStyleScope = styled.div`
   }
 
   .pro-preview-destination-cell {
-    width: 3rem;
-    min-width: 3rem;
+    width: 2.5rem;
+    min-width: 2.5rem;
     height: 7rem;
     min-height: 7rem;
     overflow: hidden;

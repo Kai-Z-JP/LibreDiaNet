@@ -3,7 +3,7 @@ import type { Alignment, Border, Borders, Cell, Fill, Workbook, Worksheet } from
 import type { DiaNetXlsxCreateFromDataRequestBody } from './api'
 import type { DayMapping, DiaNetCalendarData, DiaNetGtfsExportData, DiaNetStopData, DiaNetStopTimeData } from './types'
 import { sortTimetableColumns } from './features/libre-dianet-pro/model/timetable-column-sort'
-import { downloadBlob, stopPatternKey } from './utils'
+import { displayRouteName, downloadBlob, stopPatternKey } from './utils'
 
 type ExportRequest = DiaNetXlsxCreateFromDataRequestBody
 type ExportPreset = ExportRequest['preset']
@@ -349,7 +349,7 @@ function writeHeaderRows(
     spacing,
     styles.headerTitleStyle,
     styles.headerNormalStyle,
-    (trip) => routeDisplayOverrideForTrip(preset, trip)?.routeNameOverride ?? '',
+    (trip) => routeDisplayOverrideForTrip(preset, trip)?.routeNameOverride ?? displayRouteName(trip.route.shortName, trip.route.longName),
   )
   writeHeaderRow(sheet, FIRST_HEADER_ROW + 3, '行　　先', trips, spacing, styles.headerTitleStyle, styles.headerDestStyle, (trip) =>
     destinationName(trip, poles, routeDisplayOverrideForTrip(preset, trip)),

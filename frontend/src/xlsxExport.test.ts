@@ -12,6 +12,11 @@ describe('requestDiaNetXlsxInBrowser', () => {
       { tripId: 'trip-1', stopId: 'stop-2', stopSequence: 2, departureTime: '08:05:00' },
       { tripId: 'trip-1', stopId: 'stop-3', stopSequence: 3, departureTime: '08:10:00' },
     ]
+    const defaultRouteTripStopTimes = [
+      { tripId: 'trip-2', stopId: 'stop-1', stopSequence: 1, departureTime: '09:00:00' },
+      { tripId: 'trip-2', stopId: 'stop-2', stopSequence: 2, departureTime: '09:05:00' },
+      { tripId: 'trip-2', stopId: 'stop-3', stopSequence: 3, departureTime: '09:10:00' },
+    ]
 
     const request: DiaNetXlsxCreateFromDataRequestBody = {
       gtfs: {
@@ -21,7 +26,10 @@ describe('requestDiaNetXlsxInBrowser', () => {
           { id: 'stop-2', name: 'Stop', platformCode: '2' },
           { id: 'stop-3', name: 'Stop', platformCode: '3' },
         ],
-        routes: [{ id: 'route-1', shortName: 'R1', longName: null }],
+        routes: [
+          { id: 'route-1', shortName: 'R1', longName: null },
+          { id: 'route-2', shortName: 'R2', longName: null },
+        ],
         trips: [
           {
             tripId: 'trip-1',
@@ -31,8 +39,9 @@ describe('requestDiaNetXlsxInBrowser', () => {
             tripHeadsign: null,
             routeDisplayOverrideKey: 'saved-route-display-key',
           },
+          { tripId: 'trip-2', routeId: 'route-2', directionId: 0, serviceId: 'svc-1', tripHeadsign: null },
         ],
-        stopTimes: tripStopTimes,
+        stopTimes: [...tripStopTimes, ...defaultRouteTripStopTimes],
         calendars: [
           {
             id: 'svc-1',
@@ -57,7 +66,10 @@ describe('requestDiaNetXlsxInBrowser', () => {
           name: 'raw.zip',
           uuid: 'raw-uuid',
         },
-        routes: [{ id: 'route-1', direction: 0 }],
+        routes: [
+          { id: 'route-1', direction: 0 },
+          { id: 'route-2', direction: 0 },
+        ],
         poles: [
           {
             id: 'stop-1',
@@ -132,6 +144,7 @@ describe('requestDiaNetXlsxInBrowser', () => {
     expect(sheet?.getCell('B6').font.bold).toBe(true)
     expect(sheet?.getCell('B7').font.bold).toBe(true)
     expect(sheet?.getCell('E4').value).toBe('急行')
+    expect(sheet?.getCell('F4').value).toBe('R2')
     expect(sheet?.getCell('E5').value).toBe('上書き行先')
     expect(sheet?.getCell('E6').alignment.horizontal).toBe('center')
     expect(sheet?.getCell('E6').alignment.vertical).toBe('middle')
