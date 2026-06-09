@@ -201,10 +201,25 @@ describe('buildProCreateFromDataRequest', () => {
         override: preset.poles[0]?.override,
       },
     ])
+    expect(payload.preset.routeDisplayOverrides).toEqual(preset.routeDisplayOverrides)
     expect(payload.gtfs.routes.map((route) => route.id)).toEqual(['source-a::route', 'source-b::route'])
     expect(payload.gtfs.trips).toEqual([
-      { tripId: 'source-a::trip', routeId: 'source-a::route', directionId: 0, serviceId: 'source-a::svc', tripHeadsign: 'Headsign A' },
-      { tripId: 'source-b::trip', routeId: 'source-b::route', directionId: 1, serviceId: 'source-b::svc', tripHeadsign: null },
+      {
+        tripId: 'source-a::trip',
+        routeId: 'source-a::route',
+        directionId: 0,
+        serviceId: 'source-a::svc',
+        tripHeadsign: 'Headsign A',
+        routeDisplayOverrideKey: `source-a::route::0::${sourceAPatternKey}`,
+      },
+      {
+        tripId: 'source-b::trip',
+        routeId: 'source-b::route',
+        directionId: 1,
+        serviceId: 'source-b::svc',
+        tripHeadsign: null,
+        routeDisplayOverrideKey: `source-b::route::1::${sourceBPatternKey}`,
+      },
     ])
     expect(payload.gtfs.calendars.map((calendar) => calendar.id)).toEqual(['source-a::svc', 'source-b::svc'])
     expect(payload.gtfs.stopTimes.map((stopTime) => stopTime.stopId)).toEqual([

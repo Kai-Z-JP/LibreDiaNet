@@ -189,7 +189,7 @@ export const ProPreviewStyleScope = styled.div`
   .pro-preview-pole-name {
     width: 8.5rem;
     min-width: 8.5rem;
-    height: 1.65rem;
+    height: 1.25rem;
     padding-inline: 5px !important;
     border-left: 1px solid #000 !important;
     border-right: 0 !important;
@@ -258,9 +258,8 @@ export const ProPreviewStyleScope = styled.div`
 
   .pro-preview-cell-lines {
     display: flex;
-    min-height: 100%;
-    flex-direction: row-reverse;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: flex-start;
     justify-content: center;
     gap: 4px;
     padding-block: 2px;
@@ -268,8 +267,6 @@ export const ProPreviewStyleScope = styled.div`
   }
 
   .pro-preview-cell-vertical {
-    width: 1.5em;
-    min-width: 1.5em;
     line-height: 1;
     text-orientation: mixed;
     white-space: pre-line;
@@ -288,12 +285,16 @@ export const ProPreviewStyleScope = styled.div`
   }
 
   .pro-preview-time-cell {
-    height: 1.65rem;
-    min-height: 1.65rem;
+    height: 1.25rem;
+    min-height: 1.25rem;
     padding: 1px !important;
     overflow: hidden;
     border-inline: 1px solid #000 !important;
     font-size: 0.9rem;
     line-height: 1.05;
+  }
+
+  .pro-preview-time-cell-spanned {
+    vertical-align: top !important;
   }
 `

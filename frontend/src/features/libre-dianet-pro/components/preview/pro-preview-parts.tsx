@@ -24,22 +24,19 @@ export function PreviewCellText({ text, rowSpan }: { text: string; rowSpan: numb
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
-  if (rowSpan > 1 && lines.length > 1) {
+  if (rowSpan > 1) {
     return (
       <Box className="pro-preview-cell-lines">
         {lines
           .slice(0, 2)
           .reverse()
           .map((line) => (
-            <Box key={line} className={`pro-preview-cell-vertical ${justifyTextClass(line)}`}>
+            <Box key={line} className={`pro-preview-cell-vertical`}>
               {line}
             </Box>
           ))}
       </Box>
     )
-  }
-  if (rowSpan > 1 && lines[0]) {
-    return <Box className={`pro-preview-cell-vertical ${justifyTextClass(lines[0])}`}>{lines[0]}</Box>
   }
   return <>{text || ' '}</>
 }

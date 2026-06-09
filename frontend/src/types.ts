@@ -179,6 +179,7 @@ export type DiaNetTripData = {
   directionId: number | null
   serviceId: string
   tripHeadsign?: string | null
+  routeDisplayOverrideKey?: string
 }
 
 export type DiaNetStopTimeData = {

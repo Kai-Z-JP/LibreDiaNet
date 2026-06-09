@@ -7,6 +7,7 @@ import type {
   GtfsFeedResponse,
   ProPoleDetail,
   ProPreset,
+  ProRouteDisplayOverride,
   ProVersion,
   RepoInfoV2,
   RoutePresetV2,
@@ -38,6 +39,7 @@ type BackendPreset = {
     override: RoutePresetV2['poles'][number]['override']
   }[]
   excludedStopPatterns: string[][]
+  routeDisplayOverrides?: ProRouteDisplayOverride[]
 }
 
 export type DiaNetXlsxCreateFromDataRequestBody = {
@@ -118,6 +120,7 @@ export function buildProCreateFromDataRequest(
         override: pole.override,
       })),
       excludedStopPatterns: preset.excludedStopPatterns,
+      routeDisplayOverrides: preset.routeDisplayOverrides,
     },
     dayMapping,
   }
@@ -190,6 +193,7 @@ function mergeProGtfsExportData(preset: ProPreset, gtfsBySourceId: Record<string
           routeId: namespaceId(sourceId, trip.routeId),
           serviceId: namespaceId(sourceId, trip.serviceId),
           tripHeadsign: useTripHeadsignAsDestination ? (trip.tripHeadsign ?? null) : null,
+          routeDisplayOverrideKey: routeKey,
         }
       }),
     )

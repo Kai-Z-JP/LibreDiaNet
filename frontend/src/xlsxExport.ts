@@ -8,6 +8,7 @@ import { downloadBlob, stopPatternKey } from './utils'
 type ExportRequest = DiaNetXlsxCreateFromDataRequestBody
 type ExportPreset = ExportRequest['preset']
 type ExportPole = ExportPreset['poles'][number]
+type ExportRouteDisplayOverride = NonNullable<ExportPreset['routeDisplayOverrides']>[number]
 type ExportRoute = DiaNetGtfsExportData['routes'][number]
 type ExportTrip = DiaNetGtfsExportData['trips'][number]
 type WeekdayKey = Extract<keyof DiaNetCalendarData, 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday'>
@@ -292,7 +293,7 @@ function writeDiaNetSheet(sheet: Worksheet, data: SheetWriteData) {
   const tripColumnCount = data.trips.length + spacing
 
   configureSheetLayout(sheet, data.poles.length, tripColumnCount)
-  writeHeaderRows(sheet, data.trips, data.poles, spacing, styles)
+  writeHeaderRows(sheet, data.preset, data.trips, data.poles, spacing, styles)
   writePoleRows(sheet, data, poleRows, spacing, styles)
 }
 
@@ -323,6 +324,7 @@ function configureSheetLayout(sheet: Worksheet, poleCount: number, tripColumnCou
 
 function writeHeaderRows(
   sheet: Worksheet,
+  preset: ExportPreset,
   trips: TimetableTrip[],
   poles: ResolvedPole[],
   spacing: number,
@@ -339,9 +341,18 @@ function writeHeaderRows(
     styles.headerNormalStyle,
     (trip) => trip.route.id,
   )
-  writeHeaderRow(sheet, FIRST_HEADER_ROW + 2, '系　　統', trips, spacing, styles.headerTitleStyle, styles.headerNormalStyle)
+  writeHeaderRow(
+    sheet,
+    FIRST_HEADER_ROW + 2,
+    '系　　統',
+    trips,
+    spacing,
+    styles.headerTitleStyle,
+    styles.headerNormalStyle,
+    (trip) => routeDisplayOverrideForTrip(preset, trip)?.routeNameOverride ?? '',
+  )
   writeHeaderRow(sheet, FIRST_HEADER_ROW + 3, '行　　先', trips, spacing, styles.headerTitleStyle, styles.headerDestStyle, (trip) =>
-    destinationName(trip, poles),
+    destinationName(trip, poles, routeDisplayOverrideForTrip(preset, trip)),
   )
   sheet.getRow(FIRST_HEADER_ROW + 3).height = DESTINATION_ROW_HEIGHT
 }
@@ -386,7 +397,7 @@ function writePoleRows(
     }
 
     writePoleMetaCells(row, mutablePoleRows, index, rowShading, styles)
-    writeTripTimeCells(row, tripTimes, index, trips.length, spacing, override.horizontalLine, rowShading, styles)
+    writeTripTimeCells(sheet, row, preset, tripTimes, index, trips, spacing, override.horizontalLine, rowShading, styles)
   })
 }
 
@@ -447,24 +458,42 @@ function writePoleMetaCells(
 }
 
 function writeTripTimeCells(
+  sheet: Worksheet,
   row: ExcelJS.Row,
+  preset: ExportPreset,
   tripTimes: string[][],
   poleIndex: number,
-  tripCount: number,
+  trips: TimetableTrip[],
   spacing: number,
   horizontalLine: boolean,
   rowShading: boolean,
   styles: ReturnType<typeof createStyles>,
 ) {
   tripTimes.forEach((tripTime, tripIndex) => {
-    const text = horizontalLine && tripTime[poleIndex] === '…' ? '———' : tripTime[poleIndex]
+    const trip = trips[tripIndex]
+    const cellDisplay = trip ? routeStopCellDisplay(routeDisplayOverrideForTrip(preset, trip), preset.poles, poleIndex) : null
+    const baseText = cellDisplay?.textOverride ?? tripTime[poleIndex]
+    const text = horizontalLine && !cellDisplay?.overridden && baseText === '…' ? '———' : baseText
     const cell = row.getCell(FIRST_TRIP_COLUMN + tripIndex)
+
+    if (cellDisplay?.hidden) {
+      if (!cell.isMerged) {
+        applyCellStyle(cell, timeCellStyle(styles, text ?? '', rowShading))
+      }
+      return
+    }
+
     cell.value = text
-    applyCellStyle(cell, timeCellStyle(styles, text ?? '', rowShading))
+    if (cellDisplay && cellDisplay.rowSpan > 1) {
+      const startRow = FIRST_BODY_ROW + poleIndex
+      const endRow = Math.min(startRow + cellDisplay.rowSpan - 1, FIRST_BODY_ROW + preset.poles.length - 1)
+      sheet.mergeCells(startRow, FIRST_TRIP_COLUMN + tripIndex, endRow, FIRST_TRIP_COLUMN + tripIndex)
+    }
+    applyCellStyle(cell, timeCellStyle(styles, text ?? '', rowShading, (cellDisplay?.rowSpan ?? 1) > 1))
   })
 
   range(spacing).forEach((spacingIndex) => {
-    const cell = row.getCell(FIRST_TRIP_COLUMN + tripCount + spacingIndex)
+    const cell = row.getCell(FIRST_TRIP_COLUMN + trips.length + spacingIndex)
     cell.value = '…'
     applyCellStyle(cell, rowShading ? styles.bodyMajorStyle : styles.bodyStyle)
   })
@@ -478,10 +507,35 @@ function createPoleRows(poles: ResolvedPole[], routePatterns: RoutePatterns[]): 
   }))
 }
 
-function destinationName(trip: TimetableTrip, poles: ResolvedPole[]): string {
+function destinationName(trip: TimetableTrip, poles: ResolvedPole[], override: ExportRouteDisplayOverride | undefined): string {
+  if (override?.destinationOverride) {
+    return override.destinationOverride
+  }
+
   const lastStopId = trip.stopTimes.at(-1)?.stopId
   const stop = poles.find(({ stop }) => stop.id === lastStopId)?.stop
   return trip.trip.tripHeadsign?.trim() || stop?.name || ''
+}
+
+function routeDisplayOverrideForTrip(preset: ExportPreset, trip: TimetableTrip): ExportRouteDisplayOverride | undefined {
+  const routeKey = trip.trip.routeDisplayOverrideKey ?? `${trip.route.id}::${trip.trip.directionId ?? 'null'}::${stopPatternKey(trip.stopTimes)}`
+  return preset.routeDisplayOverrides?.find((override) => override.routeKey === routeKey)
+}
+
+function routeStopCellDisplay(override: ExportRouteDisplayOverride | undefined, poles: ExportPole[], poleIndex: number) {
+  const pole = poles[poleIndex]
+  const cellOverrides = override?.stopCellOverrides ?? []
+  const cellOverride = pole ? cellOverrides.find((cell) => cell.poleId === pole.id || `pole::${cell.poleId}` === pole.id) : undefined
+  const hidden = cellOverrides.some((cell) => {
+    const startIndex = poles.findIndex((candidate) => candidate.id === cell.poleId || candidate.id === `pole::${cell.poleId}`)
+    return startIndex >= 0 && startIndex < poleIndex && poleIndex < startIndex + cell.rowSpan
+  })
+  return {
+    textOverride: cellOverride?.text,
+    rowSpan: cellOverride?.rowSpan ?? 1,
+    hidden,
+    overridden: Boolean(cellOverride),
+  }
 }
 
 function tripColumnSpacing(tripCount: number): number {
@@ -514,12 +568,22 @@ function poleNameStyle(
   return terminalStopName ? styles.startEndStopNameStyle : styles.normalStopStyle
 }
 
-function timeCellStyle(styles: ReturnType<typeof createStyles>, text: string, rowShading: boolean): CellStyle {
+function timeCellStyle(styles: ReturnType<typeof createStyles>, text: string, rowShading: boolean, verticalText = false): CellStyle {
   const time = TIME_TEXT_PATTERN.test(text)
-  if (time) {
-    return rowShading ? styles.bodyMajorTimeStyle : styles.bodyTimeStyle
+  const style = time ? (rowShading ? styles.bodyMajorTimeStyle : styles.bodyTimeStyle) : rowShading ? styles.bodyMajorStyle : styles.bodyStyle
+  if (verticalText) {
+    return {
+      ...style,
+      alignment: {
+        ...style.alignment,
+        horizontal: 'center' as const,
+        vertical: 'top' as const,
+        textRotation: 'vertical' as const,
+        wrapText: true,
+      },
+    }
   }
-  return rowShading ? styles.bodyMajorStyle : styles.bodyStyle
+  return style
 }
 
 function createStyles() {
