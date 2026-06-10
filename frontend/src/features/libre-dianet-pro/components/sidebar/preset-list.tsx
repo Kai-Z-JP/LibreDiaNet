@@ -1,17 +1,20 @@
 import AddIcon from '@mui/icons-material/Add'
-import { Box, Button, List, ListItemButton, ListItemText, Typography } from '@mui/material'
-import type { ProVersion } from '../../../../types'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import { Box, Button, IconButton, List, ListItem, ListItemButton, ListItemText, Tooltip, Typography } from '@mui/material'
+import type { ProPreset, ProVersion } from '../../../../types'
 
 export function PresetList({
   selectedVersion,
   selectedPresetId,
   onSelectPreset,
   onCreatePreset,
+  onDuplicatePreset,
 }: {
   selectedVersion: ProVersion | null
   selectedPresetId: string | null
   onSelectPreset: (presetId: string) => void
   onCreatePreset?: () => void
+  onDuplicatePreset?: (preset: ProPreset) => void
 }) {
   return (
     <>
@@ -34,21 +37,44 @@ export function PresetList({
         }}
       >
         {selectedVersion?.presets.map((preset) => (
-          <ListItemButton
+          <ListItem
             key={preset.id}
-            selected={preset.id === selectedPresetId}
-            onClick={() => onSelectPreset(preset.id)}
-            sx={{
-              '&.Mui-selected': {
-                bgcolor: 'lightblue',
-              },
-              '&.Mui-selected:hover': {
-                bgcolor: 'lightblue',
-              },
-            }}
+            disablePadding
+            secondaryAction={
+              <Tooltip title="プリセットを複製">
+                <span>
+                  <IconButton
+                    edge="end"
+                    size="small"
+                    aria-label={`${preset.name} を複製`}
+                    disabled={!onDuplicatePreset}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onDuplicatePreset?.(preset)
+                    }}
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            }
           >
-            <ListItemText primary={preset.name} />
-          </ListItemButton>
+            <ListItemButton
+              selected={preset.id === selectedPresetId}
+              onClick={() => onSelectPreset(preset.id)}
+              sx={{
+                pr: 6,
+                '&.Mui-selected': {
+                  bgcolor: 'lightblue',
+                },
+                '&.Mui-selected:hover': {
+                  bgcolor: 'lightblue',
+                },
+              }}
+            >
+              <ListItemText primary={preset.name} />
+            </ListItemButton>
+          </ListItem>
         ))}
         {selectedVersion && selectedVersion.presets.length === 0 && (
           <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>

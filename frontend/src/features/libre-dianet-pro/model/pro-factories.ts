@@ -25,6 +25,28 @@ export function createProPreset(sourceIds: string[]): ProPreset {
   }
 }
 
+export function duplicateProPreset(preset: ProPreset): ProPreset {
+  const clonedPreset = structuredClone(preset)
+  const poleIdMap = new Map(clonedPreset.poles.map((pole) => [pole.id, crypto.randomUUID()]))
+
+  return {
+    ...clonedPreset,
+    id: crypto.randomUUID(),
+    name: `${preset.name} のコピー`,
+    routeDisplayOverrides: clonedPreset.routeDisplayOverrides.map((override) => ({
+      ...override,
+      stopCellOverrides: override.stopCellOverrides.map((cellOverride) => ({
+        ...cellOverride,
+        poleId: poleIdMap.get(cellOverride.poleId) ?? cellOverride.poleId,
+      })),
+    })),
+    poles: clonedPreset.poles.map((pole) => ({
+      ...pole,
+      id: poleIdMap.get(pole.id) ?? crypto.randomUUID(),
+    })),
+  }
+}
+
 export function createRepoSource(option: FeedOption): ProGtfsSource {
   return {
     sourceId: crypto.randomUUID(),

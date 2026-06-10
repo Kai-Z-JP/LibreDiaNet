@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { FeedOption, ProGtfsSource, ProVersion } from '../../../types'
+import type { FeedOption, ProGtfsSource, ProPreset, ProVersion } from '../../../types'
 
 export type ProSidebarData = {
   versions: ProVersion[]
@@ -19,6 +19,7 @@ export type ProSidebarActions = {
   onCreateRawSource: (file: File) => Promise<ProGtfsSource>
   onReplaceRawSource: (source: ProGtfsSource, file: File) => Promise<ProGtfsSource>
   onCreatePreset?: () => void
+  onDuplicatePreset?: (preset: ProPreset) => void
 }
 
 export function useProSidebar(data: ProSidebarData, actions: ProSidebarActions) {
@@ -44,6 +45,7 @@ export function useProSidebar(data: ProSidebarData, actions: ProSidebarActions) 
       selectedPresetId: data.selectedPresetId,
       onSelectPreset: actions.onSelectPreset,
       onCreatePreset: actions.onCreatePreset,
+      onDuplicatePreset: actions.onDuplicatePreset,
     },
     versionSelectDialogProps: {
       open: versionSelectOpen,

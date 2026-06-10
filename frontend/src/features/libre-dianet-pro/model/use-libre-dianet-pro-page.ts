@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { ProPresetContext } from '../../../types'
+import type { ProPreset, ProPresetContext } from '../../../types'
 import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import { useGtfsFeeds } from './use-gtfs-feeds'
 import { useProSelection } from './use-pro-selection'
@@ -32,6 +32,7 @@ export function useLibreDiaNetProPage() {
     selectVersion: selection.selectVersion,
     selectPreset: selection.setSelectedPresetId,
     createPreset: versionStore.createPreset,
+    duplicatePreset: versionStore.duplicatePreset,
     deletePreset: versionStore.deletePreset,
     createRepoSource: sourceFactory.createRepoSource,
     createRawSource: sourceFactory.createRawSource,
@@ -58,6 +59,7 @@ export function useLibreDiaNetProPage() {
       onCreateRawSource: actions.createRawSource,
       onReplaceRawSource: actions.replaceRawSource,
       onCreatePreset: selectedVersion ? () => actions.createPreset(selectedVersion) : undefined,
+      onDuplicatePreset: selectedVersion ? (preset: ProPreset) => actions.duplicatePreset(selectedVersion, preset) : undefined,
     },
   }
 

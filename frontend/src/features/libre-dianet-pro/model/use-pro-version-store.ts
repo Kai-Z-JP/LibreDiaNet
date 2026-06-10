@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from 'react'
 import { loadProPresetStore, saveProPresetStore } from '../../../storage'
 import type { ProPreset, ProVersion } from '../../../types'
-import { createProPreset, createProVersion } from './pro-factories'
+import { createProPreset, createProVersion, duplicateProPreset } from './pro-factories'
 import { proVersionsReducer } from './pro-versions.reducer'
 
 export function useProVersionStore({ onPresetCreated }: { onPresetCreated: (presetId: string) => void }) {
@@ -32,6 +32,12 @@ export function useProVersionStore({ onPresetCreated }: { onPresetCreated: (pres
     onPresetCreated(preset.id)
   }
 
+  const duplicatePreset = (version: ProVersion, preset: ProPreset) => {
+    const duplicatedPreset = duplicateProPreset(preset)
+    dispatchVersions({ type: 'preset/create', versionId: version.id, preset: duplicatedPreset })
+    onPresetCreated(duplicatedPreset.id)
+  }
+
   const deletePreset = (version: ProVersion, preset: ProPreset) => {
     dispatchVersions({ type: 'preset/delete', versionId: version.id, presetId: preset.id })
   }
@@ -42,6 +48,7 @@ export function useProVersionStore({ onPresetCreated }: { onPresetCreated: (pres
     createVersion,
     deleteVersion,
     createPreset,
+    duplicatePreset,
     deletePreset,
   }
 }
