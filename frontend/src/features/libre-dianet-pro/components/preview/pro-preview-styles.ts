@@ -243,14 +243,12 @@ export const ProPreviewStyleScope = styled.div`
   }
 
   .pro-preview-destination-columns {
-    flex-direction: row-reverse;
+    line-height: 0.75rem;
+    flex-direction: row;
   }
 
   .pro-preview-vertical-text {
-    width: 1.5em;
-    min-width: 1.5em;
     margin: 0 auto;
-    line-height: 1.5rem;
     text-orientation: mixed;
     white-space: nowrap;
     writing-mode: vertical-rl;
