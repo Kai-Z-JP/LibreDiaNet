@@ -1,8 +1,10 @@
 import { createGtfsLoader } from '@gtfs-jp/loader'
+import { getActiveServiceIds, type GtfsQuerySource } from '@gtfs-jp/query'
 import { type GtfsJpV4TableRow } from '@gtfs-jp/types'
 import { GTFS_SCHEMA, type AppGtfsLoader } from './gtfsSchema'
 import type {
   ConstructedRoute,
+  DayMapping,
   ConstructedTrip,
   DiaNetGtfsExportData,
   GtfsHandle,
@@ -194,6 +196,36 @@ export class GtfsRepository {
     const db = handle.loader.db()
     const activeServices = new Set(await this.loadActiveServiceIds(db, dateIso))
     return this.listTripsForServices(db, selectedRoutes, activeServices, excludedStopPatterns)
+  }
+
+  async listTripsForServiceDate(
+    handle: GtfsHandle,
+    selectedRoutes: RouteDetail[],
+    dateIso: string,
+    excludedStopPatterns: string[][],
+  ): Promise<ConstructedTrip[]> {
+    const db = handle.loader.db()
+    const activeServices = await this.loadActiveServiceIdsForServiceDate(handle, dateIso)
+    return this.listTripsForServices(db, selectedRoutes, activeServices, excludedStopPatterns)
+  }
+
+  async resolveDayMappingServiceIds(
+    handle: GtfsHandle,
+    dayMapping: DayMapping[],
+    mapServiceId: (serviceId: string) => string = (serviceId) => serviceId,
+  ): Promise<DayMapping[]> {
+    return Promise.all(
+      dayMapping.map(async (mapping) => {
+        if (mapping.type !== 'date') {
+          return mapping
+        }
+        const serviceIds = await this.loadActiveServiceIdsForServiceDate(handle, mapping.date)
+        return {
+          ...mapping,
+          serviceIds: Array.from(serviceIds, mapServiceId),
+        }
+      }),
+    )
   }
 
   async listTripsForWeekday(
@@ -498,6 +530,11 @@ export class GtfsRepository {
     return this.loadActiveServiceIdsForWeekday(db, weekday, dateIso)
   }
 
+  private async loadActiveServiceIdsForServiceDate(handle: GtfsHandle, dateIso: string): Promise<Set<string>> {
+    const { serviceIds } = await getActiveServiceIds(gtfsQuerySource(handle), dateIso)
+    return serviceIds
+  }
+
   private async loadActiveServiceIdsForWeekday(db: Db, weekday: GtfsServiceWeekday, referenceDateIso: string): Promise<string[]> {
     const rows = await db
       .selectFrom('calendar')
@@ -548,6 +585,13 @@ function repoFeedZipUrl(info: RepoInfoV2): string {
 
 function repoFileUid(info: RepoInfoV2): string | null {
   return info.fileUid?.trim() || null
+}
+
+function gtfsQuerySource(handle: GtfsHandle): GtfsQuerySource {
+  return {
+    db: handle.loader.db(),
+    hasTable: (tableName) => handle.loader.hasTable(tableName),
+  }
 }
 
 function tripPatternIdMap(trips: TripRow[]): Map<string, string | null> {

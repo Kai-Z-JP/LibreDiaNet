@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { buildProCreateFromDataRequest, requestDiaNetXlsx } from '../../../api'
+import { buildProCreateFromDataRequest, namespaceId, requestDiaNetXlsx } from '../../../api'
 import type { DayMapping, ProPreset, ProPresetContext, ProVersion } from '../../../types'
 import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import { proExcludedStopPatternsForSource } from './pro-pole-stop-helpers'
@@ -54,7 +54,8 @@ export function useProXlsxExport({
       const gtfsBySourceId = Object.fromEntries(
         gtfsEntries.filter((entry): entry is readonly [string, NonNullable<typeof entry>[1]] => Boolean(entry)),
       )
-      await requestDiaNetXlsx(buildProCreateFromDataRequest(version, preset, gtfsBySourceId, dayMapping))
+      const resolvedDayMapping = await resolveProDayMappingServiceIds(dayMapping, preset.sourceIds, context)
+      await requestDiaNetXlsx(buildProCreateFromDataRequest(version, preset, gtfsBySourceId, resolvedDayMapping))
     } finally {
       setDownloading(false)
     }
@@ -64,4 +65,36 @@ export function useProXlsxExport({
     downloading,
     requestXlsx,
   }
+}
+
+async function resolveProDayMappingServiceIds(
+  dayMapping: DayMapping[],
+  sourceIds: string[],
+  context: ProPresetContext,
+): Promise<DayMapping[]> {
+  return Promise.all(
+    dayMapping.map(async (mapping) => {
+      if (mapping.type !== 'date') {
+        return mapping
+      }
+      const serviceIds = (
+        await Promise.all(
+          sourceIds.map(async (sourceId) => {
+            const handle = context.handles[sourceId]
+            if (!handle) {
+              return []
+            }
+            const [resolved] = await libreDiaNetRepository.resolveDayMappingServiceIds(handle, [mapping], (serviceId) =>
+              namespaceId(sourceId, serviceId),
+            )
+            return resolved?.type === 'date' ? (resolved.serviceIds ?? []) : []
+          }),
+        )
+      ).flat()
+      return {
+        ...mapping,
+        serviceIds,
+      }
+    }),
+  )
 }

@@ -272,4 +272,97 @@ describe('requestDiaNetXlsxInBrowser', () => {
     expect(sheet?.getCell('F6').value).toBe('1100')
     expect(sheet?.getCell('G6').value).toBe('1200')
   })
+
+  it('uses resolved service ids for date sheets', async () => {
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:libre-dianet-date-service-test')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+
+    const request: DiaNetXlsxCreateFromDataRequestBody = {
+      gtfs: {
+        agencyName: 'Agency',
+        stops: [
+          { id: 'stop-1', name: 'Stop 1', platformCode: '1' },
+          { id: 'stop-2', name: 'Stop 2', platformCode: '2' },
+        ],
+        routes: [{ id: 'route-1', shortName: 'R1', longName: null }],
+        trips: [
+          { tripId: 'trip-calendar', routeId: 'route-1', directionId: 0, serviceId: 'svc-calendar' },
+          { tripId: 'trip-added', routeId: 'route-1', directionId: 0, serviceId: 'svc-added' },
+        ],
+        stopTimes: [
+          { tripId: 'trip-calendar', stopId: 'stop-1', stopSequence: 1, departureTime: '09:00:00' },
+          { tripId: 'trip-calendar', stopId: 'stop-2', stopSequence: 2, departureTime: '09:05:00' },
+          { tripId: 'trip-added', stopId: 'stop-1', stopSequence: 1, departureTime: '10:00:00' },
+          { tripId: 'trip-added', stopId: 'stop-2', stopSequence: 2, departureTime: '10:05:00' },
+        ],
+        calendars: [
+          {
+            id: 'svc-calendar',
+            startDate: '20260101',
+            endDate: '20261231',
+            sunday: 0,
+            monday: 1,
+            tuesday: 1,
+            wednesday: 1,
+            thursday: 1,
+            friday: 1,
+            saturday: 0,
+          },
+        ],
+      },
+      preset: {
+        id: 'preset-1',
+        name: 'Preset',
+        index: 1,
+        info: {
+          type: 'jp.kaiz.shachia.dianet.RawGtfsInformation',
+          name: 'raw.zip',
+          uuid: 'raw-uuid',
+        },
+        routes: [{ id: 'route-1', direction: 0 }],
+        poles: [
+          {
+            id: 'stop-1',
+            override: {
+              majorStop: false,
+              branchStart: false,
+              branchEnd: false,
+              nameOverride: null,
+              locationNameOverride: null,
+              jokoOverride: null,
+              rowShading: false,
+              stopNameBold: false,
+              horizontalLine: false,
+            },
+          },
+          {
+            id: 'stop-2',
+            override: {
+              majorStop: false,
+              branchStart: false,
+              branchEnd: false,
+              nameOverride: null,
+              locationNameOverride: null,
+              jokoOverride: null,
+              rowShading: false,
+              stopNameBold: false,
+              horizontalLine: false,
+            },
+          },
+        ],
+        excludedStopPatterns: [],
+      },
+      dayMapping: [{ name: '特定日', type: 'date', date: '2026-03-02', serviceIds: ['svc-added'] }],
+    }
+
+    await requestDiaNetXlsxInBrowser(request)
+
+    const blob = createObjectUrl.mock.calls[0]?.[0]
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(await (blob as Blob).arrayBuffer())
+    const sheet = workbook.getWorksheet('特定日')
+
+    expect(sheet?.getCell('E6').value).toBe('1000')
+  })
 })

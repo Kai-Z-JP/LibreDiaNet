@@ -213,7 +213,11 @@ function buildTimetableSheets(
     const activeServiceIds =
       mapping.type === 'all-days'
         ? null
-        : new Set(gtfs.calendars.filter((calendar) => calendarIsActive(calendar, mapping)).map((calendar) => calendar.id))
+        : new Set(
+            mapping.type === 'date' && mapping.serviceIds
+              ? mapping.serviceIds
+              : gtfs.calendars.filter((calendar) => calendarIsActive(calendar, mapping)).map((calendar) => calendar.id),
+          )
     const trips = preset.routes.flatMap((routeDetail) => {
       const route = requireFromMap(index.routeById, routeDetail.id, 'Route')
       return gtfs.trips

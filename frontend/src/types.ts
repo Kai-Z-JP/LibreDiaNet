@@ -232,6 +232,7 @@ export type DayMapping =
       name: string
       type: 'date'
       date: string
+      serviceIds?: string[]
     }
   | {
       name: string

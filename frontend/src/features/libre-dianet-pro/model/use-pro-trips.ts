@@ -61,7 +61,7 @@ export function useProTrips({
           } else if (previewMode === 'all-days') {
             sourceTrips = await libreDiaNetRepository.listTripsForAllDays(handle, selectedRoutes, excludedStopPatterns)
           } else {
-            sourceTrips = await libreDiaNetRepository.listTripsForDate(handle, selectedRoutes, date, excludedStopPatterns)
+            sourceTrips = await libreDiaNetRepository.listTripsForServiceDate(handle, selectedRoutes, date, excludedStopPatterns)
           }
           return sourceTrips.map((trip) => ({
             ...trip,
