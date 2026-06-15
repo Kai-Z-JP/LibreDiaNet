@@ -59,7 +59,7 @@ export function VersionSettingsDialog({
                 sx={{ minWidth: 220, backgroundColor: 'white' }}
               />
               <TextField
-                label="改正日"
+                label="基準日"
                 size="small"
                 type="date"
                 value={draftVersion.revisionDate}
