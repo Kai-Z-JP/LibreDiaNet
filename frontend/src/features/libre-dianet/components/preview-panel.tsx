@@ -1,4 +1,4 @@
-import { Box, TextField, Tooltip } from '@mui/material'
+import { Box, TextField, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material'
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import type { ConstructedRoute, DayMapping, GtfsHandle, GtfsStop, PoleDetail, RoutePresetV2 } from '../../../types'
@@ -23,6 +23,8 @@ type PoleRowState = {
   name: string | null
   joko: string
 }
+
+type PreviewMode = 'specific-date' | 'all-days'
 
 const tableStyle: CSSProperties = {
   backgroundColor: 'white',
@@ -99,13 +101,18 @@ export function PreviewPanel({
   handle,
   onRequestXlsx,
 }: Props) {
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('specific-date')
   const [date, setDate] = useState(todayIsoDate())
   const [constructedTrips, setConstructedTrips] = useState<Awaited<ReturnType<typeof libreDiaNetRepository.listTripsForDate>>>([])
   const [resolvedStops, setResolvedStops] = useState<{ detail: PoleDetail; stop: GtfsStop }[]>([])
 
   useEffect(() => {
     let cancelled = false
-    void libreDiaNetRepository.listTripsForDate(handle, preset.routes, date, excludedStopPatterns).then((trips) => {
+    const trips =
+      previewMode === 'all-days'
+        ? libreDiaNetRepository.listTripsForAllDays(handle, preset.routes, excludedStopPatterns)
+        : libreDiaNetRepository.listTripsForDate(handle, preset.routes, date, excludedStopPatterns)
+    void trips.then((trips) => {
       if (!cancelled) {
         setConstructedTrips(trips)
       }
@@ -113,7 +120,7 @@ export function PreviewPanel({
     return () => {
       cancelled = true
     }
-  }, [handle, preset.routes, date, excludedStopPatterns])
+  }, [handle, preset.routes, date, excludedStopPatterns, previewMode])
 
   const stops = useMemo(() => {
     const stopIdSet = Array.from(new Set(sortedStops.map((stop) => stop.id)))
@@ -209,7 +216,25 @@ export function PreviewPanel({
           gap: 0.5,
         }}
       >
-        <TextField size="small" label="日付指定" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={previewMode}
+            onChange={(_, value: PreviewMode | null) => {
+              if (value) {
+                setPreviewMode(value)
+              }
+            }}
+            sx={{ flexShrink: 0, '& .MuiToggleButton-root': { width: 56 } }}
+          >
+            <ToggleButton value="specific-date">日付</ToggleButton>
+            <ToggleButton value="all-days">全日</ToggleButton>
+          </ToggleButtonGroup>
+          {previewMode === 'specific-date' && (
+            <TextField size="small" label="日付指定" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          )}
+        </Box>
         <Tooltip title={exportTooltip}>
           <span>
             <OutputDialog disabled={changed || downloading || !canExport} onSubmit={onRequestXlsx} />

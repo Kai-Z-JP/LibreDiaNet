@@ -210,14 +210,18 @@ function buildTimetableSheets(
   const poleSpans = consecutivePoleSpans(poles)
 
   return dayMapping.map((mapping) => {
-    const activeServiceIds = new Set(
-      gtfs.calendars.filter((calendar) => calendarIsActive(calendar, mapping)).map((calendar) => calendar.id),
-    )
+    const activeServiceIds =
+      mapping.type === 'all-days'
+        ? null
+        : new Set(gtfs.calendars.filter((calendar) => calendarIsActive(calendar, mapping)).map((calendar) => calendar.id))
     const trips = preset.routes.flatMap((routeDetail) => {
       const route = requireFromMap(index.routeById, routeDetail.id, 'Route')
       return gtfs.trips
         .filter(
-          (trip) => trip.routeId === routeDetail.id && trip.directionId === routeDetail.direction && activeServiceIds.has(trip.serviceId),
+          (trip) =>
+            trip.routeId === routeDetail.id &&
+            trip.directionId === routeDetail.direction &&
+            (activeServiceIds === null || activeServiceIds.has(trip.serviceId)),
         )
         .flatMap((trip): TimetableTrip[] => {
           const stopTimes = stopTimesForTrip(index.stopTimesByTripId, trip.tripId)
@@ -518,7 +522,8 @@ function destinationName(trip: TimetableTrip, poles: ResolvedPole[], override: E
 }
 
 function routeDisplayOverrideForTrip(preset: ExportPreset, trip: TimetableTrip): ExportRouteDisplayOverride | undefined {
-  const routeKey = trip.trip.routeDisplayOverrideKey ?? `${trip.route.id}::${trip.trip.directionId ?? 'null'}::${stopPatternKey(trip.stopTimes)}`
+  const routeKey =
+    trip.trip.routeDisplayOverrideKey ?? `${trip.route.id}::${trip.trip.directionId ?? 'null'}::${stopPatternKey(trip.stopTimes)}`
   return preset.routeDisplayOverrides?.find((override) => override.routeKey === routeKey)
 }
 
@@ -570,7 +575,13 @@ function poleNameStyle(
 
 function timeCellStyle(styles: ReturnType<typeof createStyles>, text: string, rowShading: boolean, verticalText = false): CellStyle {
   const time = TIME_TEXT_PATTERN.test(text)
-  const style = time ? (rowShading ? styles.bodyMajorTimeStyle : styles.bodyTimeStyle) : rowShading ? styles.bodyMajorStyle : styles.bodyStyle
+  const style = time
+    ? rowShading
+      ? styles.bodyMajorTimeStyle
+      : styles.bodyTimeStyle
+    : rowShading
+      ? styles.bodyMajorStyle
+      : styles.bodyStyle
   if (verticalText) {
     return {
       ...style,
@@ -695,6 +706,9 @@ function applyBorder(
 }
 
 function calendarIsActive(calendar: DiaNetCalendarData, mapping: DayMapping): boolean {
+  if (mapping.type === 'all-days') {
+    return true
+  }
   if (mapping.type === 'weekday') {
     return calendar[mapping.weekday] === 1
   }

@@ -49,10 +49,20 @@ export function useProTrips({
             return []
           }
           const excludedStopPatterns = proExcludedStopPatternsForSource(preset.excludedStopPatterns, sourceId)
-          const sourceTrips =
-            previewMode === 'day-type'
-              ? await libreDiaNetRepository.listTripsForWeekday(handle, selectedRoutes, weekday, weekdayReferenceDate, excludedStopPatterns)
-              : await libreDiaNetRepository.listTripsForDate(handle, selectedRoutes, date, excludedStopPatterns)
+          let sourceTrips: Awaited<ReturnType<typeof libreDiaNetRepository.listTripsForDate>>
+          if (previewMode === 'day-type') {
+            sourceTrips = await libreDiaNetRepository.listTripsForWeekday(
+              handle,
+              selectedRoutes,
+              weekday,
+              weekdayReferenceDate,
+              excludedStopPatterns,
+            )
+          } else if (previewMode === 'all-days') {
+            sourceTrips = await libreDiaNetRepository.listTripsForAllDays(handle, selectedRoutes, excludedStopPatterns)
+          } else {
+            sourceTrips = await libreDiaNetRepository.listTripsForDate(handle, selectedRoutes, date, excludedStopPatterns)
+          }
           return sourceTrips.map((trip) => ({
             ...trip,
             sourceId,

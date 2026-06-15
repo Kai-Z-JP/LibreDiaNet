@@ -39,6 +39,7 @@ export function ProPreviewPanel({
   const previewModes: { value: ProPreviewMode; label: string }[] = [
     { value: 'day-type', label: '日種' },
     { value: 'specific-date', label: '日付' },
+    { value: 'all-days', label: '全日' },
   ]
   const weekdays: { value: GtfsServiceWeekday; label: string }[] = [
     { value: 'monday', label: '月曜' },
@@ -63,13 +64,7 @@ export function ProPreviewPanel({
                 props.controls.onSelectPreviewMode(value)
               }
             }}
-            sx={{
-              width: 112,
-              flexShrink: 0,
-              '& .MuiToggleButton-root': {
-                width: 56,
-              },
-            }}
+            sx={{ flexShrink: 0, '& .MuiToggleButton-root': { width: 56 } }}
           >
             {previewModes.map((mode) => (
               <ToggleButton key={mode.value} value={mode.value}>
@@ -77,7 +72,7 @@ export function ProPreviewPanel({
               </ToggleButton>
             ))}
           </ToggleButtonGroup>
-          {props.controls.previewMode === 'day-type' ? (
+          {props.controls.previewMode === 'day-type' && (
             <TextField
               select
               size="small"
@@ -93,7 +88,8 @@ export function ProPreviewPanel({
                 </MenuItem>
               ))}
             </TextField>
-          ) : (
+          )}
+          {props.controls.previewMode === 'specific-date' && (
             <TextField
               size="small"
               label="日付"

@@ -238,6 +238,10 @@ export type DayMapping =
       type: 'weekday'
       weekday: GtfsServiceWeekday
     }
+  | {
+      name: string
+      type: 'all-days'
+    }
 
 export type OpenHandleResult = {
   handle: GtfsHandle

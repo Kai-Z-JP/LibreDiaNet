@@ -3,6 +3,10 @@ import { requestDiaNetXlsxInBrowser } from './xlsxExport'
 import type { DiaNetXlsxCreateFromDataRequestBody } from './api'
 
 describe('requestDiaNetXlsxInBrowser', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('generates and downloads an xlsx blob in the browser', async () => {
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:libre-dianet-test')
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
@@ -157,5 +161,115 @@ describe('requestDiaNetXlsxInBrowser', () => {
 
     expect(click).toHaveBeenCalledOnce()
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:libre-dianet-test')
+  })
+
+  it('includes every trip in an all-days sheet', async () => {
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:libre-dianet-all-days-test')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+
+    const request: DiaNetXlsxCreateFromDataRequestBody = {
+      gtfs: {
+        agencyName: 'Agency',
+        stops: [
+          { id: 'stop-1', name: 'Stop 1', platformCode: '1' },
+          { id: 'stop-2', name: 'Stop 2', platformCode: '2' },
+        ],
+        routes: [{ id: 'route-1', shortName: 'R1', longName: null }],
+        trips: [
+          { tripId: 'trip-weekday', routeId: 'route-1', directionId: 0, serviceId: 'svc-weekday' },
+          { tripId: 'trip-sunday', routeId: 'route-1', directionId: 0, serviceId: 'svc-sunday' },
+          { tripId: 'trip-calendar-date-only', routeId: 'route-1', directionId: 0, serviceId: 'svc-calendar-date-only' },
+        ],
+        stopTimes: [
+          { tripId: 'trip-weekday', stopId: 'stop-1', stopSequence: 1, departureTime: '10:00:00' },
+          { tripId: 'trip-weekday', stopId: 'stop-2', stopSequence: 2, departureTime: '10:05:00' },
+          { tripId: 'trip-sunday', stopId: 'stop-1', stopSequence: 1, departureTime: '11:00:00' },
+          { tripId: 'trip-sunday', stopId: 'stop-2', stopSequence: 2, departureTime: '11:05:00' },
+          { tripId: 'trip-calendar-date-only', stopId: 'stop-1', stopSequence: 1, departureTime: '12:00:00' },
+          { tripId: 'trip-calendar-date-only', stopId: 'stop-2', stopSequence: 2, departureTime: '12:05:00' },
+        ],
+        calendars: [
+          {
+            id: 'svc-weekday',
+            startDate: '20260101',
+            endDate: '20261231',
+            sunday: 0,
+            monday: 1,
+            tuesday: 1,
+            wednesday: 1,
+            thursday: 1,
+            friday: 1,
+            saturday: 0,
+          },
+          {
+            id: 'svc-sunday',
+            startDate: '20260101',
+            endDate: '20261231',
+            sunday: 1,
+            monday: 0,
+            tuesday: 0,
+            wednesday: 0,
+            thursday: 0,
+            friday: 0,
+            saturday: 0,
+          },
+        ],
+      },
+      preset: {
+        id: 'preset-1',
+        name: 'Preset',
+        index: 1,
+        info: {
+          type: 'jp.kaiz.shachia.dianet.RawGtfsInformation',
+          name: 'raw.zip',
+          uuid: 'raw-uuid',
+        },
+        routes: [{ id: 'route-1', direction: 0 }],
+        poles: [
+          {
+            id: 'stop-1',
+            override: {
+              majorStop: false,
+              branchStart: false,
+              branchEnd: false,
+              nameOverride: null,
+              locationNameOverride: null,
+              jokoOverride: null,
+              rowShading: false,
+              stopNameBold: false,
+              horizontalLine: false,
+            },
+          },
+          {
+            id: 'stop-2',
+            override: {
+              majorStop: false,
+              branchStart: false,
+              branchEnd: false,
+              nameOverride: null,
+              locationNameOverride: null,
+              jokoOverride: null,
+              rowShading: false,
+              stopNameBold: false,
+              horizontalLine: false,
+            },
+          },
+        ],
+        excludedStopPatterns: [],
+      },
+      dayMapping: [{ name: '全日', type: 'all-days' }],
+    }
+
+    await requestDiaNetXlsxInBrowser(request)
+
+    const blob = createObjectUrl.mock.calls[0]?.[0]
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(await (blob as Blob).arrayBuffer())
+    const sheet = workbook.getWorksheet('全日')
+
+    expect(sheet?.getCell('E6').value).toBe('1000')
+    expect(sheet?.getCell('F6').value).toBe('1100')
+    expect(sheet?.getCell('G6').value).toBe('1200')
   })
 })

@@ -3,7 +3,7 @@ import type { GtfsServiceWeekday, ProPreset } from '../../../types'
 import { todayIsoDate } from '../../../utils'
 import type { ProConstructedTrip } from './pro-types'
 
-export type ProPreviewMode = 'day-type' | 'specific-date'
+export type ProPreviewMode = 'day-type' | 'specific-date' | 'all-days'
 
 export type ProPoleNameEditor = {
   poleId: string

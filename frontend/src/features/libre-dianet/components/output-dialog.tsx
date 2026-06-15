@@ -62,6 +62,9 @@ export function OutputDialog({ disabled, onSubmit }: Props) {
                 size="small"
                 value={item.type}
                 onChange={(_, value: DayMapping['type'] | null) => {
+                  if (value === null) {
+                    return
+                  }
                   if (value === 'date') {
                     updateDayMapping(index, { name: item.name, type: 'date', date: item.type === 'date' ? item.date : todayIsoDate() })
                   }
@@ -72,9 +75,11 @@ export function OutputDialog({ disabled, onSubmit }: Props) {
                       weekday: item.type === 'weekday' ? item.weekday : 'monday',
                     })
                   }
+                  if (value === 'all-days') {
+                    updateDayMapping(index, { name: item.name, type: 'all-days' })
+                  }
                 }}
                 sx={{
-                  width: 112,
                   flexShrink: 0,
                   '& .MuiToggleButton-root': {
                     width: 56,
@@ -83,8 +88,9 @@ export function OutputDialog({ disabled, onSubmit }: Props) {
               >
                 <ToggleButton value="weekday">日種</ToggleButton>
                 <ToggleButton value="date">日付</ToggleButton>
+                <ToggleButton value="all-days">全日</ToggleButton>
               </ToggleButtonGroup>
-              {item.type === 'weekday' ? (
+              {item.type === 'weekday' && (
                 <TextField
                   select
                   label="曜日"
@@ -98,7 +104,8 @@ export function OutputDialog({ disabled, onSubmit }: Props) {
                     </MenuItem>
                   ))}
                 </TextField>
-              ) : (
+              )}
+              {item.type === 'date' && (
                 <TextField
                   label="日付"
                   type="date"

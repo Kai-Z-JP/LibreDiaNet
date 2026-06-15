@@ -208,10 +208,18 @@ export class GtfsRepository {
     return this.listTripsForServices(db, selectedRoutes, activeServices, excludedStopPatterns)
   }
 
+  async listTripsForAllDays(
+    handle: GtfsHandle,
+    selectedRoutes: RouteDetail[],
+    excludedStopPatterns: string[][],
+  ): Promise<ConstructedTrip[]> {
+    return this.listTripsForServices(handle.loader.db(), selectedRoutes, undefined, excludedStopPatterns)
+  }
+
   private async listTripsForServices(
     db: Db,
     selectedRoutes: RouteDetail[],
-    activeServices: Set<string>,
+    activeServices: Set<string> | undefined,
     excludedStopPatterns: string[][],
   ): Promise<ConstructedTrip[]> {
     const excludedKeys = new Set(excludedStopPatterns.map((pattern) => stopPatternKey(pattern)))
