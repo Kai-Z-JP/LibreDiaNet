@@ -1,4 +1,5 @@
 import { Droppable } from '@hello-pangea/dnd'
+import AddIcon from '@mui/icons-material/Add'
 import MergeIcon from '@mui/icons-material/Merge'
 import { Box, Button, Card, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material'
 import type { GtfsStop, ProPreset } from '../../../../types'
@@ -20,6 +21,7 @@ type OutputPoleListProps = {
   }
   actions: {
     onUpdate: (preset: ProPreset) => void
+    onAddEmptyPole: () => void
     onMergePolesByStopId: () => void
     onConfirmPendingMerge: () => void
     onCancelPendingMerge: () => void
@@ -28,13 +30,16 @@ type OutputPoleListProps = {
 
 export function OutputPoleList({ data, actions }: OutputPoleListProps) {
   const { preset, stopMap, constructedRoutes, routePatternMap, includeSourceNameInRoute, pendingMerge } = data
-  const { onUpdate, onMergePolesByStopId, onConfirmPendingMerge, onCancelPendingMerge } = actions
+  const { onUpdate, onAddEmptyPole, onMergePolesByStopId, onConfirmPendingMerge, onCancelPendingMerge } = actions
 
   return (
     <Card elevation={0} sx={{ p: 1, minHeight: 400, backgroundColor: '#eaeef6' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, p: 1 }}>
         <Typography>出力標柱</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={onAddEmptyPole}>
+            空標柱
+          </Button>
           <Button size="small" variant="outlined" startIcon={<MergeIcon />} onClick={onMergePolesByStopId}>
             自動統合
           </Button>

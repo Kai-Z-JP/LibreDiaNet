@@ -237,7 +237,7 @@ function buildTimetableSheets(
     return {
       name: mapping.name,
       trips: sortedTrips,
-      tripTimes: sortedTrips.map((trip) => tripTimesForPoles(trip, preset.poles, poleIndexByPatternKey)),
+      tripTimes: sortedTrips.map((trip) => tripTimesForPoles(trip, preset.poles, poles, poleIndexByPatternKey)),
     }
   })
 }
@@ -263,6 +263,7 @@ function sortTimetableTrips(
 function tripTimesForPoles(
   trip: TimetableTrip,
   presetPoles: ExportPole[],
+  poles: ResolvedPole[],
   poleIndexByPatternKey: Map<string, (number | null)[]>,
 ): string[] {
   const times = presetPoles.map((_, poleIndex) => {
@@ -270,7 +271,7 @@ function tripTimesForPoles(
     return stopTimeIndex === null ? '' : departureHMM(trip.stopTimes[stopTimeIndex])
   })
 
-  return fillMissingTimes(times)
+  return fillMissingTimes(times).map((time, index) => (poles[index]?.stop.emptyPole ? '' : time))
 }
 
 function stopTimeIndexForPole(
@@ -766,7 +767,7 @@ function jokoText(poleRows: PoleRow[], index: number): string {
   if (!current) {
     return ''
   }
-  return previous?.joko === current.joko ? '〃' : current.joko
+  return current.joko !== '' && previous?.joko === current.joko ? '〃' : current.joko
 }
 
 function stopTimesForTrip(stopTimesByTripId: Map<string, DiaNetStopTimeData[]>, tripId: string): DiaNetStopTimeData[] {

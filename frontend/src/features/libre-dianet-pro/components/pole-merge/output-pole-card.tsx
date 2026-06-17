@@ -3,7 +3,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import { Box, Card, IconButton, Typography } from '@mui/material'
 import { memo, useState } from 'react'
 import type { GtfsStop, ProPoleDetail, ProPreset } from '../../../../types'
-import { hasVisibleProOverride, type ProRoutePatternMap } from '../../model/pro-pole-stop-helpers'
+import { hasVisibleProOverride, proPoleDisplayName, type ProRoutePatternMap } from '../../model/pro-pole-stop-helpers'
 import type { ProConstructedRoute } from '../../model/pro-types'
 import { OutputPoleDetails } from './output-pole-details'
 
@@ -28,8 +28,7 @@ export const OutputPoleCard = memo(function OutputPoleCard({
 }) {
   const [manualOpen, setManualOpen] = useState<boolean | null>(null)
   const open = manualOpen ?? hasVisibleProOverride(pole)
-  const primaryStop = pole.stops[0]
-  const primary = primaryStop ? stopMap[`${primaryStop.sourceId}::${primaryStop.id}`] : null
+  const name = proPoleDisplayName(pole, stopMap) || '空標柱'
 
   return (
     <Draggable draggableId={`pole-${pole.id}`} index={index}>
@@ -47,7 +46,7 @@ export const OutputPoleCard = memo(function OutputPoleCard({
             cursor: 'pointer',
           }}
         >
-          <OutputPoleSummary pole={pole} name={primary?.name ?? pole.id} onUpdate={onUpdate} preset={preset} />
+          <OutputPoleSummary pole={pole} name={name} onUpdate={onUpdate} preset={preset} />
           {open && (
             <OutputPoleDetails
               pole={pole}

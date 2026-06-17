@@ -92,7 +92,7 @@ export function proStopTimeMatchesPoleStop(
 export function proPoleDisplayName(pole: ProPoleDetail, stopMap: Record<string, GtfsStop>): string {
   const primaryStop = pole.stops[0]
   const primary = primaryStop ? stopMap[`${primaryStop.sourceId}::${primaryStop.id}`] : null
-  return pole.override.nameOverride ?? primary?.name ?? pole.id
+  return pole.override.nameOverride ?? primary?.name ?? ''
 }
 
 export function proPoleDefaultLocationName(pole: ProPoleDetail, stopMap: Record<string, GtfsStop>): string {

@@ -1,5 +1,5 @@
 import { buildCreateFromDataRequest, buildProCreateFromDataRequest } from './api'
-import type { ProPreset, ProVersion, RoutePresetV2 } from './types'
+import { EMPTY_OVERRIDE, type ProPreset, type ProVersion, type RoutePresetV2 } from './types'
 import { stopPatternKey } from './utils'
 
 describe('buildCreateFromDataRequest', () => {
@@ -232,6 +232,48 @@ describe('buildProCreateFromDataRequest', () => {
       name: '統合停留所',
       platformCode: '1',
       jokoOverride: null,
+    })
+  })
+
+  it('keeps an empty output pole as a blank synthetic stop', () => {
+    const version: ProVersion = {
+      id: 'version-1',
+      name: '2026春改正',
+      revisionDate: '2026-04-01',
+      gtfsSources: [],
+      presets: [],
+    }
+    const preset: ProPreset = {
+      id: 'preset-pro',
+      name: 'Pro preset',
+      index: 7,
+      sourceIds: [],
+      routes: [],
+      routeDisplayOverrides: [],
+      poles: [
+        {
+          id: 'empty-pole',
+          stops: [],
+          override: EMPTY_OVERRIDE,
+        },
+      ],
+      excludedStopPatterns: [],
+    }
+
+    const payload = buildProCreateFromDataRequest(version, preset, {}, [{ name: '平日', type: 'date', date: '2026-04-01' }])
+
+    expect(payload.preset.poles).toEqual([
+      {
+        id: 'pole::empty-pole',
+        override: EMPTY_OVERRIDE,
+      },
+    ])
+    expect(payload.gtfs.stops).toContainEqual({
+      id: 'pole::empty-pole',
+      name: '',
+      platformCode: null,
+      jokoOverride: '',
+      emptyPole: true,
     })
   })
 })

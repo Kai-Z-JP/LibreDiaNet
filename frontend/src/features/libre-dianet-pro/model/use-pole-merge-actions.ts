@@ -56,6 +56,20 @@ export function usePoleMergeActions({
     })
   }
 
+  const addEmptyPole = () => {
+    onUpdate({
+      ...preset,
+      poles: [
+        ...preset.poles,
+        {
+          id: crypto.randomUUID(),
+          stops: [],
+          override: EMPTY_OVERRIDE,
+        },
+      ],
+    })
+  }
+
   const toggleExcludedPattern = (route: ProConstructedRoute, pattern: GtfsStop[]) => {
     const key = proExcludedPatternKey(route.sourceId, pattern)
     const nextPatterns = preset.excludedStopPatterns.filter((patternEntry) => patternEntry[0] !== key)
@@ -70,6 +84,11 @@ export function usePoleMergeActions({
     const targetIndexByStopId = new Map<string, number>()
 
     for (const pole of preset.poles) {
+      if (pole.stops.length === 0) {
+        nextPoles.push(pole)
+        continue
+      }
+
       const eligibleStops = pole.stops.filter((stop) => !duplicateStopIdKeys.has(proStopIdKey(stop.sourceId, stop.id)))
       const ineligibleStops = pole.stops.filter((stop) => duplicateStopIdKeys.has(proStopIdKey(stop.sourceId, stop.id)))
 
@@ -247,6 +266,7 @@ export function usePoleMergeActions({
 
   return {
     addPatternStops,
+    addEmptyPole,
     toggleExcludedPattern,
     mergePolesByStopId,
     dragPole,

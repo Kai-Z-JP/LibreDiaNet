@@ -78,6 +78,7 @@ export function usePoleMergeModel({
     actions: {
       updateSelectedStops: setSelectedStopMap,
       addPatternStops: actions.addPatternStops,
+      addEmptyPole: actions.addEmptyPole,
       toggleExcludedPattern: actions.toggleExcludedPattern,
       mergePolesByStopId: actions.mergePolesByStopId,
       dragPole: actions.dragPole,
@@ -110,6 +111,7 @@ export function usePoleMergeModel({
         },
         actions: {
           onUpdate,
+          onAddEmptyPole: actions.addEmptyPole,
           onMergePolesByStopId: actions.mergePolesByStopId,
           onConfirmPendingMerge: actions.confirmPendingMerge,
           onCancelPendingMerge: actions.cancelPendingMerge,

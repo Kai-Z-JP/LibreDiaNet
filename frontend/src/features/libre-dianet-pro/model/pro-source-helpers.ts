@@ -11,7 +11,7 @@ export function removeSourceFromPreset(preset: ProPreset, sourceId: string): Pro
         ...pole,
         stops: pole.stops.filter((stop) => stop.sourceId !== sourceId),
       }))
-      .filter((pole) => pole.stops.length > 0),
+      .filter((pole, index) => preset.poles[index]?.stops.length === 0 || pole.stops.length > 0),
   }
 }
 

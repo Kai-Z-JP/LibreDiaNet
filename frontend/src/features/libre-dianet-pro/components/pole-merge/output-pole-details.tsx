@@ -150,6 +150,5 @@ function removeStopFromPole(
           }
         : item,
     )
-    .filter((item) => item.stops.length > 0)
   onUpdate({ ...preset, poles: nextPoles })
 }

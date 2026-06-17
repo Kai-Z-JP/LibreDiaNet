@@ -117,7 +117,7 @@ export function proTripTimeForPole(trip: ProConstructedTrip, pole: ProPoleDetail
 
 export function proTripPreviewTimes(trip: ProConstructedTrip, poles: ProPoleDetail[]): string[] {
   const times = poles.map((pole) => proTripTimeForPole(trip, pole))
-  return fillMissingPreviewTimes(times)
+  return blankEmptyPoleTimes(fillMissingPreviewTimes(times), poles)
 }
 
 export function sortProConstructedTrips(
@@ -153,7 +153,7 @@ export function sortProConstructedTrips(
 
 export function proPatternPreviewTimes(pattern: GtfsStop[], poles: ProPoleDetail[], sourceId: string): string[] {
   const times = poles.map((pole) => proPatternTimeForPole(pattern, pole, sourceId))
-  return fillMissingPreviewTimes(times)
+  return blankEmptyPoleTimes(fillMissingPreviewTimes(times), poles)
 }
 
 export function proPatternTimeForPole(pattern: GtfsStop[], pole: ProPoleDetail, sourceId: string): string {
@@ -205,4 +205,8 @@ function fillMissingPreviewTimes(times: string[]): string[] {
     }
     return first >= 0 && index >= first && index <= last ? '‖' : '…'
   })
+}
+
+function blankEmptyPoleTimes(times: string[], poles: ProPoleDetail[]): string[] {
+  return times.map((time, index) => (poles[index]?.stops.length === 0 ? '' : time))
 }

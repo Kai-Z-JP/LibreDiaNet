@@ -165,6 +165,7 @@ export type DiaNetStopData = {
   name: string
   platformCode: string | null
   jokoOverride?: string | null
+  emptyPole?: boolean
 }
 
 export type DiaNetRouteData = {

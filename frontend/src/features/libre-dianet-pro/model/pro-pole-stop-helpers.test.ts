@@ -39,6 +39,10 @@ describe('proPoleDisplayName', () => {
 
     expect(proPoleDisplayName(pole, { 'source-a::stop-a': stop('stop-a', 'Stop A') })).toBe('')
   })
+
+  it('uses a blank default display for empty poles', () => {
+    expect(proPoleDisplayName({ ...poleDetail({}), stops: [] }, {})).toBe('')
+  })
 })
 
 describe('proPoleDisplayLocationName', () => {

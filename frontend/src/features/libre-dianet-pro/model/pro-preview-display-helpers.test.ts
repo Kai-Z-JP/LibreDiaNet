@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { ProRouteDisplayOverride } from '../../../types'
-import { hasProRouteNameOverride, normalizeProRouteDisplayOverride } from './pro-preview-display-helpers'
+import { EMPTY_OVERRIDE, type ProPoleDetail, type ProRouteDisplayOverride } from '../../../types'
+import { stopPatternKey } from '../../../utils'
+import { hasProRouteNameOverride, normalizeProRouteDisplayOverride, proTripPreviewTimes } from './pro-preview-display-helpers'
+import type { ProConstructedTrip } from './pro-types'
 
 const baseOverride: ProRouteDisplayOverride = {
   routeKey: 'source::route::0::pattern',
@@ -37,3 +39,44 @@ describe('hasProRouteNameOverride', () => {
     expect(hasProRouteNameOverride(baseOverride, 'A1')).toBe(false)
   })
 })
+
+describe('proTripPreviewTimes', () => {
+  it('keeps empty pole time cells blank instead of filling pass markers', () => {
+    const stopTime = [
+      { tripId: 'trip-1', stopId: 'stop-a', stopSequence: 1, departureTime: '08:00:00' },
+      { tripId: 'trip-1', stopId: 'stop-b', stopSequence: 2, departureTime: '08:10:00' },
+    ]
+    const patternKey = stopPatternKey(stopTime)
+    const trip: ProConstructedTrip = {
+      sourceId: 'source-a',
+      sourceName: 'Source A',
+      routeId: 'route-a',
+      direction: 0,
+      routeName: 'Route A',
+      stopTime,
+    }
+    const poles: ProPoleDetail[] = [
+      pole('pole-a', 'stop-a', patternKey, 0),
+      { id: 'empty-pole', stops: [], override: EMPTY_OVERRIDE },
+      pole('pole-b', 'stop-b', patternKey, 1),
+    ]
+
+    expect(proTripPreviewTimes(trip, poles)[1]).toBe('')
+  })
+})
+
+function pole(id: string, stopId: string, stopPattern: string, stopIndex: number): ProPoleDetail {
+  return {
+    id,
+    stops: [
+      {
+        sourceId: 'source-a',
+        id: stopId,
+        stopSequence: stopIndex + 1,
+        stopPatternKey: stopPattern,
+        stopIndex,
+      },
+    ],
+    override: EMPTY_OVERRIDE,
+  }
+}

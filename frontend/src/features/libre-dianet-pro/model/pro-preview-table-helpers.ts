@@ -20,10 +20,13 @@ export function proPoleRawJoko(
   poleIndex: number,
   constructedRoutes: ProConstructedRoute[],
   stopMap: Record<string, GtfsStop>,
-): '発' | '着' {
+): string {
   const override = poles[poleIndex]?.override.jokoOverride
-  if (override === '発' || override === '着') {
+  if (override === '発' || override === '着' || override === '') {
     return override
+  }
+  if (poles[poleIndex]?.stops.length === 0) {
+    return ''
   }
   if (poleIndex === 0) {
     return '発'

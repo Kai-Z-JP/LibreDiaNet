@@ -222,14 +222,12 @@ function mergeProGtfsExportData(preset: ProPreset, gtfsBySourceId: Record<string
 
   for (const pole of preset.poles) {
     const firstStop = pole.stops.map((stop) => stopsById.get(namespaceId(stop.sourceId, stop.id))).find(Boolean)
-    if (!firstStop) {
-      continue
-    }
     stopsById.set(proPoleExportId(pole), {
       id: proPoleExportId(pole),
-      name: pole.override.nameOverride ?? firstStop.name,
-      platformCode: pole.override.locationNameOverride ?? firstStop.platformCode,
-      jokoOverride: pole.override.jokoOverride,
+      name: pole.override.nameOverride ?? firstStop?.name ?? '',
+      platformCode: pole.override.locationNameOverride ?? firstStop?.platformCode ?? null,
+      jokoOverride: pole.override.jokoOverride ?? (pole.stops.length === 0 ? '' : null),
+      ...(pole.stops.length === 0 ? { emptyPole: true } : {}),
     })
   }
 

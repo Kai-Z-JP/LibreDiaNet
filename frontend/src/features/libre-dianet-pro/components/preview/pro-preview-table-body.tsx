@@ -77,7 +77,7 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
           {preset.poles.map((pole, poleIndex) => {
             const primaryStop = pole.stops[0]
             const primary = primaryStop ? stopMap[`${primaryStop.sourceId}::${primaryStop.id}`] : null
-            const defaultName = primary?.name ?? pole.id
+            const defaultName = primary?.name ?? ''
             const name = proPoleDisplayName(pole, stopMap)
             const defaultLocationName = proPoleDefaultLocationName(pole, stopMap)
             const locationName = proPoleDisplayLocationName(pole, stopMap)
@@ -86,7 +86,7 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
             const terminalName = preset.poles.slice(poleIndex + 1).every((candidate) => proPoleDisplayName(candidate, stopMap) === name)
             const rawJoko = proPoleRawJoko(preset.poles, poleIndex, constructedRoutes, stopMap)
             const previousRawJoko = poleIndex > 0 ? proPoleRawJoko(preset.poles, poleIndex - 1, constructedRoutes, stopMap) : null
-            const joko = previousRawJoko === null ? rawJoko : previousRawJoko === rawJoko ? '〃' : rawJoko
+            const joko = rawJoko !== '' && previousRawJoko !== null && previousRawJoko === rawJoko ? '〃' : rawJoko
             const openPoleEditor = () => onOpenPoleNameEditor(pole, defaultName, defaultLocationName, rawJoko)
             const sectionLineClass = poleNameMergedIntoPrevious ? ' pro-preview-section-line' : ''
             const selected = selectedPoleIds.includes(pole.id)
