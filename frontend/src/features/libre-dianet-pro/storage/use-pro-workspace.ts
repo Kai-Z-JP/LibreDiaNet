@@ -13,6 +13,7 @@ import { createFirebaseAuthStartUrl, FIREBASE_AUTH_RETURN_PARAM } from './fireba
 import {
   copyProWorkspace,
   createLocalProWorkspaceStorage,
+  type ProWorkspaceCopyLogger,
   type ProWorkspaceDescriptor,
   type ProWorkspaceStorage,
 } from './pro-workspace-storage'
@@ -161,7 +162,13 @@ export function useProWorkspace() {
   }, [])
 
   const activateStorage = useCallback(
-    async (target: ProWorkspaceStorage, mode: ProWorkspaceOpenMode, currentStore: ProPresetStore, beforeActivate?: () => Promise<void>) => {
+    async (
+      target: ProWorkspaceStorage,
+      mode: ProWorkspaceOpenMode,
+      currentStore: ProPresetStore,
+      beforeActivate?: () => Promise<void>,
+      copyLog?: ProWorkspaceCopyLogger,
+    ) => {
       const current = runtimeRef.current
       if (sameDescriptor(current.storage.descriptor, target.descriptor) && current.storage.descriptor.kind !== 'file-system') {
         await target.dispose?.()
@@ -172,10 +179,14 @@ export function useProWorkspace() {
       setError(null)
       let switched = false
       try {
+        if (mode === 'copy') {
+          copyLog?.({ level: 'info', message: 'コピー元のデータを確定しています' })
+        }
         await current.repository.closeAll()
         if (mode === 'copy') {
+          copyLog?.({ level: 'info', message: 'コピー先の既存データを確認しています' })
           await target.awaitInitialSync?.()
-          await copyProWorkspace(current.storage, target, currentStore)
+          await copyProWorkspace(current.storage, target, currentStore, copyLog)
         } else {
           await target.loadStore()
         }
@@ -186,7 +197,11 @@ export function useProWorkspace() {
       } catch (switchError) {
         await safelyDisposeStorage(target)
         replaceRuntime(createRuntime(current.storage))
-        setError(errorMessage(switchError, '保存先を切り替えられませんでした'))
+        const message = errorMessage(switchError, '保存先を切り替えられませんでした')
+        setError(message)
+        if (mode === 'copy') {
+          copyLog?.({ level: 'error', message: `コピーに失敗しました: ${message}` })
+        }
         throw switchError
       } finally {
         if (switched) {
@@ -199,33 +214,43 @@ export function useProWorkspace() {
   )
 
   const useLocalWorkspace = useCallback(
-    async (mode: ProWorkspaceOpenMode, currentStore: ProPresetStore) => {
-      await activateStorage(createLocalProWorkspaceStorage(), mode, currentStore)
+    async (mode: ProWorkspaceOpenMode, currentStore: ProPresetStore, copyLog?: ProWorkspaceCopyLogger) => {
+      await activateStorage(createLocalProWorkspaceStorage(), mode, currentStore, undefined, copyLog)
     },
     [activateStorage],
   )
 
   const chooseFileSystemWorkspace = useCallback(
-    async (mode: ProWorkspaceOpenMode, currentStore: ProPresetStore) => {
+    async (mode: ProWorkspaceOpenMode, currentStore: ProPresetStore, copyLog?: ProWorkspaceCopyLogger) => {
       const picker = (window as DirectoryPickerWindow).showDirectoryPicker
       if (!picker) {
         throw new Error('このブラウザは File System Access API に対応していません')
       }
       const handle = await picker.call(window, { id: 'libre-dianet-pro-workspace', mode: 'readwrite' })
+      if (mode === 'copy') {
+        copyLog?.({ level: 'info', message: `コピー先フォルダを選択しました: ${handle.name}` })
+      }
       const target = await createFileSystemProWorkspaceStorage(handle)
-      await activateStorage(target, mode, currentStore, () => saveActiveFileSystemHandle(handle))
+      await activateStorage(target, mode, currentStore, () => saveActiveFileSystemHandle(handle), copyLog)
     },
     [activateStorage],
   )
 
   const useFirebaseWorkspace = useCallback(
-    async (workspaceId: string, workspaceName: string, mode: ProWorkspaceOpenMode, currentStore: ProPresetStore) => {
+    async (
+      workspaceId: string,
+      workspaceName: string,
+      mode: ProWorkspaceOpenMode,
+      currentStore: ProPresetStore,
+      copyLog?: ProWorkspaceCopyLogger,
+    ) => {
       if (mode === 'copy') {
+        copyLog?.({ level: 'info', message: 'Firebaseワークスペースを準備しています' })
         const access = await loadFirebaseWorkspaceAccess()
         await access.ensureFirebaseWorkspace(workspaceId.trim(), workspaceName)
       }
       const target = await createFirebaseWorkspaceStorage(workspaceId)
-      await activateStorage(target, mode, currentStore)
+      await activateStorage(target, mode, currentStore, undefined, copyLog)
     },
     [activateStorage],
   )

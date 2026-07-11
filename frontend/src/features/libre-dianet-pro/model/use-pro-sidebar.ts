@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FeedOption, ProGtfsSource, ProPreset, ProVersion } from '../../../types'
 import type { FirebaseProUser, FirebaseWorkspaceMember, FirebaseWorkspaceSummary } from '../storage/firebase-pro-workspace-access'
-import type { ProWorkspaceDescriptor } from '../storage/pro-workspace-storage'
+import type { ProWorkspaceCopyLogger, ProWorkspaceDescriptor } from '../storage/pro-workspace-storage'
 import type { ProWorkspaceOpenMode } from '../storage/use-pro-workspace'
 
 export type ProSidebarData = {
@@ -34,9 +34,14 @@ export type ProSidebarActions = {
   onReplaceRawSource: (source: ProGtfsSource, file: File) => Promise<ProGtfsSource>
   onCreatePreset?: () => void
   onDuplicatePreset?: (preset: ProPreset) => void
-  onUseLocalWorkspace: (mode: ProWorkspaceOpenMode) => Promise<void>
-  onChooseFileSystemWorkspace: (mode: ProWorkspaceOpenMode) => Promise<void>
-  onUseFirebaseWorkspace: (workspaceId: string, workspaceName: string, mode: ProWorkspaceOpenMode) => Promise<void>
+  onUseLocalWorkspace: (mode: ProWorkspaceOpenMode, copyLog?: ProWorkspaceCopyLogger) => Promise<void>
+  onChooseFileSystemWorkspace: (mode: ProWorkspaceOpenMode, copyLog?: ProWorkspaceCopyLogger) => Promise<void>
+  onUseFirebaseWorkspace: (
+    workspaceId: string,
+    workspaceName: string,
+    mode: ProWorkspaceOpenMode,
+    copyLog?: ProWorkspaceCopyLogger,
+  ) => Promise<void>
   onPrepareFirebaseAuth: () => Promise<FirebaseProUser | null>
   onSignInFirebase: () => Promise<void>
   onSignOutFirebase: () => Promise<void>

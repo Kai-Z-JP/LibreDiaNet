@@ -1,6 +1,12 @@
 import { gtfsCacheFilename } from '../../../gtfsRepository'
 import type { ProPresetStore, RawInfoV2, RepoInfoV2 } from '../../../types'
-import { copyProWorkspace, emptyProPresetStore, type ProWorkspaceStorage, type SqliteBlobStore } from './pro-workspace-storage'
+import {
+  copyProWorkspace,
+  emptyProPresetStore,
+  type ProWorkspaceCopyLog,
+  type ProWorkspaceStorage,
+  type SqliteBlobStore,
+} from './pro-workspace-storage'
 
 describe('copyProWorkspace', () => {
   it('copies the Pro store and its SQLite blobs', async () => {
@@ -61,7 +67,8 @@ describe('copyProWorkspace', () => {
     await target.databaseBlobs.write(gtfsCacheFilename(missingRawInfo), new Uint8Array([9]))
 
     const saveStore = vi.spyOn(target, 'saveStore')
-    const copied = await copyProWorkspace(source, target, store)
+    const logs: ProWorkspaceCopyLog[] = []
+    const copied = await copyProWorkspace(source, target, store, (entry) => logs.push(entry))
 
     expect(await target.databaseBlobs.read(gtfsCacheFilename(repoInfo))).toEqual(new Uint8Array([1, 2]))
     expect(await target.databaseBlobs.read(gtfsCacheFilename(rawInfo))).toEqual(new Uint8Array([3, 4]))
@@ -71,6 +78,14 @@ describe('copyProWorkspace', () => {
     expect(await target.loadStore()).toEqual(copied)
     expect(saveStore).toHaveBeenLastCalledWith(copied, { replace: true })
     expect(target.awaitRemoteSync).toHaveBeenCalledOnce()
+    expect(logs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ level: 'warning' }),
+        expect.objectContaining({ message: 'ワークスペースデータを保存しています（1改正・1プリセット）' }),
+        { level: 'info', message: 'リモートストレージとの同期を待っています' },
+        { level: 'success', message: 'コピーが完了しました' },
+      ]),
+    )
   })
 })
 

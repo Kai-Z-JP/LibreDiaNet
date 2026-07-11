@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ProPreset, ProPresetContext } from '../../../types'
+import type { ProWorkspaceCopyLogger } from '../storage/pro-workspace-storage'
 import type { ProWorkspaceController, ProWorkspaceOpenMode } from '../storage/use-pro-workspace'
 import { useGtfsFeeds } from './use-gtfs-feeds'
 import { useProSelection } from './use-pro-selection'
@@ -38,10 +39,12 @@ export function useLibreDiaNetProPage(workspace: ProWorkspaceController) {
   const selectedVersion = selection.selectedVersion
   const selectedPreset = selection.selectedPreset
   const currentStore = { version: 1 as const, versions: versionStore.versions }
-  const useLocalWorkspace = (mode: ProWorkspaceOpenMode) => workspace.useLocalWorkspace(mode, currentStore)
-  const chooseFileSystemWorkspace = (mode: ProWorkspaceOpenMode) => workspace.chooseFileSystemWorkspace(mode, currentStore)
-  const useFirebaseWorkspace = (workspaceId: string, workspaceName: string, mode: ProWorkspaceOpenMode) =>
-    workspace.useFirebaseWorkspace(workspaceId, workspaceName, mode, currentStore)
+  const useLocalWorkspace = (mode: ProWorkspaceOpenMode, copyLog?: ProWorkspaceCopyLogger) =>
+    workspace.useLocalWorkspace(mode, currentStore, copyLog)
+  const chooseFileSystemWorkspace = (mode: ProWorkspaceOpenMode, copyLog?: ProWorkspaceCopyLogger) =>
+    workspace.chooseFileSystemWorkspace(mode, currentStore, copyLog)
+  const useFirebaseWorkspace = (workspaceId: string, workspaceName: string, mode: ProWorkspaceOpenMode, copyLog?: ProWorkspaceCopyLogger) =>
+    workspace.useFirebaseWorkspace(workspaceId, workspaceName, mode, currentStore, copyLog)
 
   const sidebarProps = {
     data: {

@@ -21,6 +21,13 @@ export type ProWorkspaceSaveOptions = {
   replace?: boolean
 }
 
+export type ProWorkspaceCopyLog = {
+  level: 'info' | 'warning' | 'success' | 'error'
+  message: string
+}
+
+export type ProWorkspaceCopyLogger = (entry: ProWorkspaceCopyLog) => void
+
 export interface ProWorkspaceStorage {
   readonly descriptor: ProWorkspaceDescriptor
   readonly label: string
@@ -60,20 +67,30 @@ export async function copyProWorkspace(
   source: ProWorkspaceStorage,
   target: ProWorkspaceStorage,
   store: ProPresetStore,
+  log?: ProWorkspaceCopyLogger,
 ): Promise<ProPresetStore> {
   const sourceInfos = store.versions.flatMap((version) => version.gtfsSources.map((source) => source.info))
   const infosByFilename = new Map(sourceInfos.map((info) => [gtfsCacheFilename(info), info]))
   const missingRawUuids = new Set<string>()
+  const totalDatabases = infosByFilename.size
 
+  log?.({ level: 'info', message: `SQLiteデータを確認しています（${totalDatabases}件）` })
+
+  let databaseIndex = 0
   for (const [filename, info] of infosByFilename) {
+    databaseIndex += 1
     const bytes = await source.databaseBlobs.read(filename)
     if (bytes) {
       await target.databaseBlobs.write(filename, bytes)
+      log?.({ level: 'info', message: `SQLiteをコピーしました（${databaseIndex}/${totalDatabases}）` })
       continue
     }
     await target.databaseBlobs.delete(filename)
     if (info.kind === 'raw') {
       missingRawUuids.add(info.uuid)
+      log?.({ level: 'warning', message: `元データがないSQLiteを欠損として記録しました（${databaseIndex}/${totalDatabases}）` })
+    } else {
+      log?.({ level: 'warning', message: `取得できないSQLiteをコピー先から除外しました（${databaseIndex}/${totalDatabases}）` })
     }
   }
 
@@ -88,7 +105,16 @@ export async function copyProWorkspace(
       ),
     })),
   }
+  const presetCount = copiedStore.versions.reduce((count, version) => count + version.presets.length, 0)
+  log?.({
+    level: 'info',
+    message: `ワークスペースデータを保存しています（${copiedStore.versions.length}改正・${presetCount}プリセット）`,
+  })
   await target.saveStore(copiedStore, { replace: true })
-  await target.awaitRemoteSync?.()
+  if (target.awaitRemoteSync) {
+    log?.({ level: 'info', message: 'リモートストレージとの同期を待っています' })
+    await target.awaitRemoteSync()
+  }
+  log?.({ level: 'success', message: 'コピーが完了しました' })
   return copiedStore
 }
