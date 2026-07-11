@@ -2,26 +2,27 @@ import { useEffect, useMemo, useReducer, useRef, type SetStateAction } from 'rea
 import type { ProPreset, ProPresetContext, ProVersion } from '../../../types'
 import { useProEditorData } from '../model/use-pro-editor-data'
 
-type ProEditorState = {
+export type ProEditorState = {
   tab: number
   deletePresetConfirmOpen: boolean
   draftVersion: ProVersion
   draftPreset: ProPreset | null
+  externalPreset: ProPreset | null
   activeDraftKey: string
 }
 
-type ProEditorAction =
+export type ProEditorAction =
   | { type: 'setTab'; value: number }
   | { type: 'setDeletePresetConfirmOpen'; value: boolean }
   | { type: 'setDraftVersion'; value: SetStateAction<ProVersion> }
   | { type: 'setDraftPreset'; value: SetStateAction<ProPreset | null> }
-  | { type: 'resetDraft'; version: ProVersion; preset: ProPreset | null; draftKey: string; resetTab: boolean }
+  | { type: 'reconcileDraft'; version: ProVersion; preset: ProPreset | null; draftKey: string }
 
 function applyStateAction<T>(current: T, value: SetStateAction<T>): T {
   return typeof value === 'function' ? (value as (current: T) => T)(current) : value
 }
 
-function proEditorReducer(state: ProEditorState, action: ProEditorAction): ProEditorState {
+export function proEditorReducer(state: ProEditorState, action: ProEditorAction): ProEditorState {
   switch (action.type) {
     case 'setTab':
       return { ...state, tab: action.value }
@@ -31,14 +32,18 @@ function proEditorReducer(state: ProEditorState, action: ProEditorAction): ProEd
       return { ...state, draftVersion: applyStateAction(state.draftVersion, action.value) }
     case 'setDraftPreset':
       return { ...state, draftPreset: applyStateAction(state.draftPreset, action.value) }
-    case 'resetDraft':
+    case 'reconcileDraft': {
+      const selectionChanged = action.draftKey !== state.activeDraftKey
       return {
         ...state,
-        tab: action.resetTab ? 0 : state.tab,
+        tab: selectionChanged ? 0 : state.tab,
         draftVersion: action.version,
-        draftPreset: action.preset,
+        draftPreset:
+          selectionChanged || sameValue(state.draftPreset, state.externalPreset) ? action.preset : state.draftPreset,
+        externalPreset: action.preset,
         activeDraftKey: action.draftKey,
       }
+    }
   }
 }
 
@@ -62,9 +67,10 @@ export function useProEditorModel({
     deletePresetConfirmOpen: false,
     draftVersion: version,
     draftPreset: preset,
+    externalPreset: preset,
     activeDraftKey: `${version.id}:${preset?.id ?? ''}`,
   })
-  const { tab, deletePresetConfirmOpen, draftVersion, draftPreset, activeDraftKey } = state
+  const { tab, deletePresetConfirmOpen, draftVersion, draftPreset } = state
   const setDraftPreset = (value: SetStateAction<ProPreset | null>) => dispatch({ type: 'setDraftPreset', value })
   const tabContentRef = useRef<HTMLDivElement | null>(null)
   const { draftContext, sourceNameMap, routeOptions, constructedRoutes, stopMap } = useProEditorData({
@@ -75,8 +81,8 @@ export function useProEditorModel({
 
   useEffect(() => {
     const nextDraftKey = `${version.id}:${preset?.id ?? ''}`
-    dispatch({ type: 'resetDraft', version, preset, draftKey: nextDraftKey, resetTab: nextDraftKey !== activeDraftKey })
-  }, [activeDraftKey, version, preset])
+    dispatch({ type: 'reconcileDraft', version, preset, draftKey: nextDraftKey })
+  }, [version, preset])
 
   useEffect(() => {
     tabContentRef.current?.scrollTo({ top: 0, left: 0 })
@@ -184,4 +190,8 @@ export function useProEditorModel({
     },
     tabContentRef,
   }
+}
+
+function sameValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
 }
