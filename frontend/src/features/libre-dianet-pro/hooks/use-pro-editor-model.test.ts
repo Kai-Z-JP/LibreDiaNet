@@ -30,6 +30,27 @@ const state = (draftPreset: ProPreset): ProEditorState => ({
 })
 
 describe('proEditorReducer', () => {
+  it('keeps the current draft while accepting an update to another preset', () => {
+    const otherPreset = { ...preset, id: 'other', name: '更新前' }
+    const editingPreset = { ...preset, name: '編集中' }
+    const currentVersion = { ...version, presets: [preset, otherPreset] }
+    const currentState = {
+      ...state(editingPreset),
+      draftVersion: currentVersion,
+    }
+    const updatedOtherPreset = { ...otherPreset, name: '別端末で更新' }
+
+    const result = proEditorReducer(currentState, {
+      type: 'reconcileDraft',
+      version: { ...currentVersion, presets: [preset, updatedOtherPreset] },
+      preset,
+      draftKey: 'version:preset',
+    })
+
+    expect(result.draftPreset?.name).toBe('編集中')
+    expect(result.draftVersion.presets.find(({ id }) => id === 'other')?.name).toBe('別端末で更新')
+  })
+
   it('keeps preset edits when the selected version receives a GTFS-related update', () => {
     const editingPreset = { ...preset, name: '編集中' }
     const updatedVersion = { ...version, revisionDate: '2026-07-12' }

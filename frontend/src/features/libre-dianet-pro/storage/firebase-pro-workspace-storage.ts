@@ -7,6 +7,7 @@ import type { ProPresetStore } from '../../../types'
 import { getFirebaseProClient } from './firebase-pro-client'
 import { FIREBASE_WORKSPACES_COLLECTION, requireFirebaseWorkspaceAccess, validateWorkspaceId } from './firebase-pro-workspace-access'
 import { decodeFirebaseVersionDocument, encodeFirebaseVersionDocument, type FirebaseVersionDocument } from './firebase-pro-workspace-codec'
+import { firebaseVersionConflictHandler } from './firebase-version-conflict-handler'
 import { createMirroredOpfsDatabaseProvider, storageKeyHash } from './sqlite-blob-store'
 import type { ProWorkspaceSaveOptions, ProWorkspaceStorage, SqliteBlobStore } from './pro-workspace-storage'
 
@@ -49,7 +50,7 @@ export async function createFirebaseProWorkspaceStorage(workspaceId: string): Pr
     eventReduce: true,
   })
   const collections = await database.addCollections<FirebaseCollections>({
-    versions: { schema: VERSION_SCHEMA },
+    versions: { schema: VERSION_SCHEMA, conflictHandler: firebaseVersionConflictHandler },
   })
   const versions = collections.versions
   const remoteCollection = firestoreCollection(
