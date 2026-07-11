@@ -634,6 +634,7 @@ function toStopTimeRow(row: RawStopTimeRow): StopTimeRow {
     trip_id: asRequiredString(row.trip_id),
     stop_id: asRequiredString(row.stop_id),
     stop_sequence: toNumber(row.stop_sequence),
+    arrival_time: asOptionalString(row.arrival_time),
     departure_time: asOptionalString(row.departure_time),
   }
 }
