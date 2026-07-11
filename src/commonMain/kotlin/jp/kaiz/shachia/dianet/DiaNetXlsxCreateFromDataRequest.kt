@@ -49,6 +49,7 @@ data class DiaNetStopTimeData(
     val tripId: String,
     val stopId: String,
     val stopSequence: Int,
+    val arrivalTime: String? = null,
     val departureTime: String? = null,
     val stopPatternId: String? = null
 )

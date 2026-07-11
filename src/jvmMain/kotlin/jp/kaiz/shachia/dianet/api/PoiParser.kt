@@ -104,6 +104,7 @@ private data class DiaNetWorkbookStopTime(
     val tripId: String,
     val stopId: String,
     val stopSequence: Int,
+    val arrivalTime: String?,
     val departureTime: String?,
     val stopPatternId: String? = null
 )
@@ -186,6 +187,7 @@ private fun GTFS.toWorkbookData() = DiaNetWorkbookData(
             tripId = it.tripId,
             stopId = it.stopId ?: "",
             stopSequence = it.stopSequence,
+            arrivalTime = it.arrivalTime,
             departureTime = it.departureTime,
             stopPatternId = null
         )
@@ -211,7 +213,7 @@ private fun DiaNetGtfsExportData.toWorkbookData() = DiaNetWorkbookData(
     stops = stops.map { DiaNetWorkbookStop(it.id, it.name, it.platformCode, it.jokoOverride) },
     routes = routes.map { DiaNetWorkbookRoute(it.id, it.shortName, it.longName) },
     trips = trips.map { DiaNetWorkbookTrip(it.tripId, it.routeId, it.directionId, it.serviceId, it.tripHeadsign) },
-    stopTimes = stopTimes.map { DiaNetWorkbookStopTime(it.tripId, it.stopId, it.stopSequence, it.departureTime, it.stopPatternId) },
+    stopTimes = stopTimes.map { DiaNetWorkbookStopTime(it.tripId, it.stopId, it.stopSequence, it.arrivalTime, it.departureTime, it.stopPatternId) },
     calendars = calendars.map {
         DiaNetWorkbookCalendar(
             id = it.id,
@@ -343,7 +345,8 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
                     item = trip,
                     compareValues = preset.poles.mapIndexed { index, _ ->
                         val poleIndex = stopIdPatternMapping[index]
-                        if (poleIndex == null || poleIndex == -1) null else trip.stopTime[poleIndex].departHMM().trim().toIntOrNull()
+                        if (poleIndex == null || poleIndex == -1) null
+                        else trip.stopTime[poleIndex].timeHMM(preset.poles[index].override.jokoOverride == "着").trim().toIntOrNull()
                     }
                 )
             },
@@ -358,7 +361,7 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
             val sujiTime = preset.poles.mapIndexed { index, poleDetail ->
                 val poleIndex = stopIdPatternMapping[index]
                 if (poleIndex == null || poleIndex == -1) ""
-                else suji.stopTime[poleIndex].departHMM()
+                else suji.stopTime[poleIndex].timeHMM(poleDetail.override.jokoOverride == "着")
             }.toMutableList()
 
             val first = sujiTime.indexOfFirst(String::isNotEmpty)
@@ -684,11 +687,12 @@ private fun DiaNetWorkbookStopTime.departHHMM() = departureTime?.split(":")?.let
 } ?: ""
 
 
-private fun DiaNetWorkbookStopTime.departHMM() = departureTime?.split(":")?.let {
+private fun DiaNetWorkbookStopTime.timeHMM(useArrivalTime: Boolean) =
+    (if (useArrivalTime) arrivalTime ?: departureTime else departureTime)?.split(":")?.let {
     val hh = it[0].toInt()
     val mm = it[1].padStart(2, '0')
     "$hh$mm".padStart(4, '\u2002')
-} ?: ""
+    } ?: ""
 
 private fun <T> sortTimetableColumns(columns: List<TimetableSortColumn<T>>, poleSpans: List<Int>): List<T> {
     val sorted = mutableListOf<TimetableSortColumn<T>>()

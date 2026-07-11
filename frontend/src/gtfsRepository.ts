@@ -29,7 +29,7 @@ type Db = ReturnType<GtfsLoader['db']>
 type TripRow = Pick<GtfsJpV4TableRow<'trips'>, 'trip_id' | 'route_id' | 'direction_id' | 'service_id' | 'jp_pattern_id'> &
   Partial<Pick<GtfsJpV4TableRow<'trips'>, 'trip_headsign'>>
 type StopTimeRow = Pick<GtfsJpV4TableRow<'stop_times'>, 'trip_id' | 'stop_id' | 'stop_sequence'> &
-  Partial<Pick<GtfsJpV4TableRow<'stop_times'>, 'departure_time'>>
+  Partial<Pick<GtfsJpV4TableRow<'stop_times'>, 'arrival_time' | 'departure_time'>>
 type CalendarRow = Pick<
   GtfsJpV4TableRow<'calendar'>,
   'service_id' | 'start_date' | 'end_date' | 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday'
@@ -288,6 +288,7 @@ export class GtfsRepository {
           tripId,
           stopId: String(row.stop_id),
           stopSequence: toNumber(row.stop_sequence),
+          arrivalTime: asOptionalString(row.arrival_time),
           departureTime: asOptionalString(row.departure_time),
           stopPatternId: patternIdByTripId.get(tripId) ?? null,
         }
@@ -354,6 +355,7 @@ export class GtfsRepository {
         tripId,
         stopId: String(row.stop_id),
         stopSequence: toNumber(row.stop_sequence),
+        arrivalTime: asOptionalString(row.arrival_time),
         departureTime: asOptionalString(row.departure_time),
         stopPatternId: patternIdByTripId.get(tripId) ?? null,
       })
@@ -403,6 +405,7 @@ export class GtfsRepository {
         tripId: String(row.trip_id),
         stopId: String(row.stop_id),
         stopSequence: toNumber(row.stop_sequence),
+        arrivalTime: asOptionalString(row.arrival_time),
         departureTime: asOptionalString(row.departure_time),
         stopPatternId: patternIdByTripId.get(String(row.trip_id)) ?? null,
       })),
@@ -510,7 +513,7 @@ export class GtfsRepository {
     return (
       await db
         .selectFrom('stop_times')
-        .select(includeDepartureTime ? ['trip_id', 'stop_id', 'stop_sequence', 'departure_time'] : ['trip_id', 'stop_id', 'stop_sequence'])
+        .select(includeDepartureTime ? ['trip_id', 'stop_id', 'stop_sequence', 'arrival_time', 'departure_time'] : ['trip_id', 'stop_id', 'stop_sequence'])
         .where('trip_id', 'in', tripIds)
         .orderBy('trip_id')
         .orderBy('stop_sequence')

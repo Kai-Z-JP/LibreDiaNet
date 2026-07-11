@@ -112,7 +112,9 @@ export function proTripTimeForPole(trip: ProConstructedTrip, pole: ProPoleDetail
   const stopTime = trip.stopTime.find((item, index) =>
     pole.stops.some((stop) => stop.sourceId === trip.sourceId && proStopTimeMatchesPoleStop(trip.stopTime, item, index, stop)),
   )
-  return formatPreviewDepartureTime(stopTime?.departureTime)
+  return formatPreviewDepartureTime(
+    pole.override.jokoOverride === '着' ? stopTime?.arrivalTime ?? stopTime?.departureTime : stopTime?.departureTime,
+  )
 }
 
 export function proTripPreviewTimes(trip: ProConstructedTrip, poles: ProPoleDetail[]): string[] {

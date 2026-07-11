@@ -358,7 +358,9 @@ export function PreviewPanel({
                         key={`trip-time-${tripIndex}-${index}`}
                         style={bodyCellStyle(detail, { borderInline: '1px solid black' }, name === null)}
                       >
-                        {formatPreviewDepartureTime(stopTime?.departureTime)}
+                        {formatPreviewDepartureTime(
+                          detail.override.jokoOverride === '着' ? stopTime?.arrivalTime ?? stopTime?.departureTime : stopTime?.departureTime,
+                        )}
                       </td>
                     )
                   })}

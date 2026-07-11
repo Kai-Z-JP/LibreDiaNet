@@ -147,6 +147,7 @@ export type GtfsStopTime = {
   tripId: string
   stopId: string
   stopSequence: number
+  arrivalTime?: string | null
   departureTime: string | null
   stopPatternId?: string | null
 }
@@ -187,6 +188,7 @@ export type DiaNetStopTimeData = {
   tripId: string
   stopId: string
   stopSequence: number
+  arrivalTime?: string | null
   departureTime: string | null
   stopPatternId?: string | null
 }

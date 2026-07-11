@@ -253,7 +253,9 @@ function sortTimetableTrips(
       item: trip,
       compareValues: presetPoles.map((_, poleIndex) => {
         const stopTimeIndex = stopTimeIndexForPole(trip, poleIndex, poleIndexByPatternKey)
-        return stopTimeIndex === null ? null : Number(departureHMM(trip.stopTimes[stopTimeIndex]).trim()) || null
+        return stopTimeIndex === null
+          ? null
+          : Number(stopTimeHMM(trip.stopTimes[stopTimeIndex], presetPoles[poleIndex]?.override.jokoOverride === '着').trim()) || null
       }),
     })),
     poleSpans,
@@ -268,7 +270,7 @@ function tripTimesForPoles(
 ): string[] {
   const times = presetPoles.map((_, poleIndex) => {
     const stopTimeIndex = stopTimeIndexForPole(trip, poleIndex, poleIndexByPatternKey)
-    return stopTimeIndex === null ? '' : departureHMM(trip.stopTimes[stopTimeIndex])
+    return stopTimeIndex === null ? '' : stopTimeHMM(trip.stopTimes[stopTimeIndex], poles[poleIndex]?.stop.jokoOverride === '着')
   })
 
   return fillMissingTimes(times).map((time, index) => (poles[index]?.stop.emptyPole ? '' : time))
@@ -786,8 +788,9 @@ function fillMissingTimes(times: string[]): string[] {
   })
 }
 
-function departureHMM(stopTime: DiaNetStopTimeData | undefined): string {
-  const parts = stopTime?.departureTime?.split(':')
+function stopTimeHMM(stopTime: DiaNetStopTimeData | undefined, useArrivalTime: boolean): string {
+  const selectedTime = useArrivalTime ? stopTime?.arrivalTime ?? stopTime?.departureTime : stopTime?.departureTime
+  const parts = selectedTime?.split(':')
   if (!parts || parts.length < 2) {
     return ''
   }

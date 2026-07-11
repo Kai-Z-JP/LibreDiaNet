@@ -41,6 +41,29 @@ describe('hasProRouteNameOverride', () => {
 })
 
 describe('proTripPreviewTimes', () => {
+  it('uses arrival time only when arrival is explicitly selected', () => {
+    const stopTime = [
+      { tripId: 'trip-1', stopId: 'stop-a', stopSequence: 1, arrivalTime: '07:59:00', departureTime: '08:00:00' },
+    ]
+    const patternKey = stopPatternKey(stopTime)
+    const trip: ProConstructedTrip = {
+      sourceId: 'source-a',
+      sourceName: 'Source A',
+      routeId: 'route-a',
+      direction: 0,
+      routeName: 'Route A',
+      stopTime,
+    }
+    const departurePole = pole('pole-a', 'stop-a', patternKey, 0)
+    const arrivalPole = {
+      ...departurePole,
+      override: { ...EMPTY_OVERRIDE, jokoOverride: '着' },
+    } satisfies ProPoleDetail
+
+    expect(proTripPreviewTimes(trip, [departurePole]).map((time) => time.trim())).toEqual(['800'])
+    expect(proTripPreviewTimes(trip, [arrivalPole]).map((time) => time.trim())).toEqual(['759'])
+  })
+
   it('keeps empty pole time cells blank instead of filling pass markers', () => {
     const stopTime = [
       { tripId: 'trip-1', stopId: 'stop-a', stopSequence: 1, departureTime: '08:00:00' },
