@@ -746,6 +746,9 @@ private fun <T> sortTimetableColumns(columns: List<TimetableSortColumn<T>>, pole
                                     } else if (targetFirstTime < checkLastTime) {
                                         addIndex = sortedIndex + 1
                                         break
+                                    } else {
+                                        addIndex = sortedIndex
+                                        break
                                     }
                                 } else if (targetLastIndex < checkFirstIndex) {
                                     val targetLastTime = targetTimes[targetLastIndex]!!
@@ -759,6 +762,9 @@ private fun <T> sortTimetableColumns(columns: List<TimetableSortColumn<T>>, pole
                                             addIndex = 0
                                             break
                                         }
+                                    } else {
+                                        addIndex = sortedIndex + 1
+                                        break
                                     }
                                 }
                             }

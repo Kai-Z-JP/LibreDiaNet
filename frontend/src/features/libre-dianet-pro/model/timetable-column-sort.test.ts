@@ -39,7 +39,7 @@ describe('sortTimetableColumns', () => {
     expect(sorted).toEqual(['upper-row-trip', 'lower-row-trip'])
   })
 
-  it('orders same-time departure before arrival inside a multi-row stop interval', () => {
+  it('orders same-time arrival before departure inside a multi-row stop interval', () => {
     const sorted = sortTimetableColumns(
       [
         { item: 'arrival', compareValues: [900, null] },
@@ -48,10 +48,10 @@ describe('sortTimetableColumns', () => {
       [{ colSpan: 2 }, { colSpan: 1 }],
     )
 
-    expect(sorted).toEqual(['departure', 'arrival'])
+    expect(sorted).toEqual(['arrival', 'departure'])
   })
 
-  it('keeps same-time departure before arrival when departure is already sorted first', () => {
+  it('moves same-time arrival before departure when departure is already sorted first', () => {
     const sorted = sortTimetableColumns(
       [
         { item: 'departure', compareValues: [null, 900] },
@@ -60,7 +60,7 @@ describe('sortTimetableColumns', () => {
       [{ colSpan: 2 }, { colSpan: 1 }],
     )
 
-    expect(sorted).toEqual(['departure', 'arrival'])
+    expect(sorted).toEqual(['arrival', 'departure'])
   })
 
   it('keeps unresolved columns in their conservative input order', () => {
@@ -101,7 +101,7 @@ describe('sortTimetableColumns', () => {
     expect(sorted).toEqual(['lower-trip', 'upper-trip'])
   })
 
-  it('orders a same-time starting trip before an ending trip in a non-overlapping range', () => {
+  it('orders a same-time ending trip before a starting trip in a non-overlapping range', () => {
     const poles = Array.from({ length: 5 }, () => ({ colSpan: 1 }))
     const sorted = sortTimetableColumns(
       [
@@ -111,7 +111,7 @@ describe('sortTimetableColumns', () => {
       poles,
     )
 
-    expect(sorted).toEqual(['starting-trip', 'ending-trip'])
+    expect(sorted).toEqual(['ending-trip', 'starting-trip'])
   })
 
   it('places an early lower-row trip before multiple later upper-row trips', () => {

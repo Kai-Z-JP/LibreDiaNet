@@ -74,7 +74,7 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
                       addIndex = sortedIndex + 1
                       break
                     } else if (targetFirstTime === checkLastTime) {
-                      addIndex = sortedIndex + 1
+                      addIndex = sortedIndex
                       break
                     }
                   }
@@ -91,7 +91,7 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
                         break
                       }
                     } else if (targetLastTime === checkFirstTime) {
-                      addIndex = sortedIndex
+                      addIndex = sortedIndex + 1
                       break
                     }
                   }
@@ -156,13 +156,13 @@ function compareNonOverlappingRangeEndpoints<T>(check: TimetableSortableColumn<T
   if (checkLastIndex < targetFirstIndex) {
     const checkLastTime = check.compareValues[checkLastIndex] as number
     const targetFirstTime = target.compareValues[targetFirstIndex] as number
-    return checkLastTime < targetFirstTime ? -1 : 1
+    return checkLastTime <= targetFirstTime ? -1 : 1
   }
 
   if (targetLastIndex < checkFirstIndex) {
     const targetLastTime = target.compareValues[targetLastIndex] as number
     const checkFirstTime = check.compareValues[checkFirstIndex] as number
-    return targetLastTime < checkFirstTime ? 1 : -1
+    return targetLastTime <= checkFirstTime ? 1 : -1
   }
 
   return null
