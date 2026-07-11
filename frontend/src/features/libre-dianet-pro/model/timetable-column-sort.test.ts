@@ -27,6 +27,30 @@ describe('sortTimetableColumns', () => {
     expect(sorted).toEqual(['0800', '0810', '0820', '0830'])
   })
 
+  it('uses a later shared pole to break a same-time tie', () => {
+    const sorted = sortTimetableColumns(
+      [
+        { item: 'later', compareValues: [800, null, 900] },
+        { item: 'earlier', compareValues: [800, null, 850] },
+      ],
+      [{ colSpan: 1 }, { colSpan: 1 }, { colSpan: 1 }],
+    )
+
+    expect(sorted).toEqual(['earlier', 'later'])
+  })
+
+  it('keeps input order when all shared pole times are equal', () => {
+    const sorted = sortTimetableColumns(
+      [
+        { item: 'first', compareValues: [800, null, 900] },
+        { item: 'second', compareValues: [800, 850, 900] },
+      ],
+      [{ colSpan: 1 }, { colSpan: 1 }, { colSpan: 1 }],
+    )
+
+    expect(sorted).toEqual(['first', 'second'])
+  })
+
   it('uses time positions inside a multi-row stop interval', () => {
     const sorted = sortTimetableColumns(
       [
@@ -126,6 +150,21 @@ describe('sortTimetableColumns', () => {
     )
 
     expect(sorted).toEqual(['0800-lower', '0900-upper', '1005-upper'])
+  })
+
+  it('inserts an early lower-segment trip between upper- and lower-segment trips', () => {
+    const sorted = sortTimetableColumns(
+      [
+        { item: '0809-upper', compareValues: [809, null] },
+        { item: '0930-upper', compareValues: [930, 930] },
+        { item: '1017-lower', compareValues: [null, 1017] },
+        { item: 'crossing-trip', compareValues: [1000, 800] },
+        { item: '0827-lower', compareValues: [null, 827] },
+      ],
+      [{ colSpan: 1 }, { colSpan: 1 }],
+    )
+
+    expect(sorted).toEqual(['0809-upper', '0827-lower', '0930-upper', 'crossing-trip', '1017-lower'])
   })
 
   it('keeps overlapping trips without comparable rows in input order', () => {

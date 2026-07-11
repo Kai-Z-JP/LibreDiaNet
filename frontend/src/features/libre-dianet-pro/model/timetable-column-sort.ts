@@ -21,9 +21,10 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
       if (sorted.length === 0) {
         addIndex = 0
       } else {
-        for (let sortedIndex = 0; sortedIndex < sorted.length; sortedIndex += 1) {
+        sortedLoop: for (let sortedIndex = 0; sortedIndex < sorted.length; sortedIndex += 1) {
           const target = sorted[sortedIndex]
           const endpointOrder = compareNonOverlappingRangeEndpoints(check, target)
+          let hasEqualSharedTime = false
 
           if (endpointOrder !== null && endpointOrder < 0) {
             addIndex = sortedIndex
@@ -40,14 +41,15 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
 
             if (targetTime !== null && checkTime !== null) {
               if (checkTime < targetTime) {
-                if (firstSortedIndexWithValue(sorted, poleIndex) === sortedIndex && addIndex === -1) {
-                  addIndex = sortedIndex
-                  break
-                }
+                addIndex = sortedIndex
+                break sortedLoop
+              }
+              if (checkTime > targetTime) {
+                addIndex = sortedIndex + 1
                 break
               }
-              addIndex = sortedIndex + 1
-              break
+              hasEqualSharedTime = true
+              continue
             }
 
             const colSpan = poles[poleIndex]?.colSpan ?? 1
@@ -66,16 +68,14 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
                   const checkLastTime = checkTimes[checkLastIndex]
                   if (targetFirstTime !== null && checkLastTime !== null) {
                     if (targetFirstTime > checkLastTime) {
-                      if (sortedIndex === 0) {
-                        addIndex = 0
-                        break
-                      }
+                      addIndex = sortedIndex
+                      break sortedLoop
                     } else if (targetFirstTime < checkLastTime) {
                       addIndex = sortedIndex + 1
                       break
                     } else if (targetFirstTime === checkLastTime) {
                       addIndex = sortedIndex
-                      break
+                      break sortedLoop
                     }
                   }
                 } else if (targetLastIndex < checkFirstIndex) {
@@ -86,10 +86,8 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
                       addIndex = sortedIndex + 1
                       break
                     } else if (targetLastTime > checkFirstTime) {
-                      if (sortedIndex === 0) {
-                        addIndex = 0
-                        break
-                      }
+                      addIndex = sortedIndex
+                      break sortedLoop
                     } else if (targetLastTime === checkFirstTime) {
                       addIndex = sortedIndex + 1
                       break
@@ -98,6 +96,10 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
                 }
               }
             }
+          }
+
+          if (hasEqualSharedTime) {
+            addIndex = sortedIndex + 1
           }
         }
       }
@@ -137,10 +139,6 @@ function compareValueAt<T>(column: TimetableSortableColumn<T>, index: number): n
 
 function compareValuesInRange<T>(column: TimetableSortableColumn<T>, start: number, count: number): (number | null)[] {
   return Array.from({ length: count }, (_, index) => compareValueAt(column, start + index))
-}
-
-function firstSortedIndexWithValue<T>(columns: TimetableSortableColumn<T>[], poleIndex: number): number {
-  return columns.findIndex((column) => compareValueAt(column, poleIndex) !== null)
 }
 
 function compareNonOverlappingRangeEndpoints<T>(check: TimetableSortableColumn<T>, target: TimetableSortableColumn<T>): number | null {
