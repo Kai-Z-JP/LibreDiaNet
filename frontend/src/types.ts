@@ -1,4 +1,4 @@
-import type { AppGtfsLoader } from './gtfsSchema'
+import type { GtfsLoader } from '@gtfs-jp/loader'
 
 export type OverrideConfig = {
   majorStop: boolean
@@ -252,7 +252,7 @@ export type OpenHandleResult = {
 
 export type GtfsHandle = {
   filename: string
-  loader: AppGtfsLoader
+  loader: GtfsLoader
 }
 
 export type PresetContext = {

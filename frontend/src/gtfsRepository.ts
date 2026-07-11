@@ -1,7 +1,6 @@
-import { createGtfsLoader } from '@gtfs-jp/loader'
+import { createGtfsLoader, type GtfsLoader } from '@gtfs-jp/loader'
 import { getActiveServiceIds, type GtfsQuerySource } from '@gtfs-jp/query'
 import { type GtfsJpV4TableRow } from '@gtfs-jp/types'
-import { GTFS_SCHEMA, type AppGtfsLoader } from './gtfsSchema'
 import type {
   ConstructedRoute,
   DayMapping,
@@ -26,7 +25,7 @@ const IMPORT_OPTIONS = {
   opfsImportMode: 'memory-stage' as const,
 }
 
-type Db = ReturnType<AppGtfsLoader['db']>
+type Db = ReturnType<GtfsLoader['db']>
 type TripRow = Pick<GtfsJpV4TableRow<'trips'>, 'trip_id' | 'route_id' | 'direction_id' | 'service_id' | 'jp_pattern_id'> &
   Partial<Pick<GtfsJpV4TableRow<'trips'>, 'trip_headsign'>>
 type StopTimeRow = Pick<GtfsJpV4TableRow<'stop_times'>, 'trip_id' | 'stop_id' | 'stop_sequence'> &
@@ -53,7 +52,7 @@ export class GtfsRepository {
     if (existing) {
       return { handle: existing, imported: false }
     }
-    const loader = createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
+    const loader = createGtfsLoader({ storage: 'opfs', filename })
     await loader.open()
     const validation = await loader.validate()
     if (!validation.valid) {
@@ -75,7 +74,7 @@ export class GtfsRepository {
   async reloadRepoFeed(info: RepoInfoV2): Promise<OpenHandleResult> {
     const filename = repoCacheFilename(info)
     const existing = this.handles.get(filename)
-    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
+    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename })
     if (!existing) {
       await loader.open()
     }
@@ -96,7 +95,7 @@ export class GtfsRepository {
     if (existing && !file) {
       return { handle: existing, imported: false }
     }
-    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
+    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename })
     if (!existing) {
       await loader.open()
     }
@@ -131,7 +130,7 @@ export class GtfsRepository {
       this.handles.delete(filename)
       return
     }
-    const loader = createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
+    const loader = createGtfsLoader({ storage: 'opfs', filename })
     await loader.open()
     await loader.close({ unlink: true })
   }
@@ -536,10 +535,10 @@ export class GtfsRepository {
   }
 
   private async loadActiveServiceIdsForWeekday(db: Db, weekday: GtfsServiceWeekday, referenceDateIso: string): Promise<string[]> {
-    const rows = await db
+    const rows = (await db
       .selectFrom('calendar')
       .select(['service_id', 'start_date', 'end_date', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'])
-      .execute()
+      .execute()) as CalendarRow[]
 
     return selectActiveServiceIdsForWeekday(rows, weekday, referenceDateIso)
   }
@@ -561,7 +560,7 @@ export function selectActiveServiceIdsForWeekday(rows: CalendarRow[], weekday: G
     .map((row) => String(row.service_id))
 }
 
-async function importRepoZip(loader: AppGtfsLoader, info: RepoInfoV2): Promise<void> {
+async function importRepoZip(loader: GtfsLoader, info: RepoInfoV2): Promise<void> {
   const response = await fetch(repoFeedZipUrl(info))
   if (!response.ok) {
     throw new Error(`Failed to fetch GTFS ZIP: ${response.status}`)
