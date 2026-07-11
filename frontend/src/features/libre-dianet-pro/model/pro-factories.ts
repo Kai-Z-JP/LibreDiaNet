@@ -47,6 +47,36 @@ export function duplicateProPreset(preset: ProPreset): ProPreset {
   }
 }
 
+export function duplicateProPole(preset: ProPreset, poleId: string): ProPreset {
+  const poleIndex = preset.poles.findIndex((pole) => pole.id === poleId)
+  const pole = preset.poles[poleIndex]
+  if (!pole) {
+    return preset
+  }
+
+  const duplicatedPoleId = crypto.randomUUID()
+  const duplicatedPole = {
+    ...structuredClone(pole),
+    id: duplicatedPoleId,
+  }
+  const poles = [...preset.poles]
+  poles.splice(poleIndex + 1, 0, duplicatedPole)
+
+  return {
+    ...preset,
+    poles,
+    routeDisplayOverrides: preset.routeDisplayOverrides.map((override) => ({
+      ...override,
+      stopCellOverrides: [
+        ...override.stopCellOverrides,
+        ...override.stopCellOverrides
+          .filter((cellOverride) => cellOverride.poleId === poleId)
+          .map((cellOverride) => ({ ...cellOverride, poleId: duplicatedPoleId })),
+      ],
+    })),
+  }
+}
+
 export function createRepoSource(option: FeedOption): ProGtfsSource {
   return {
     sourceId: crypto.randomUUID(),

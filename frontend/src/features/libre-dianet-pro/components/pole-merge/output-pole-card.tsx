@@ -1,8 +1,10 @@
 import { Draggable } from '@hello-pangea/dnd'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { Box, Card, IconButton, Typography } from '@mui/material'
+import { Box, Card, IconButton, Tooltip, Typography } from '@mui/material'
 import { memo, useState } from 'react'
 import type { GtfsStop, ProPoleDetail, ProPreset } from '../../../../types'
+import { duplicateProPole } from '../../model/pro-factories'
 import { hasVisibleProOverride, proPoleDisplayName, type ProRoutePatternMap } from '../../model/pro-pole-stop-helpers'
 import type { ProConstructedRoute } from '../../model/pro-types'
 import { OutputPoleDetails } from './output-pole-details'
@@ -81,15 +83,32 @@ function OutputPoleSummary({
       <Typography variant="body2" color="text.secondary">
         {pole.stops.length}標柱
       </Typography>
-      <IconButton
-        size="small"
-        onClick={(event) => {
-          event.stopPropagation()
-          onUpdate({ ...preset, poles: preset.poles.filter((item) => item.id !== pole.id) })
-        }}
-      >
-        <DeleteIcon fontSize="small" />
-      </IconButton>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Tooltip title="複製">
+          <IconButton
+            size="small"
+            aria-label={`${name}を複製`}
+            onClick={(event) => {
+              event.stopPropagation()
+              onUpdate(duplicateProPole(preset, pole.id))
+            }}
+          >
+            <ContentCopyIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="削除">
+          <IconButton
+            size="small"
+            aria-label={`${name}を削除`}
+            onClick={(event) => {
+              event.stopPropagation()
+              onUpdate({ ...preset, poles: preset.poles.filter((item) => item.id !== pole.id) })
+            }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
     </Box>
   )
 }
