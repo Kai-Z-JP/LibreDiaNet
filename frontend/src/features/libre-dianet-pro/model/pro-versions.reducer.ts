@@ -1,6 +1,7 @@
 import type { ProPreset, ProVersion } from '../../../types'
 
 export type ProVersionsAction =
+  | { type: 'store/replace'; versions: ProVersion[] }
   | { type: 'version/create'; version: ProVersion }
   | { type: 'version/update'; version: ProVersion }
   | { type: 'version/delete'; versionId: string }
@@ -9,6 +10,8 @@ export type ProVersionsAction =
 
 export function proVersionsReducer(versions: ProVersion[], action: ProVersionsAction): ProVersion[] {
   switch (action.type) {
+    case 'store/replace':
+      return action.versions
     case 'version/create':
       return [...versions, action.version]
     case 'version/update':

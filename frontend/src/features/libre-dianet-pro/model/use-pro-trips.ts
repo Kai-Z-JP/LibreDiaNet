@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { GtfsRepository } from '../../../gtfsRepository'
 import type { GtfsServiceWeekday, GtfsStop, ProPreset, ProPresetContext } from '../../../types'
 import { todayIsoDate } from '../../../utils'
-import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import { buildProRouteSelection } from './pro-preset-change-helpers'
 import { proExcludedStopPatternsForSource } from './pro-pole-stop-helpers'
 import { sortProConstructedTrips } from './pro-preview-display-helpers'
 import type { ProConstructedTrip } from './pro-types'
+import { useProGtfsRepository } from './pro-gtfs-repository-context'
 import type { ProPreviewMode } from './use-pro-preview-state'
 
 export function useProTrips({
@@ -25,6 +26,7 @@ export function useProTrips({
   date: string
   sourceNameMap: Record<string, string>
 }): ProConstructedTrip[] {
+  const repository = useProGtfsRepository()
   const [trips, setTrips] = useState<ProConstructedTrip[]>([])
   const routeSelection = useMemo(() => buildProRouteSelection(preset.sourceIds, preset.routes), [preset.routes, preset.sourceIds])
 
@@ -49,19 +51,13 @@ export function useProTrips({
             return []
           }
           const excludedStopPatterns = proExcludedStopPatternsForSource(preset.excludedStopPatterns, sourceId)
-          let sourceTrips: Awaited<ReturnType<typeof libreDiaNetRepository.listTripsForDate>>
+          let sourceTrips: Awaited<ReturnType<GtfsRepository['listTripsForDate']>>
           if (previewMode === 'day-type') {
-            sourceTrips = await libreDiaNetRepository.listTripsForWeekday(
-              handle,
-              selectedRoutes,
-              weekday,
-              weekdayReferenceDate,
-              excludedStopPatterns,
-            )
+            sourceTrips = await repository.listTripsForWeekday(handle, selectedRoutes, weekday, weekdayReferenceDate, excludedStopPatterns)
           } else if (previewMode === 'all-days') {
-            sourceTrips = await libreDiaNetRepository.listTripsForAllDays(handle, selectedRoutes, excludedStopPatterns)
+            sourceTrips = await repository.listTripsForAllDays(handle, selectedRoutes, excludedStopPatterns)
           } else {
-            sourceTrips = await libreDiaNetRepository.listTripsForServiceDate(handle, selectedRoutes, date, excludedStopPatterns)
+            sourceTrips = await repository.listTripsForServiceDate(handle, selectedRoutes, date, excludedStopPatterns)
           }
           return sourceTrips.map((trip) => ({
             ...trip,
@@ -78,7 +74,7 @@ export function useProTrips({
     return () => {
       cancelled = true
     }
-  }, [context.handles, date, preset.excludedStopPatterns, previewMode, revisionDate, routeSelection, sourceNameMap, weekday])
+  }, [context.handles, date, preset.excludedStopPatterns, previewMode, repository, revisionDate, routeSelection, sourceNameMap, weekday])
 
   return trips
 }

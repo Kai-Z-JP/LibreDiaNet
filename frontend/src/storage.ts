@@ -50,7 +50,7 @@ export function loadProPresetStore(storage: Storage = window.localStorage): ProP
   if (!raw) {
     return { version: 1, versions: [] }
   }
-  return parseProStore(raw)
+  return parseProPresetStore(raw)
 }
 
 export function saveProPresetStore(store: ProPresetStore, storage: Storage = window.localStorage): void {
@@ -68,7 +68,7 @@ function parseCurrentStore(raw: string): PresetStoreV2 {
   }
 }
 
-function parseProStore(raw: string): ProPresetStore {
+export function parseProPresetStore(raw: string): ProPresetStore {
   const parsed = JSON.parse(raw) as unknown
   if (!isRecord(parsed) || parsed.version !== 1 || !Array.isArray(parsed.versions)) {
     throw new Error('Unsupported Pro preset store format')

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { ProGtfsSource } from '../../../types'
-import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
+import { useProGtfsRepository } from './pro-gtfs-repository-context'
 
 export function useRepoSourceReload() {
+  const repository = useProGtfsRepository()
   const [reloadingSourceIds, setReloadingSourceIds] = useState<string[]>([])
 
   const reloadRepoSource = async (source: ProGtfsSource) => {
@@ -11,7 +12,7 @@ export function useRepoSourceReload() {
     }
     setReloadingSourceIds((current) => [...current, source.sourceId])
     try {
-      await libreDiaNetRepository.reloadRepoFeed(source.info)
+      await repository.reloadRepoFeed(source.info)
     } finally {
       setReloadingSourceIds((current) => current.filter((sourceId) => sourceId !== source.sourceId))
     }

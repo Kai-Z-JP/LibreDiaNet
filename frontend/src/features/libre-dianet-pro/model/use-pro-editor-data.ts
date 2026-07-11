@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { GtfsRepository } from '../../../gtfsRepository'
 import type { GtfsStop, ProPreset, ProPresetContext, ProVersion } from '../../../types'
-import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import {
   buildProPoleStopIdsBySource,
   buildProRouteSelection,
@@ -9,6 +9,7 @@ import {
 } from './pro-preset-change-helpers'
 import { proGtfsSourceDisplayName } from './pro-source-helpers'
 import type { ProConstructedRoute, ProRouteOption } from './pro-types'
+import { useProGtfsRepository } from './pro-gtfs-repository-context'
 
 type LoadedStopMapInputs = {
   constructedRoutes: ProConstructedRoute[]
@@ -25,14 +26,15 @@ export function useProEditorData({
   draftVersion: ProVersion
   draftPreset: ProPreset | null
 }) {
-  const draftContext = useProDraftContext(context, draftVersion)
+  const repository = useProGtfsRepository()
+  const draftContext = useProDraftContext(context, draftVersion, repository)
   const sourceNameMap = useMemo(
     () => Object.fromEntries(draftVersion.gtfsSources.map((source) => [source.sourceId, proGtfsSourceDisplayName(source)])),
     [draftVersion.gtfsSources],
   )
-  const routeOptions = useProRouteOptions(draftVersion, draftContext)
-  const constructedRoutes = useProConstructedRoutes(draftPreset, draftContext, sourceNameMap)
-  const stopMap = useProStopMap(draftPreset, draftContext, constructedRoutes)
+  const routeOptions = useProRouteOptions(draftVersion, draftContext, repository)
+  const constructedRoutes = useProConstructedRoutes(draftPreset, draftContext, sourceNameMap, repository)
+  const stopMap = useProStopMap(draftPreset, draftContext, constructedRoutes, repository)
 
   return {
     draftContext,
@@ -43,7 +45,7 @@ export function useProEditorData({
   }
 }
 
-function useProDraftContext(context: ProPresetContext, draftVersion: ProVersion): ProPresetContext {
+function useProDraftContext(context: ProPresetContext, draftVersion: ProVersion, repository: GtfsRepository): ProPresetContext {
   const [draftContext, setDraftContext] = useState<ProPresetContext>({ loading: false, handles: {}, errors: {} })
 
   useEffect(() => {
@@ -61,9 +63,7 @@ function useProDraftContext(context: ProPresetContext, draftVersion: ProVersion)
               throw new Error('GTFSキャッシュが見つからないため、ZIPの再アップロードが必要です。')
             }
             const result =
-              source.info.kind === 'repo'
-                ? await libreDiaNetRepository.openRepoFeed(source.info)
-                : await libreDiaNetRepository.openRawFeed(source.info)
+              source.info.kind === 'repo' ? await repository.openRepoFeed(source.info) : await repository.openRawFeed(source.info)
             return [source.sourceId, result.handle, null] as const
           } catch (error) {
             return [source.sourceId, null, error instanceof Error ? error.message : 'GTFSデータの読み込みに失敗しました'] as const
@@ -83,12 +83,12 @@ function useProDraftContext(context: ProPresetContext, draftVersion: ProVersion)
     return () => {
       cancelled = true
     }
-  }, [context.handles, draftVersion.gtfsSources])
+  }, [context.handles, draftVersion.gtfsSources, repository])
 
   return draftContext
 }
 
-function useProRouteOptions(draftVersion: ProVersion, draftContext: ProPresetContext): ProRouteOption[] {
+function useProRouteOptions(draftVersion: ProVersion, draftContext: ProPresetContext, repository: GtfsRepository): ProRouteOption[] {
   const [routeOptions, setRouteOptions] = useState<ProRouteOption[]>([])
 
   useEffect(() => {
@@ -101,7 +101,7 @@ function useProRouteOptions(draftVersion: ProVersion, draftContext: ProPresetCon
             return []
           }
           const sourceName = proGtfsSourceDisplayName(source)
-          const routes = await libreDiaNetRepository.listRoutesWithDirections(handle)
+          const routes = await repository.listRoutesWithDirections(handle)
           return routes.map((route) => ({
             ...route,
             railwayCode: `${source.sourceId}::${route.railwayCode}`,
@@ -119,7 +119,7 @@ function useProRouteOptions(draftVersion: ProVersion, draftContext: ProPresetCon
     return () => {
       cancelled = true
     }
-  }, [draftContext.handles, draftVersion.gtfsSources])
+  }, [draftContext.handles, draftVersion.gtfsSources, repository])
 
   return routeOptions
 }
@@ -128,6 +128,7 @@ function useProConstructedRoutes(
   draftPreset: ProPreset | null,
   draftContext: ProPresetContext,
   sourceNameMap: Record<string, string>,
+  repository: GtfsRepository,
 ): ProConstructedRoute[] {
   const [constructedRoutes, setConstructedRoutes] = useState<ProConstructedRoute[]>([])
   const routeSelection = useMemo(
@@ -149,7 +150,7 @@ function useProConstructedRoutes(
             return []
           }
           const selectedRoutes = routeSelection.routes.filter((route) => route.sourceId === sourceId)
-          const built = await libreDiaNetRepository.buildConstructedRoutes(handle, selectedRoutes)
+          const built = await repository.buildConstructedRoutes(handle, selectedRoutes)
           return built.map((route) => ({
             ...route,
             sourceId,
@@ -165,7 +166,7 @@ function useProConstructedRoutes(
     return () => {
       cancelled = true
     }
-  }, [draftContext.handles, routeSelection, sourceNameMap])
+  }, [draftContext.handles, repository, routeSelection, sourceNameMap])
 
   return constructedRoutes
 }
@@ -174,6 +175,7 @@ function useProStopMap(
   draftPreset: ProPreset | null,
   draftContext: ProPresetContext,
   constructedRoutes: ProConstructedRoute[],
+  repository: GtfsRepository,
 ): Record<string, GtfsStop> {
   const [stopMap, setStopMap] = useState<Record<string, GtfsStop>>({})
   const loadedInputsRef = useRef<LoadedStopMapInputs | null>(null)
@@ -220,7 +222,7 @@ function useProStopMap(
           if (!handle) {
             return {}
           }
-          const stops = await libreDiaNetRepository.getStopsByIds(handle, Array.from(stopIds))
+          const stops = await repository.getStopsByIds(handle, Array.from(stopIds))
           return Object.fromEntries(Object.entries(stops).map(([id, stop]) => [`${sourceId}::${id}`, stop]))
         }),
       )
@@ -237,7 +239,7 @@ function useProStopMap(
     return () => {
       cancelled = true
     }
-  }, [constructedRoutes, draftContext.handles, poleStopIdsBySource, routeSelection])
+  }, [constructedRoutes, draftContext.handles, poleStopIdsBySource, repository, routeSelection])
 
   return stopMap
 }

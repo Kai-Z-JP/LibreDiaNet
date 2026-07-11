@@ -1,11 +1,12 @@
 import type { FeedOption, ProGtfsSource } from '../../../types'
-import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import { createRawSourceInfo, createRepoSource } from './pro-factories'
+import { useProGtfsRepository } from './pro-gtfs-repository-context'
 
 export function useProSourceFactory() {
+  const repository = useProGtfsRepository()
   const createRawSource = async (file: File): Promise<ProGtfsSource> => {
     const { info, source } = createRawSourceInfo(file)
-    await libreDiaNetRepository.openRawFeed(info, file)
+    await repository.openRawFeed(info, file)
     return source
   }
 
@@ -18,7 +19,7 @@ export function useProSourceFactory() {
       name: file.name,
       cacheState: 'ready' as const,
     }
-    await libreDiaNetRepository.openRawFeed(nextInfo, file)
+    await repository.openRawFeed(nextInfo, file)
     return { ...source, info: nextInfo }
   }
 

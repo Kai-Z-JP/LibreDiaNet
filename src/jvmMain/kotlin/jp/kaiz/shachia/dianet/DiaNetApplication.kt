@@ -30,6 +30,16 @@ private fun frontendResource(path: String): String =
 
 private object DiaNetApplication
 
+private val CrossOriginIsolationHeaders = createApplicationPlugin("CrossOriginIsolationHeaders") {
+    onCall { call ->
+        val path = call.request.path()
+        if (path != "/firebase-auth" && !path.startsWith("/firebase-auth/")) {
+            call.response.header("Cross-Origin-Opener-Policy", "same-origin")
+            call.response.header("Cross-Origin-Embedder-Policy", "require-corp")
+        }
+    }
+}
+
 private suspend fun ApplicationCall.respondFrontend(path: String) {
     respondText(
         frontendResource(path),
@@ -41,10 +51,8 @@ fun Application.module() {
     install(ContentNegotiation) {
         json(kotlinxJson)
     }
-    install(DefaultHeaders) {
-        header("Cross-Origin-Opener-Policy", "same-origin")
-        header("Cross-Origin-Embedder-Policy", "require-corp")
-    }
+    install(DefaultHeaders)
+    install(CrossOriginIsolationHeaders)
     install(CORS) {
         allowHost("127.0.0.1:5173")
         allowHost("localhost:5173")
@@ -77,6 +85,12 @@ fun Application.module() {
             call.respondFrontend("react/index.html")
         }
         get("/pro/{...}") {
+            call.respondFrontend("react/index.html")
+        }
+        get("/firebase-auth") {
+            call.respondFrontend("react/index.html")
+        }
+        get("/firebase-auth/{...}") {
             call.respondFrontend("react/index.html")
         }
         staticResources("/react", "react")

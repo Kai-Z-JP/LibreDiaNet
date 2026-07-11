@@ -116,7 +116,7 @@ val frontendDist = frontendDir.dir("dist")
 
 val frontendInstall by tasks.registering(Exec::class) {
     workingDir(frontendDir.asFile)
-    commandLine("pnpm", "install", "--frozen-lockfile")
+    commandLine("/usr/local/bin/pnpm", "install", "--frozen-lockfile")
     inputs.files(
         frontendDir.file("package.json"),
         frontendDir.file("pnpm-lock.yaml")
@@ -127,7 +127,7 @@ val frontendInstall by tasks.registering(Exec::class) {
 val frontendBuild by tasks.registering(Exec::class) {
     dependsOn(frontendInstall)
     workingDir(frontendDir.asFile)
-    commandLine("pnpm", "build")
+    commandLine("/usr/local/bin/pnpm", "build")
     environment("VITE_BASE", "/react/")
     inputs.files(
         frontendDir.file("package.json"),

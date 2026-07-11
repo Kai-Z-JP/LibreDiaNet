@@ -1,4 +1,4 @@
-import { createGtfsLoader, type GtfsLoader } from '@gtfs-jp/loader'
+import { createGtfsLoader, type GtfsDatabaseProvider, type GtfsLoader } from '@gtfs-jp/loader'
 import { getActiveServiceIds, type GtfsQuerySource } from '@gtfs-jp/query'
 import { type GtfsJpV4TableRow } from '@gtfs-jp/types'
 import type {
@@ -45,6 +45,11 @@ class RawCacheMissingError extends Error {
 
 export class GtfsRepository {
   private readonly handles = new Map<string, GtfsHandle>()
+  private readonly createDatabaseProvider?: (filename: string) => GtfsDatabaseProvider
+
+  constructor(options: { createDatabaseProvider?: (filename: string) => GtfsDatabaseProvider } = {}) {
+    this.createDatabaseProvider = options.createDatabaseProvider
+  }
 
   async openRepoFeed(info: RepoInfoV2): Promise<OpenHandleResult> {
     const filename = repoCacheFilename(info)
@@ -52,7 +57,7 @@ export class GtfsRepository {
     if (existing) {
       return { handle: existing, imported: false }
     }
-    const loader = createGtfsLoader({ storage: 'opfs', filename })
+    const loader = this.createLoader(filename)
     await loader.open()
     const validation = await loader.validate()
     if (!validation.valid) {
@@ -74,7 +79,7 @@ export class GtfsRepository {
   async reloadRepoFeed(info: RepoInfoV2): Promise<OpenHandleResult> {
     const filename = repoCacheFilename(info)
     const existing = this.handles.get(filename)
-    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename })
+    const loader = existing?.loader ?? this.createLoader(filename)
     if (!existing) {
       await loader.open()
     }
@@ -90,12 +95,12 @@ export class GtfsRepository {
   }
 
   async openRawFeed(info: RawInfoV2, file?: File): Promise<OpenHandleResult> {
-    const filename = `raw-${info.uuid}.sqlite3`
+    const filename = gtfsCacheFilename(info)
     const existing = this.handles.get(filename)
     if (existing && !file) {
       return { handle: existing, imported: false }
     }
-    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename })
+    const loader = existing?.loader ?? this.createLoader(filename)
     if (!existing) {
       await loader.open()
     }
@@ -123,14 +128,14 @@ export class GtfsRepository {
   }
 
   async deleteFeedCache(info: RepoInfoV2 | RawInfoV2): Promise<void> {
-    const filename = info.kind === 'repo' ? repoCacheFilename(info) : `raw-${info.uuid}.sqlite3`
+    const filename = gtfsCacheFilename(info)
     const existing = this.handles.get(filename)
     if (existing) {
       await existing.loader.close({ unlink: true })
       this.handles.delete(filename)
       return
     }
-    const loader = createGtfsLoader({ storage: 'opfs', filename })
+    const loader = this.createLoader(filename)
     await loader.open()
     await loader.close({ unlink: true })
   }
@@ -139,6 +144,15 @@ export class GtfsRepository {
     const closers = Array.from(this.handles.values()).map((handle) => handle.loader.close())
     this.handles.clear()
     await Promise.all(closers)
+  }
+
+  private createLoader(filename: string): GtfsLoader {
+    const database = this.createDatabaseProvider?.(filename)
+    return createGtfsLoader({
+      storage: 'opfs',
+      filename,
+      ...(database ? { database } : {}),
+    })
   }
 
   async listRoutesWithDirections(handle: GtfsHandle): Promise<RouteOption[]> {
@@ -566,6 +580,10 @@ async function importRepoZip(loader: GtfsLoader, info: RepoInfoV2): Promise<void
     throw new Error(`Failed to fetch GTFS ZIP: ${response.status}`)
   }
   await loader.importZip(await response.blob(), IMPORT_OPTIONS)
+}
+
+export function gtfsCacheFilename(info: RepoInfoV2 | RawInfoV2): string {
+  return info.kind === 'repo' ? repoCacheFilename(info) : `raw-${info.uuid}.sqlite3`
 }
 
 function repoCacheFilename(info: RepoInfoV2): string {

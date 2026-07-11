@@ -4,6 +4,7 @@ import { useProSidebar, type ProSidebarActions, type ProSidebarData } from '../.
 import { AboutDialog } from './about-dialog'
 import { PresetList } from './preset-list'
 import { SidebarHeader } from './sidebar-header'
+import { StorageSettingsDialog } from './storage-settings-dialog'
 import { VersionSelectDialog } from './version-select-dialog'
 import { VersionSelectorButton } from './version-selector-button'
 import { VersionSettingsDialog } from '../version-settings/version-settings-dialog'
@@ -24,6 +25,7 @@ export function ProSidebar({ data, actions }: ProSidebarProps) {
       <VersionSelectDialog {...model.versionSelectDialogProps} />
       <VersionSettingsDialog {...model.versionSettingsDialogProps} />
       <AboutDialog {...model.aboutDialogProps} />
+      <StorageSettingsDialog {...model.storageSettingsDialogProps} />
     </SidebarCard>
   )
 }

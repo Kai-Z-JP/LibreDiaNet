@@ -3,6 +3,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import FirebaseAuthRoute from './features/libre-dianet-pro/firebase-auth-route'
 import LibreDiaNetProPage from './features/libre-dianet-pro/libre-dianet-pro-page'
 import { globalStyles } from './global-styles'
 
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/pro" element={<LibreDiaNetProPage />} />
+        <Route path="/firebase-auth" element={<FirebaseAuthRoute />} />
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>
     </BrowserRouter>

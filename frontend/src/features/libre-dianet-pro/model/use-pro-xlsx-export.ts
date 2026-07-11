@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { buildProCreateFromDataRequest, namespaceId, requestDiaNetXlsx } from '../../../api'
+import type { GtfsRepository } from '../../../gtfsRepository'
 import type { DayMapping, ProPreset, ProPresetContext, ProVersion } from '../../../types'
-import { libreDiaNetRepository } from '../../libre-dianet/lib/repository'
 import { proExcludedStopPatternsForSource } from './pro-pole-stop-helpers'
+import { useProGtfsRepository } from './pro-gtfs-repository-context'
 
 export function useProXlsxExport({
   version,
@@ -15,6 +16,7 @@ export function useProXlsxExport({
   context: ProPresetContext
   sourceNameMap: Record<string, string>
 }) {
+  const repository = useProGtfsRepository()
   const [downloading, setDownloading] = useState(false)
 
   const requestXlsx = async (dayMapping: DayMapping[]) => {
@@ -48,13 +50,13 @@ export function useProXlsxExport({
             ),
             excludedStopPatterns: proExcludedStopPatternsForSource(preset.excludedStopPatterns, sourceId),
           }
-          return [sourceId, await libreDiaNetRepository.buildExportData(handle, singlePreset)] as const
+          return [sourceId, await repository.buildExportData(handle, singlePreset)] as const
         }),
       )
       const gtfsBySourceId = Object.fromEntries(
         gtfsEntries.filter((entry): entry is readonly [string, NonNullable<typeof entry>[1]] => Boolean(entry)),
       )
-      const resolvedDayMapping = await resolveProDayMappingServiceIds(dayMapping, preset.sourceIds, context)
+      const resolvedDayMapping = await resolveProDayMappingServiceIds(dayMapping, preset.sourceIds, context, repository)
       await requestDiaNetXlsx(buildProCreateFromDataRequest(version, preset, gtfsBySourceId, resolvedDayMapping))
     } finally {
       setDownloading(false)
@@ -71,6 +73,7 @@ async function resolveProDayMappingServiceIds(
   dayMapping: DayMapping[],
   sourceIds: string[],
   context: ProPresetContext,
+  repository: GtfsRepository,
 ): Promise<DayMapping[]> {
   return Promise.all(
     dayMapping.map(async (mapping) => {
@@ -84,7 +87,7 @@ async function resolveProDayMappingServiceIds(
             if (!handle) {
               return []
             }
-            const [resolved] = await libreDiaNetRepository.resolveDayMappingServiceIds(handle, [mapping], (serviceId) =>
+            const [resolved] = await repository.resolveDayMappingServiceIds(handle, [mapping], (serviceId) =>
               namespaceId(sourceId, serviceId),
             )
             return resolved?.type === 'date' ? (resolved.serviceIds ?? []) : []

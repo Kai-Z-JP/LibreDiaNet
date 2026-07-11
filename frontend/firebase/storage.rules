@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Requires roles/firebaserules.firestoreServiceAgent on the Storage service agent.
+    function isWorkspaceMember(workspaceId) {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/libreDiaNetProWorkspaces/$(workspaceId)/members/$(request.auth.uid));
+    }
+
+    match /libre-dianet-pro/{workspaceId}/gtfs/{filename} {
+      allow read, delete: if isWorkspaceMember(workspaceId);
+      allow create, update: if isWorkspaceMember(workspaceId)
+        && request.resource.contentType == 'application/vnd.sqlite3';
+    }
+  }
+}

@@ -1,12 +1,23 @@
 import styled from '@emotion/styled'
-import { Card, CssBaseline } from '@mui/material'
+import { Card, CircularProgress, CssBaseline } from '@mui/material'
 import { ProEditor } from './components/editor/pro-editor'
 import { EmptyState } from './components/shared/empty-state'
 import { ProSidebar } from './components/sidebar/pro-sidebar'
 import { useLibreDiaNetProPage } from './model/use-libre-dianet-pro-page'
+import { ProGtfsRepositoryProvider } from './model/pro-gtfs-repository-provider'
+import { useProWorkspace, type ProWorkspaceController } from './storage/use-pro-workspace'
 
 export default function LibreDiaNetProPage() {
-  const model = useLibreDiaNetProPage()
+  const workspace = useProWorkspace()
+  return (
+    <ProGtfsRepositoryProvider repository={workspace.repository}>
+      <LibreDiaNetProPageContent workspace={workspace} />
+    </ProGtfsRepositoryProvider>
+  )
+}
+
+function LibreDiaNetProPageContent({ workspace }: { workspace: ProWorkspaceController }) {
+  const model = useLibreDiaNetProPage(workspace)
   return <LibreDiaNetProPageView {...model} />
 }
 
@@ -18,7 +29,11 @@ function LibreDiaNetProPageView({ state, props }: ReturnType<typeof useLibreDiaN
         <ProPageShell>
           <ProSidebar {...props.sidebar} />
           <ProMainCard>
-            {!state.selectedVersion || !props.editor ? (
+            {state.loading ? (
+              <LoadingState>
+                <CircularProgress size={28} />
+              </LoadingState>
+            ) : !state.selectedVersion || !props.editor ? (
               <EmptyState text="左側からバージョンを作成してください。" />
             ) : (
               <ProEditor {...props.editor} />
@@ -34,6 +49,12 @@ const ProPageRoot = styled.div`
   height: 100vh;
   overflow: hidden;
   background-color: #f0f0f0;
+`
+
+const LoadingState = styled.div`
+  display: grid;
+  flex: 1;
+  place-items: center;
 `
 
 const ProPageShell = styled.div`
