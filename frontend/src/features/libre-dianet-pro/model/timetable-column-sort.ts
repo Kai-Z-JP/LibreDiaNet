@@ -23,6 +23,16 @@ export function sortTimetableColumns<T>(columns: TimetableSortableColumn<T>[], p
       } else {
         for (let sortedIndex = 0; sortedIndex < sorted.length; sortedIndex += 1) {
           const target = sorted[sortedIndex]
+          const endpointOrder = compareNonOverlappingRangeEndpoints(check, target)
+
+          if (endpointOrder !== null && endpointOrder < 0) {
+            addIndex = sortedIndex
+            break
+          }
+          if (endpointOrder !== null && endpointOrder > 0) {
+            addIndex = sortedIndex + 1
+            continue
+          }
 
           for (let poleIndex = 0; poleIndex < poles.length; poleIndex += 1) {
             const targetTime = compareValueAt(target, poleIndex)
@@ -131,6 +141,31 @@ function compareValuesInRange<T>(column: TimetableSortableColumn<T>, start: numb
 
 function firstSortedIndexWithValue<T>(columns: TimetableSortableColumn<T>[], poleIndex: number): number {
   return columns.findIndex((column) => compareValueAt(column, poleIndex) !== null)
+}
+
+function compareNonOverlappingRangeEndpoints<T>(check: TimetableSortableColumn<T>, target: TimetableSortableColumn<T>): number | null {
+  const checkFirstIndex = check.compareValues.findIndex(isComparableTime)
+  const checkLastIndex = findLastIndex(check.compareValues, isComparableTime)
+  const targetFirstIndex = target.compareValues.findIndex(isComparableTime)
+  const targetLastIndex = findLastIndex(target.compareValues, isComparableTime)
+
+  if (checkFirstIndex === -1 || targetFirstIndex === -1) {
+    return null
+  }
+
+  if (checkLastIndex < targetFirstIndex) {
+    const checkLastTime = check.compareValues[checkLastIndex] as number
+    const targetFirstTime = target.compareValues[targetFirstIndex] as number
+    return checkLastTime < targetFirstTime ? -1 : 1
+  }
+
+  if (targetLastIndex < checkFirstIndex) {
+    const targetLastTime = target.compareValues[targetLastIndex] as number
+    const checkFirstTime = check.compareValues[checkFirstIndex] as number
+    return targetLastTime < checkFirstTime ? 1 : -1
+  }
+
+  return null
 }
 
 function isComparableTime(value: number | null): value is number {

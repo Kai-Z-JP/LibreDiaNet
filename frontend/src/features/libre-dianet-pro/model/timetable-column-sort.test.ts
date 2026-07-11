@@ -74,4 +74,70 @@ describe('sortTimetableColumns', () => {
 
     expect(sorted).toEqual(['first', 'second'])
   })
+
+  it('orders trips with non-overlapping timetable ranges by the last and first stop times', () => {
+    const poles = Array.from({ length: 5 }, () => ({ colSpan: 1 }))
+    const sorted = sortTimetableColumns(
+      [
+        { item: 'lower-trip', compareValues: [null, null, null, 900, 910] },
+        { item: 'upper-trip', compareValues: [800, 810, null, null, null] },
+      ],
+      poles,
+    )
+
+    expect(sorted).toEqual(['upper-trip', 'lower-trip'])
+  })
+
+  it('prioritizes endpoint times when vertical order and time order disagree', () => {
+    const poles = Array.from({ length: 5 }, () => ({ colSpan: 1 }))
+    const sorted = sortTimetableColumns(
+      [
+        { item: 'upper-trip', compareValues: [900, 910, null, null, null] },
+        { item: 'lower-trip', compareValues: [null, null, null, 800, 810] },
+      ],
+      poles,
+    )
+
+    expect(sorted).toEqual(['lower-trip', 'upper-trip'])
+  })
+
+  it('orders a same-time starting trip before an ending trip in a non-overlapping range', () => {
+    const poles = Array.from({ length: 5 }, () => ({ colSpan: 1 }))
+    const sorted = sortTimetableColumns(
+      [
+        { item: 'ending-trip', compareValues: [800, 900, null, null, null] },
+        { item: 'starting-trip', compareValues: [null, null, null, 900, 1000] },
+      ],
+      poles,
+    )
+
+    expect(sorted).toEqual(['starting-trip', 'ending-trip'])
+  })
+
+  it('places an early lower-row trip before multiple later upper-row trips', () => {
+    const poles = Array.from({ length: 5 }, () => ({ colSpan: 1 }))
+    const sorted = sortTimetableColumns(
+      [
+        { item: '0900-upper', compareValues: [900, 919, null, null, null] },
+        { item: '1005-upper', compareValues: [1005, 1051, null, null, null] },
+        { item: '0800-lower', compareValues: [null, null, null, 800, 850] },
+      ],
+      poles,
+    )
+
+    expect(sorted).toEqual(['0800-lower', '0900-upper', '1005-upper'])
+  })
+
+  it('keeps overlapping trips without comparable rows in input order', () => {
+    const poles = Array.from({ length: 5 }, () => ({ colSpan: 1 }))
+    const sorted = sortTimetableColumns(
+      [
+        { item: 'first', compareValues: [800, null, null, 900, null] },
+        { item: 'second', compareValues: [null, 810, 820, null, 910] },
+      ],
+      poles,
+    )
+
+    expect(sorted).toEqual(['first', 'second'])
+  })
 })
