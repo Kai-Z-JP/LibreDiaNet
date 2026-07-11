@@ -15,14 +15,14 @@ importers:
         specifier: ^11.14.1
         version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7)
       '@gtfs-jp/loader':
-        specifier: ^4.0.0-beta.12
-        version: 4.0.0-beta.12(kysely@0.28.17)
+        specifier: ^4.0.0-beta.14
+        version: 4.0.0-beta.14(kysely@0.28.17)
       '@gtfs-jp/query':
-        specifier: ^4.0.0-beta.12
-        version: 4.0.0-beta.12(kysely@0.28.17)
+        specifier: ^4.0.0-beta.14
+        version: 4.0.0-beta.14(kysely@0.28.17)
       '@gtfs-jp/types':
-        specifier: ^4.0.0-beta.12
-        version: 4.0.0-beta.12
+        specifier: ^4.0.0-beta.14
+        version: 4.0.0-beta.14
       '@hello-pangea/dnd':
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -350,18 +350,18 @@ packages:
   '@fast-csv/parse@4.3.6':
     resolution: {integrity: sha512-uRsLYksqpbDmWaSmzvJcuApSEe38+6NQZBUsuAyMZKqHxH0g1wcJgsKUvN3WC8tewaqFjBMMGrkHmC+T7k8LvA==}
 
-  '@gtfs-jp/loader@4.0.0-beta.12':
-    resolution: {integrity: sha512-CV75gWLcorcetWqWGp5pQW0s2VnVNz/CkqUVG+NCVoROZkvEUvZXO5neai6Ll8qt7Yus9+/CM5s72vlD+CS8Qg==}
+  '@gtfs-jp/loader@4.0.0-beta.14':
+    resolution: {integrity: sha512-MvwM7peHpPoZlvkX1z29l5tVDBVXh58BjQP8ZkqllTEIgY6dLpIStD/GvptJkQJXqM26MPAj1/JLGNNnzusUnQ==}
     peerDependencies:
       kysely: ^0.28.14
 
-  '@gtfs-jp/query@4.0.0-beta.12':
-    resolution: {integrity: sha512-IFGg1H6xeee/dFl71h8Lc7Mx/WVh0l4nZ99fFCmW3LZpvbSt+fhujs9hYtPW9Pad6AuVfSYELy7kgKIUBcidJQ==}
+  '@gtfs-jp/query@4.0.0-beta.14':
+    resolution: {integrity: sha512-eeGeeqgdcF1g0uiScbSedD+lYXlRKXzuOJNbo41gGkvvN3pH493ci3cz2nyHkx9gJgt+xumWo4IsMOWTpHLUJQ==}
     peerDependencies:
       kysely: ^0.28.14
 
-  '@gtfs-jp/types@4.0.0-beta.12':
-    resolution: {integrity: sha512-+w1YKQbvJghQIApbLtjm01ilZniYXHsSZ+EtPfesDtbptpDplnjYeeR1vphZmaMnA2YWHe/a54L/v2cSJ9R0Jg==}
+  '@gtfs-jp/types@4.0.0-beta.14':
+    resolution: {integrity: sha512-GdP5byMSGQp0WpMGyOr4mx7CrNXDZfhk9fKkWqZvqtEN4GVCxfIHXfG0FhvqsZEgFGQpq+jZJzu49EEWJjlfNQ==}
 
   '@hello-pangea/dnd@18.0.1':
     resolution: {integrity: sha512-xojVWG8s/TGrKT1fC8K2tIWeejJYTAeJuj36zM//yEm/ZrnZUSFGS15BpO+jGZT1ybWvyXmeDJwPYb4dhWlbZQ==}
@@ -2375,18 +2375,18 @@ snapshots:
       lodash.isundefined: 3.0.1
       lodash.uniq: 4.5.0
 
-  '@gtfs-jp/loader@4.0.0-beta.12(kysely@0.28.17)':
+  '@gtfs-jp/loader@4.0.0-beta.14(kysely@0.28.17)':
     dependencies:
-      '@gtfs-jp/types': 4.0.0-beta.12
+      '@gtfs-jp/types': 4.0.0-beta.14
       '@sqlite.org/sqlite-wasm': 3.51.2-build9
       kysely: 0.28.17
 
-  '@gtfs-jp/query@4.0.0-beta.12(kysely@0.28.17)':
+  '@gtfs-jp/query@4.0.0-beta.14(kysely@0.28.17)':
     dependencies:
-      '@gtfs-jp/loader': 4.0.0-beta.12(kysely@0.28.17)
+      '@gtfs-jp/loader': 4.0.0-beta.14(kysely@0.28.17)
       kysely: 0.28.17
 
-  '@gtfs-jp/types@4.0.0-beta.12': {}
+  '@gtfs-jp/types@4.0.0-beta.14': {}
 
   '@hello-pangea/dnd@18.0.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
