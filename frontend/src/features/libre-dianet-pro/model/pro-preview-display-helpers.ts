@@ -158,6 +158,24 @@ export function proPatternPreviewTimes(pattern: GtfsStop[], poles: ProPoleDetail
   return blankEmptyPoleTimes(fillMissingPreviewTimes(times), poles)
 }
 
+export function isProPatternIndexReversed(times: string[], poleIndex: number): boolean {
+  const currentIndex = parsePatternIndex(times[poleIndex])
+  if (currentIndex === null) {
+    return false
+  }
+
+  const previousIndexes = times.slice(0, poleIndex).map(parsePatternIndex).filter((index) => index !== null)
+  return previousIndexes.length > 0 && currentIndex < Math.max(...previousIndexes)
+}
+
+function parsePatternIndex(value: string | undefined): number | null {
+  const normalized = value?.trim() ?? ''
+  if (!/^\d+$/.test(normalized)) {
+    return null
+  }
+  return Number(normalized)
+}
+
 export function proPatternTimeForPole(pattern: GtfsStop[], pole: ProPoleDetail, sourceId: string): string {
   const patternKey = stopPatternKey(pattern)
   const match = pole.stops

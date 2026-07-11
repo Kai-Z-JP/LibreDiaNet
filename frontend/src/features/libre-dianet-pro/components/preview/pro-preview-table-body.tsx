@@ -4,6 +4,7 @@ import { Box } from '@mui/material'
 import {
   buildProPreviewCellDisplay,
   disabledPreviewCellStyle,
+  isProPatternIndexReversed,
   isProPatternExcluded,
   justifyTextClass,
 } from '../../model/pro-preview-display-helpers'
@@ -163,6 +164,8 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
 
                           const text = cellDisplay.textOverride ?? previewTimesByPatternKey[routeKey]?.[poleIndex] ?? ''
                           const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '———' : text
+                          const indexReversed =
+                            !cellDisplay.overridden && isProPatternIndexReversed(previewTimesByPatternKey[routeKey] ?? [], poleIndex)
 
                           return (
                             <td
@@ -179,7 +182,9 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                                   ? disabledPreviewCellStyle.backgroundColor
                                   : cellDisplay.overridden
                                     ? '#fff3cd'
-                                    : undefined,
+                                    : indexReversed
+                                      ? '#ffcdd2'
+                                      : undefined,
                               }}
                             >
                               <PreviewCellText text={displayText} rowSpan={cellDisplay.rowSpan} />

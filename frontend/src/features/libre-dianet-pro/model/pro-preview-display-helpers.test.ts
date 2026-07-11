@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_OVERRIDE, type ProPoleDetail, type ProRouteDisplayOverride } from '../../../types'
 import { stopPatternKey } from '../../../utils'
-import { hasProRouteNameOverride, normalizeProRouteDisplayOverride, proTripPreviewTimes } from './pro-preview-display-helpers'
+import {
+  hasProRouteNameOverride,
+  isProPatternIndexReversed,
+  normalizeProRouteDisplayOverride,
+  proTripPreviewTimes,
+} from './pro-preview-display-helpers'
 import type { ProConstructedTrip } from './pro-types'
 
 const baseOverride: ProRouteDisplayOverride = {
@@ -85,6 +90,22 @@ describe('proTripPreviewTimes', () => {
     ]
 
     expect(proTripPreviewTimes(trip, poles)[1]).toBe('')
+  })
+})
+
+describe('isProPatternIndexReversed', () => {
+  it('detects a numeric index that is smaller than the maximum preceding numeric index', () => {
+    const times = ['0', '…', '4', '', '1', '3', '4', '5']
+
+    expect(isProPatternIndexReversed(times, 4)).toBe(true)
+    expect(isProPatternIndexReversed(times, 5)).toBe(true)
+    expect(isProPatternIndexReversed(times, 6)).toBe(false)
+    expect(isProPatternIndexReversed(times, 7)).toBe(false)
+  })
+
+  it('ignores pass markers and non-numeric text', () => {
+    expect(isProPatternIndexReversed(['2', '…', '———', 'text'], 1)).toBe(false)
+    expect(isProPatternIndexReversed(['2', '…', '———', 'text'], 3)).toBe(false)
   })
 })
 

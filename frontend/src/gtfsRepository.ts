@@ -513,7 +513,11 @@ export class GtfsRepository {
     return (
       await db
         .selectFrom('stop_times')
-        .select(includeDepartureTime ? ['trip_id', 'stop_id', 'stop_sequence', 'arrival_time', 'departure_time'] : ['trip_id', 'stop_id', 'stop_sequence'])
+        .select(
+          includeDepartureTime
+            ? ['trip_id', 'stop_id', 'stop_sequence', 'arrival_time', 'departure_time']
+            : ['trip_id', 'stop_id', 'stop_sequence'],
+        )
         .where('trip_id', 'in', tripIds)
         .orderBy('trip_id')
         .orderBy('stop_sequence')
