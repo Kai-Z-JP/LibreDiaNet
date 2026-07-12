@@ -21,9 +21,23 @@ export function PoleMergePanel({
 
   return (
     <DragDropContext onDragEnd={actions.dragPole}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2, minHeight: 0 }}>
-        <PolePatternList {...props.patternList} />
-        <OutputPoleList {...props.outputPoleList} />
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) minmax(0, 1fr)' },
+          gridTemplateRows: { lg: 'minmax(0, 1fr)' },
+          gap: 2,
+          height: { lg: '100%' },
+          minHeight: 0,
+          overflow: { lg: 'hidden' },
+        }}
+      >
+        <Box sx={{ minWidth: 0, minHeight: 0, overflowY: { lg: 'auto' } }}>
+          <PolePatternList {...props.patternList} />
+        </Box>
+        <Box sx={{ minWidth: 0, minHeight: 0, overflowY: { lg: 'auto' } }}>
+          <OutputPoleList {...props.outputPoleList} />
+        </Box>
       </Box>
     </DragDropContext>
   )
