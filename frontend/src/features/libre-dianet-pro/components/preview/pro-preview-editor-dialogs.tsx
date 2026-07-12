@@ -24,6 +24,7 @@ export function ProPreviewEditorDialogs({
     updateRouteDisplayOverride: (
       routeKey: string,
       transform: (current: NonNullable<ProPreset['routeDisplayOverrides'][number]>) => ProPreset['routeDisplayOverrides'][number] | null,
+      transformPreset?: (current: ProPreset) => ProPreset,
     ) => void
     onUpdate: (preset: ProPreset) => void
     onConfirmPendingPoleMerge: () => void

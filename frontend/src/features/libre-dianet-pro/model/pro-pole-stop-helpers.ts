@@ -135,7 +135,7 @@ export function proStopDisplayLabel(
   const stopName = stopMap[`${stop.sourceId}::${stop.id}`]?.name ?? `存在しない停留所`
   const routeLabel = routePattern ? proRouteDisplayLabel(routePattern.route, includeSourceName) : ''
   const patternLabel = routePattern ? `P${routePattern.presetPatternIndex + 1}: ` : ''
-  const indexLabel = `#${stop.stopIndex + 1}`
+  const indexLabel = `#${stop.stopIndex}`
   return [patternLabel, routeLabel ? `${routeLabel}${indexLabel}` : indexLabel, stopName, `(ID: ${stop.id})`].filter(Boolean).join(' ')
 }
 

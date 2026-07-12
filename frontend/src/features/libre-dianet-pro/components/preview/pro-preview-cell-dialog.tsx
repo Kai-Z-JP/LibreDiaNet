@@ -13,7 +13,9 @@ import {
 import type { Dispatch, SetStateAction } from 'react'
 import type { ProPreset } from '../../../../types'
 import type { ProStopCellEditor } from '../../hooks/use-pro-preview-model'
+import { proPoleStopKey } from '../../model/pro-pole-stop-helpers'
 import { fieldLabelProps } from '../../model/pro-ui-constants'
+import { PoleStopChip } from '../shared/pole-stop-chip'
 
 export function ProPreviewCellDialog({
   editor,
@@ -25,6 +27,7 @@ export function ProPreviewCellDialog({
   updateRouteDisplayOverride: (
     routeKey: string,
     transform: (current: NonNullable<ProPreset['routeDisplayOverrides'][number]>) => ProPreset['routeDisplayOverrides'][number] | null,
+    transformPreset?: (current: ProPreset) => ProPreset,
   ) => void
 }) {
   return (
@@ -36,6 +39,24 @@ export function ProPreviewCellDialog({
             <Box sx={{ display: 'grid', gap: 2, pt: 1 }}>
               <Typography>{editor.routeLabel}</Typography>
               <Typography color="text.secondary">{editor.stopLabel}</Typography>
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  紐づく標柱
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {editor.poleStops.map((stop) => (
+                    <PoleStopChip
+                      key={stop.key}
+                      label={stop.label}
+                      onDelete={() => {
+                        updateEditor((current) =>
+                          current ? { ...current, poleStops: current.poleStops.filter((poleStop) => poleStop.key !== stop.key) } : current,
+                        )
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
               <TextField
                 fullWidth
                 label="表示文字"
@@ -107,24 +128,38 @@ export function ProPreviewCellDialog({
             <Button onClick={() => updateEditor(null)}>キャンセル</Button>
             <Button
               variant="contained"
+              disabled={!hasCellEditorChanges(editor)}
               onClick={() => {
                 const text = editor.text.trim()
                 const rowSpan = editor.useRowSpan ? Math.max(Number(editor.rowSpanText) || 2, 2) : 1
-                updateRouteDisplayOverride(editor.routeKey, (current) => ({
-                  ...current,
-                  stopCellOverrides: [
-                    ...current.stopCellOverrides.filter((override) => override.poleId !== editor.poleId),
-                    ...(text
-                      ? [
-                          {
-                            poleId: editor.poleId,
-                            text,
-                            rowSpan,
-                          },
-                        ]
-                      : []),
-                  ],
-                }))
+                const remainingPoleStopKeys = new Set(editor.poleStops.map((stop) => stop.key))
+                const deletedPoleStopKeys = new Set(editor.originalPoleStopKeys.filter((key) => !remainingPoleStopKeys.has(key)))
+                updateRouteDisplayOverride(
+                  editor.routeKey,
+                  (current) => ({
+                    ...current,
+                    stopCellOverrides: [
+                      ...current.stopCellOverrides.filter((override) => override.poleId !== editor.poleId),
+                      ...(text
+                        ? [
+                            {
+                              poleId: editor.poleId,
+                              text,
+                              rowSpan,
+                            },
+                          ]
+                        : []),
+                    ],
+                  }),
+                  (current) => ({
+                    ...current,
+                    poles: current.poles.map((pole) =>
+                      pole.id === editor.poleId
+                        ? { ...pole, stops: pole.stops.filter((stop) => !deletedPoleStopKeys.has(proPoleStopKey(stop))) }
+                        : pole,
+                    ),
+                  }),
+                )
                 updateEditor(null)
               }}
             >
@@ -134,5 +169,18 @@ export function ProPreviewCellDialog({
         </>
       )}
     </Dialog>
+  )
+}
+
+function hasCellEditorChanges(editor: ProStopCellEditor): boolean {
+  const text = editor.text.trim()
+  const rowSpan = editor.useRowSpan ? Math.max(Number(editor.rowSpanText) || 2, 2) : 1
+  const currentPoleStopKeys = editor.poleStops.map((stop) => stop.key)
+
+  return (
+    text !== editor.originalText ||
+    rowSpan !== editor.originalRowSpan ||
+    currentPoleStopKeys.length !== editor.originalPoleStopKeys.length ||
+    currentPoleStopKeys.some((key, index) => key !== editor.originalPoleStopKeys[index])
   )
 }

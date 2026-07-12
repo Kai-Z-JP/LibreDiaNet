@@ -30,6 +30,7 @@ describe('proStopDisplayLabel', () => {
     )
 
     expect(label).toContain('P2')
+    expect(label).toContain('#0')
   })
 })
 

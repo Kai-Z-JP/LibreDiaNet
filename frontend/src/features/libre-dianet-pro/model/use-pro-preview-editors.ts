@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { GtfsStop, ProPoleDetail, ProPreset } from '../../../types'
-import { displayRouteName } from '../../../utils'
-import { proExcludedPatternKey, proRouteDisplayLabel } from './pro-pole-stop-helpers'
+import { displayRouteName, stopPatternKey } from '../../../utils'
+import { proExcludedPatternKey, proPoleStopKey, proRouteDisplayLabel, proStopDisplayLabel } from './pro-pole-stop-helpers'
 import { normalizeProRouteDisplayOverride } from './pro-preview-display-helpers'
 import { proRouteKey } from './pro-route-keys'
 import type { ProConstructedRoute } from './pro-types'
@@ -12,6 +12,8 @@ type RouteDisplayOverrideByKey = Record<string, RouteDisplayOverride>
 
 export function useProPreviewEditors({
   preset,
+  stopMap,
+  constructedRoutes,
   includeSourceNameInRoute,
   routeDisplayOverridesByKey,
   onUpdate,
@@ -20,6 +22,8 @@ export function useProPreviewEditors({
   setCellEditor,
 }: {
   preset: ProPreset
+  stopMap: Record<string, GtfsStop>
+  constructedRoutes: ProConstructedRoute[]
   includeSourceNameInRoute: boolean
   routeDisplayOverridesByKey: RouteDisplayOverrideByKey
   onUpdate: (preset: ProPreset) => void
@@ -30,6 +34,7 @@ export function useProPreviewEditors({
   const updateRouteDisplayOverride = (
     routeKey: string,
     transform: (current: NonNullable<RouteDisplayOverride>) => RouteDisplayOverride | null,
+    transformPreset: (current: ProPreset) => ProPreset = (current) => current,
   ) => {
     const current = routeDisplayOverridesByKey[routeKey] ?? {
       routeKey,
@@ -39,13 +44,15 @@ export function useProPreviewEditors({
       stopCellOverrides: [],
     }
     const nextOverride = normalizeProRouteDisplayOverride(transform(current))
-    onUpdate({
-      ...preset,
-      routeDisplayOverrides: [
-        ...preset.routeDisplayOverrides.filter((override) => override.routeKey !== routeKey),
-        ...(nextOverride ? [nextOverride] : []),
-      ].toSorted((left, right) => left.routeKey.localeCompare(right.routeKey)),
-    })
+    onUpdate(
+      transformPreset({
+        ...preset,
+        routeDisplayOverrides: [
+          ...preset.routeDisplayOverrides.filter((override) => override.routeKey !== routeKey),
+          ...(nextOverride ? [nextOverride] : []),
+        ].toSorted((left, right) => left.routeKey.localeCompare(right.routeKey)),
+      }),
+    )
   }
 
   const openRouteEditor = (route: ProConstructedRoute, pattern: GtfsStop[]) => {
@@ -92,11 +99,20 @@ export function useProPreviewEditors({
     const routeKey = proRouteKey(route, pattern)
     const routeLabel = proRouteDisplayLabel(route, includeSourceNameInRoute)
     const cellOverride = routeDisplayOverridesByKey[routeKey]?.stopCellOverrides.find((override) => override.poleId === pole.id)
+    const patternKey = stopPatternKey(pattern)
+    const relatedStops = pole.stops.filter((stop) => stop.sourceId === route.sourceId && stop.stopPatternKey === patternKey)
     setCellEditor({
       routeKey,
       poleId: pole.id,
       routeLabel,
       stopLabel,
+      poleStops: relatedStops.map((stop) => ({
+        key: proPoleStopKey(stop),
+        label: proStopDisplayLabel(stop, stopMap, constructedRoutes, includeSourceNameInRoute),
+      })),
+      originalPoleStopKeys: relatedStops.map(proPoleStopKey),
+      originalText: cellOverride?.text ?? '',
+      originalRowSpan: cellOverride?.rowSpan ?? 1,
       text: cellOverride?.text ?? '',
       useRowSpan: (cellOverride?.rowSpan ?? 1) > 1,
       rowSpanText: String(cellOverride?.rowSpan ?? 2),

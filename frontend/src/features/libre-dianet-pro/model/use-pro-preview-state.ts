@@ -35,6 +35,13 @@ export type ProStopCellEditor = {
   poleId: string
   routeLabel: string
   stopLabel: string
+  poleStops: Array<{
+    key: string
+    label: string
+  }>
+  originalPoleStopKeys: string[]
+  originalText: string
+  originalRowSpan: number
   text: string
   useRowSpan: boolean
   rowSpanText: string

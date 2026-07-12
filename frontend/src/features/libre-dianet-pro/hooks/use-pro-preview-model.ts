@@ -64,6 +64,8 @@ export function useProPreviewModel({
   const display = useProPreviewDisplay({ preset, context, constructedRoutes, constructedTrips })
   const editors = useProPreviewEditors({
     preset,
+    stopMap,
+    constructedRoutes,
     includeSourceNameInRoute: display.includeSourceNameInRoute,
     routeDisplayOverridesByKey: display.routeDisplayOverridesByKey,
     onUpdate,

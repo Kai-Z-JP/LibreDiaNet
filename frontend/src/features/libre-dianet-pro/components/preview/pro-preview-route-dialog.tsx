@@ -28,6 +28,7 @@ export function ProPreviewRouteDialog({
   updateRouteDisplayOverride: (
     routeKey: string,
     transform: (current: NonNullable<ProPreset['routeDisplayOverrides'][number]>) => ProPreset['routeDisplayOverrides'][number] | null,
+    transformPreset?: (current: ProPreset) => ProPreset,
   ) => void
 }) {
   return (

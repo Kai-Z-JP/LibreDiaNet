@@ -30,6 +30,10 @@ export function ProPreviewPoleNameDialog({
   updateEditor: Dispatch<SetStateAction<ProPoleNameEditor | null>>
   onUpdate: (preset: ProPreset) => void
 }) {
+  const stopIds = editor
+    ? Array.from(new Set(preset.poles.find((pole) => pole.id === editor.poleId)?.stops.map((stop) => stop.id) ?? []))
+    : []
+
   return (
     <Dialog open={editor !== null} maxWidth="xs" fullWidth onClose={() => updateEditor(null)}>
       <DialogTitle>標柱設定</DialogTitle>
@@ -37,6 +41,9 @@ export function ProPreviewPoleNameDialog({
         <>
           <DialogContent>
             <Box sx={{ display: 'grid', gap: 2, pt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                stop_id: {stopIds.join(', ')}
+              </Typography>
               <Typography variant="body2" color="text.secondary">
                 既定: {editor.defaultName}
               </Typography>

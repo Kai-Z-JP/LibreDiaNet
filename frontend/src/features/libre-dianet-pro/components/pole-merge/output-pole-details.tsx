@@ -1,8 +1,8 @@
-import DeleteIcon from '@mui/icons-material/Delete'
-import { Box, Chip, IconButton, Typography } from '@mui/material'
+import { Box, Chip } from '@mui/material'
 import type { GtfsStop, ProPoleDetail, ProPreset } from '../../../../types'
 import { proPoleStopKey, proStopDisplayLabel, sameProPoleStop, type ProRoutePatternMap } from '../../model/pro-pole-stop-helpers'
 import type { ProConstructedRoute } from '../../model/pro-types'
+import { PoleStopChip } from '../shared/pole-stop-chip'
 
 export function OutputPoleDetails({
   preset,
@@ -64,27 +64,9 @@ function OutputPoleStopChip({
   onUpdate: (preset: ProPreset) => void
 }) {
   const stopKey = proPoleStopKey(stop)
+  const label = proStopDisplayLabel(stop, stopMap, constructedRoutes, includeSourceNameInRoute, routePatternMap[stopKey] ?? null)
 
-  return (
-    <Box
-      sx={{
-        px: 1,
-        py: 0.25,
-        backgroundColor: '#eaeef6',
-        borderRadius: 1,
-        display: 'flex',
-        gap: 0.5,
-        alignItems: 'center',
-      }}
-    >
-      <Typography variant="body2">
-        {proStopDisplayLabel(stop, stopMap, constructedRoutes, includeSourceNameInRoute, routePatternMap[stopKey] ?? null)}
-      </Typography>
-      <IconButton size="small" sx={{ p: 0.25 }} onClick={() => removeStopFromPole(preset, pole, stop, onUpdate)}>
-        <DeleteIcon sx={{ fontSize: 16 }} />
-      </IconButton>
-    </Box>
-  )
+  return <PoleStopChip label={label} onDelete={() => removeStopFromPole(preset, pole, stop, onUpdate)} />
 }
 
 function PoleTextOverrides({ pole }: { pole: ProPoleDetail }) {
@@ -141,14 +123,13 @@ function removeStopFromPole(
   stop: ProPoleDetail['stops'][number],
   onUpdate: (preset: ProPreset) => void,
 ) {
-  const nextPoles = preset.poles
-    .map((item) =>
-      item.id === pole.id
-        ? {
-            ...item,
-            stops: item.stops.filter((current) => !sameProPoleStop(current, stop)),
-          }
-        : item,
-    )
+  const nextPoles = preset.poles.map((item) =>
+    item.id === pole.id
+      ? {
+          ...item,
+          stops: item.stops.filter((current) => !sameProPoleStop(current, stop)),
+        }
+      : item,
+  )
   onUpdate({ ...preset, poles: nextPoles })
 }
