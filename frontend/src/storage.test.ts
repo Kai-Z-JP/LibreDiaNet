@@ -1,4 +1,24 @@
-import { loadProPresetStore, migrateLegacyStore, PRO_STORAGE_KEY, saveProPresetStore } from './storage'
+import { loadProPresetStore, migrateLegacyStore, parseProPresetImport, PRO_STORAGE_KEY, saveProPresetStore } from './storage'
+
+describe('parseProPresetImport', () => {
+  it('parses a standalone Pro preset', () => {
+    const preset = parseProPresetImport(
+      JSON.stringify({
+        id: 'preset-a',
+        name: 'Preset A',
+        index: 1,
+        sourceIds: [],
+        routes: [],
+        routeDisplayOverrides: [],
+        poles: [],
+        excludedStopPatterns: [],
+      }),
+    )
+
+    expect(preset.id).toBe('preset-a')
+    expect(preset.name).toBe('Preset A')
+  })
+})
 
 describe('migrateLegacyStore', () => {
   it('converts legacy repo preset into v2', () => {

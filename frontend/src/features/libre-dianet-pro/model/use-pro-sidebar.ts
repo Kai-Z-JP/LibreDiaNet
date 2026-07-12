@@ -34,6 +34,7 @@ export type ProSidebarActions = {
   onReplaceRawSource: (source: ProGtfsSource, file: File) => Promise<ProGtfsSource>
   onCreatePreset?: () => void
   onDuplicatePreset?: (preset: ProPreset) => void
+  onImportPreset?: (file: File) => Promise<void>
   onUseLocalWorkspace: (mode: ProWorkspaceOpenMode, copyLog?: ProWorkspaceCopyLogger) => Promise<void>
   onChooseFileSystemWorkspace: (mode: ProWorkspaceOpenMode, copyLog?: ProWorkspaceCopyLogger) => Promise<void>
   onUseFirebaseWorkspace: (
@@ -85,6 +86,7 @@ export function useProSidebar(data: ProSidebarData, actions: ProSidebarActions) 
       onSelectPreset: actions.onSelectPreset,
       onCreatePreset: actions.onCreatePreset,
       onDuplicatePreset: actions.onDuplicatePreset,
+      onImportPreset: actions.onImportPreset,
     },
     versionSelectDialogProps: {
       open: versionSelectOpen && !data.workspace.busy && !storageSettingsOpen,

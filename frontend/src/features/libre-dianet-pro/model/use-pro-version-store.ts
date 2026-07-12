@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react'
 import { deepEqual } from 'rxdb/plugins/utils'
 import type { ProPreset, ProVersion } from '../../../types'
 import type { ProWorkspaceStorage } from '../storage/pro-workspace-storage'
-import { createProPreset, createProVersion, duplicateProPreset } from './pro-factories'
+import { createProPreset, createProVersion, duplicateProPreset, importProPreset } from './pro-factories'
 import { proVersionsReducer } from './pro-versions.reducer'
 
 export function useProVersionStore({
@@ -124,6 +124,12 @@ export function useProVersionStore({
     onPresetCreated(duplicatedPreset.id)
   }
 
+  const importPreset = (version: ProVersion, preset: ProPreset) => {
+    const importedPreset = importProPreset(preset)
+    dispatchVersions({ type: 'preset/create', versionId: version.id, preset: importedPreset })
+    onPresetCreated(importedPreset.id)
+  }
+
   const deletePreset = (version: ProVersion, preset: ProPreset) => {
     dispatchVersions({ type: 'preset/delete', versionId: version.id, presetId: preset.id })
   }
@@ -137,6 +143,7 @@ export function useProVersionStore({
     deleteVersion,
     createPreset,
     duplicatePreset,
+    importPreset,
     deletePreset,
   }
 }

@@ -32,11 +32,11 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
           {'パターン'}
         </td>
         {showStaticPatterns &&
-          proRoutePatternEntries(previewConstructedRoutes).map(({ route, pattern, patternIndex, presetPatternIndex }) => {
+          proRoutePatternEntries(previewConstructedRoutes).map(({ route, pattern, presetPatternIndex }) => {
             const excluded = isProPatternExcluded(preset, route, pattern)
             return (
               <td
-                key={`route-${route.sourceId}-${route.route.routeId}-${route.direction ?? 'null'}-${patternIndex}`}
+                key={`route-${presetPatternIndex}`}
                 className="pro-preview-route-cell pro-preview-editable"
                 title={excluded ? 'クリックしてこの停車パターンを使用する' : 'クリックしてこの停車パターンを使用しない'}
                 onClick={() => onTogglePatternUsage(route, pattern)}
@@ -63,33 +63,31 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
           {'系\u3000\u3000統'}
         </td>
         {showStaticPatterns &&
-          previewConstructedRoutes.flatMap((route) =>
-            route.stopPatterns.map((pattern, index) => {
-              const routeKey = proRouteKey(route, pattern)
-              const excluded = isProPatternExcluded(preset, route, pattern)
-              const override = routeDisplayOverridesByKey[routeKey]
-              const defaultRouteName = displayRouteName(route.route.shortName, route.route.longName)
-              const routeName = override?.routeNameOverride ?? defaultRouteName
-              return (
-                <td
-                  key={`name-${route.sourceId}-${route.route.routeId}-${index}`}
-                  className={`pro-preview-route-cell${excluded ? '' : ' pro-preview-editable'}`}
-                  title={excluded ? 'この停車パターンは使用しない' : 'クリックして路線表示設定を編集'}
-                  onClick={() => !excluded && onOpenRouteEditor(route, pattern)}
-                  style={{
-                    ...(excluded ? disabledPreviewCellStyle : {}),
-                    backgroundColor: excluded
-                      ? disabledPreviewCellStyle.backgroundColor
-                      : hasProRouteNameOverride(override, defaultRouteName)
-                        ? '#fff3cd'
-                        : undefined,
-                  }}
-                >
-                  <span className="pro-preview-route-name">{routeName || ' '}</span>
-                </td>
-              )
-            }),
-          )}
+          proRoutePatternEntries(previewConstructedRoutes).map(({ route, pattern, presetPatternIndex }) => {
+            const routeKey = proRouteKey(route, pattern)
+            const excluded = isProPatternExcluded(preset, route, pattern)
+            const override = routeDisplayOverridesByKey[routeKey]
+            const defaultRouteName = displayRouteName(route.route.shortName, route.route.longName)
+            const routeName = override?.routeNameOverride ?? defaultRouteName
+            return (
+              <td
+                key={`name-${presetPatternIndex}`}
+                className={`pro-preview-route-cell${excluded ? '' : ' pro-preview-editable'}`}
+                title={excluded ? 'この停車パターンは使用しない' : 'クリックして路線表示設定を編集'}
+                onClick={() => !excluded && onOpenRouteEditor(route, pattern)}
+                style={{
+                  ...(excluded ? disabledPreviewCellStyle : {}),
+                  backgroundColor: excluded
+                    ? disabledPreviewCellStyle.backgroundColor
+                    : hasProRouteNameOverride(override, defaultRouteName)
+                      ? '#fff3cd'
+                      : undefined,
+                }}
+              >
+                <span className="pro-preview-route-name">{routeName || ' '}</span>
+              </td>
+            )
+          })}
         {showActualTimetable &&
           constructedTrips.map((trip, index) => {
             const routeKey = proTripRouteKey(trip)
@@ -107,35 +105,33 @@ export function ProPreviewTableHead({ data, actions }: ProPreviewTableProps) {
           {'行\u3000\u3000先'}
         </td>
         {showStaticPatterns &&
-          previewConstructedRoutes.flatMap((route) =>
-            route.stopPatterns.map((pattern, index) => {
-              const routeKey = proRouteKey(route, pattern)
-              const excluded = isProPatternExcluded(preset, route, pattern)
-              const override = routeDisplayOverridesByKey[routeKey]
-              const defaultDestination = pattern.at(-1)?.name ?? ''
-              const destinations = splitDestinationColumns(
-                override?.useTripHeadsignAsDestination ? '※' : proDestinationDisplay(override, defaultDestination),
-              )
-              return (
-                <td
-                  key={`dest-${route.sourceId}-${route.route.routeId}-${index}`}
-                  className={`pro-preview-destination-cell${excluded ? '' : ' pro-preview-editable'}`}
-                  title={excluded ? 'この停車パターンは使用しない' : 'クリックして路線表示設定を編集'}
-                  onClick={() => !excluded && onOpenRouteEditor(route, pattern)}
-                  style={{
-                    ...(excluded ? disabledPreviewCellStyle : {}),
-                    backgroundColor: excluded
-                      ? disabledPreviewCellStyle.backgroundColor
-                      : hasProDestinationOverride(override, defaultDestination)
-                        ? '#fff3cd'
-                        : undefined,
-                  }}
-                >
-                  <DestinationPreview destinations={destinations} />
-                </td>
-              )
-            }),
-          )}
+          proRoutePatternEntries(previewConstructedRoutes).map(({ route, pattern, presetPatternIndex }) => {
+            const routeKey = proRouteKey(route, pattern)
+            const excluded = isProPatternExcluded(preset, route, pattern)
+            const override = routeDisplayOverridesByKey[routeKey]
+            const defaultDestination = pattern.at(-1)?.name ?? ''
+            const destinations = splitDestinationColumns(
+              override?.useTripHeadsignAsDestination ? '※' : proDestinationDisplay(override, defaultDestination),
+            )
+            return (
+              <td
+                key={`dest-${presetPatternIndex}`}
+                className={`pro-preview-destination-cell${excluded ? '' : ' pro-preview-editable'}`}
+                title={excluded ? 'この停車パターンは使用しない' : 'クリックして路線表示設定を編集'}
+                onClick={() => !excluded && onOpenRouteEditor(route, pattern)}
+                style={{
+                  ...(excluded ? disabledPreviewCellStyle : {}),
+                  backgroundColor: excluded
+                    ? disabledPreviewCellStyle.backgroundColor
+                    : hasProDestinationOverride(override, defaultDestination)
+                      ? '#fff3cd'
+                      : undefined,
+                }}
+              >
+                <DestinationPreview destinations={destinations} />
+              </td>
+            )
+          })}
         {showActualTimetable &&
           constructedTrips.map((trip, index) => {
             const routeKey = proTripRouteKey(trip)

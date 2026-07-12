@@ -1,6 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_OVERRIDE, type ProPreset } from '../../../types'
-import { duplicateProPole, duplicateProPreset } from './pro-factories'
+import { duplicateProPole, duplicateProPreset, importProPreset } from './pro-factories'
+
+describe('importProPreset', () => {
+  it('changes only the preset id', () => {
+    const preset: ProPreset = {
+      id: 'preset-a',
+      name: 'Preset A',
+      index: 1,
+      sourceIds: ['source-a'],
+      routes: [{ sourceId: 'source-a', id: 'route-a', direction: null }],
+      routeDisplayOverrides: [],
+      poles: [{ id: 'pole-a', stops: [], override: EMPTY_OVERRIDE }],
+      excludedStopPatterns: [],
+    }
+
+    const importedPreset = importProPreset(preset)
+
+    expect(importedPreset.id).not.toBe(preset.id)
+    expect({ ...importedPreset, id: preset.id }).toEqual(preset)
+  })
+})
 
 describe('duplicateProPreset', () => {
   it('duplicates preset-managed ids and remaps pole references', () => {

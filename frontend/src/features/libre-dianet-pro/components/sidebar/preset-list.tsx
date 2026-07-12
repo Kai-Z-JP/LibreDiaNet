@@ -1,6 +1,8 @@
 import AddIcon from '@mui/icons-material/Add'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-import { Box, Button, IconButton, List, ListItem, ListItemButton, ListItemText, Tooltip, Typography } from '@mui/material'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
+import { Alert, Box, Button, IconButton, List, ListItem, ListItemButton, ListItemText, Tooltip, Typography } from '@mui/material'
+import { useRef, useState } from 'react'
 import type { ProPreset, ProVersion } from '../../../../types'
 
 export function PresetList({
@@ -9,21 +11,59 @@ export function PresetList({
   onSelectPreset,
   onCreatePreset,
   onDuplicatePreset,
+  onImportPreset,
 }: {
   selectedVersion: ProVersion | null
   selectedPresetId: string | null
   onSelectPreset: (presetId: string) => void
   onCreatePreset?: () => void
   onDuplicatePreset?: (preset: ProPreset) => void
+  onImportPreset?: (file: File) => Promise<void>
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+
+  const importFile = async (file: File) => {
+    setImportError(null)
+    try {
+      await onImportPreset?.(file)
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'プリセットをImportできませんでした')
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
   return (
     <>
       <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center' }}>
         <Typography variant="h6">プリセット</Typography>
-        <Button size="small" startIcon={<AddIcon />} disabled={!onCreatePreset} onClick={onCreatePreset}>
-          作成
-        </Button>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) void importFile(file)
+            }}
+          />
+          <Button size="small" startIcon={<UploadFileIcon />} disabled={!onImportPreset} onClick={() => fileInputRef.current?.click()}>
+            インポート
+          </Button>
+          <Button size="small" startIcon={<AddIcon />} disabled={!onCreatePreset} onClick={onCreatePreset}>
+            作成
+          </Button>
+        </Box>
       </Box>
+      {importError && (
+        <Alert severity="error" onClose={() => setImportError(null)} sx={{ mt: 1 }}>
+          {importError}
+        </Alert>
+      )}
       <List
         dense
         disablePadding

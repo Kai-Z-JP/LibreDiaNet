@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ProPreset, ProPresetContext } from '../../../types'
+import { parseProPresetImport } from '../../../storage'
 import type { ProWorkspaceCopyLogger } from '../storage/pro-workspace-storage'
 import type { ProWorkspaceController, ProWorkspaceOpenMode } from '../storage/use-pro-workspace'
 import { useGtfsFeeds } from './use-gtfs-feeds'
@@ -31,6 +32,7 @@ export function useLibreDiaNetProPage(workspace: ProWorkspaceController) {
     selectPreset: selection.setSelectedPresetId,
     createPreset: versionStore.createPreset,
     duplicatePreset: versionStore.duplicatePreset,
+    importPreset: versionStore.importPreset,
     deletePreset: versionStore.deletePreset,
     createRepoSource: sourceFactory.createRepoSource,
     createRawSource: sourceFactory.createRawSource,
@@ -76,6 +78,9 @@ export function useLibreDiaNetProPage(workspace: ProWorkspaceController) {
       onReplaceRawSource: actions.replaceRawSource,
       onCreatePreset: selectedVersion ? () => actions.createPreset(selectedVersion) : undefined,
       onDuplicatePreset: selectedVersion ? (preset: ProPreset) => actions.duplicatePreset(selectedVersion, preset) : undefined,
+      onImportPreset: selectedVersion
+        ? async (file: File) => actions.importPreset(selectedVersion, parseProPresetImport(await file.text()))
+        : undefined,
       onUseLocalWorkspace: useLocalWorkspace,
       onChooseFileSystemWorkspace: chooseFileSystemWorkspace,
       onUseFirebaseWorkspace: useFirebaseWorkspace,

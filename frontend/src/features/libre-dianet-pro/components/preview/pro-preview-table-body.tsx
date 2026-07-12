@@ -8,7 +8,12 @@ import {
   isProPatternExcluded,
   justifyTextClass,
 } from '../../model/pro-preview-display-helpers'
-import { proPoleDefaultLocationName, proPoleDisplayLocationName, proPoleDisplayName } from '../../model/pro-pole-stop-helpers'
+import {
+  proPoleDefaultLocationName,
+  proPoleDisplayLocationName,
+  proPoleDisplayName,
+  proRoutePatternEntries,
+} from '../../model/pro-pole-stop-helpers'
 import { proRouteKey, proTripRouteKey } from '../../model/pro-route-keys'
 import { countConsecutivePoleNames, proPoleRawJoko } from '../../model/pro-preview-table-helpers'
 import { PreviewCellText } from './pro-preview-parts'
@@ -154,44 +159,42 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                       {joko}
                     </td>
                     {showStaticPatterns &&
-                      previewConstructedRoutes.flatMap((route) =>
-                        route.stopPatterns.map((pattern, index) => {
-                          const routeKey = proRouteKey(route, pattern)
-                          const excluded = isProPatternExcluded(preset, route, pattern)
-                          const cellDisplay = buildProPreviewCellDisplay(routeDisplayOverridesByKey[routeKey], preset.poles, poleIndex)
+                      proRoutePatternEntries(previewConstructedRoutes).map(({ route, pattern, presetPatternIndex }) => {
+                        const routeKey = proRouteKey(route, pattern)
+                        const excluded = isProPatternExcluded(preset, route, pattern)
+                        const cellDisplay = buildProPreviewCellDisplay(routeDisplayOverridesByKey[routeKey], preset.poles, poleIndex)
 
-                          if (cellDisplay.hidden) return null
+                        if (cellDisplay.hidden) return null
 
-                          const text = cellDisplay.textOverride ?? previewTimesByPatternKey[routeKey]?.[poleIndex] ?? ''
-                          const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '———' : text
-                          const indexReversed =
-                            !cellDisplay.overridden && isProPatternIndexReversed(previewTimesByPatternKey[routeKey] ?? [], poleIndex)
+                        const text = cellDisplay.textOverride ?? previewTimesByPatternKey[routeKey]?.[poleIndex] ?? ''
+                        const displayText = pole.override.horizontalLine && !cellDisplay.overridden && text === '…' ? '———' : text
+                        const indexReversed =
+                          !cellDisplay.overridden && isProPatternIndexReversed(previewTimesByPatternKey[routeKey] ?? [], poleIndex)
 
-                          return (
-                            <td
-                              key={`${route.sourceId}-${route.route.routeId}-${index}-${pole.id}`}
-                              className={`pro-preview-time-cell${cellDisplay.rowSpan > 1 ? ' pro-preview-time-cell-spanned' : ''}${
-                                excluded ? sectionLineClass : `${sectionLineClass} pro-preview-editable`
-                              }`}
-                              rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
-                              title={excluded ? 'この停車パターンは使用しない' : 'クリックしてセル上書きを編集'}
-                              onClick={() => !excluded && onOpenCellEditor(route, pattern, pole, name)}
-                              style={{
-                                ...(excluded ? disabledPreviewCellStyle : {}),
-                                backgroundColor: excluded
-                                  ? disabledPreviewCellStyle.backgroundColor
-                                  : cellDisplay.overridden
-                                    ? '#fff3cd'
-                                    : indexReversed
-                                      ? '#ffcdd2'
-                                      : undefined,
-                              }}
-                            >
-                              <PreviewCellText text={displayText} rowSpan={cellDisplay.rowSpan} />
-                            </td>
-                          )
-                        }),
-                      )}
+                        return (
+                          <td
+                            key={`pattern-${presetPatternIndex}-${pole.id}`}
+                            className={`pro-preview-time-cell${cellDisplay.rowSpan > 1 ? ' pro-preview-time-cell-spanned' : ''}${
+                              excluded ? sectionLineClass : `${sectionLineClass} pro-preview-editable`
+                            }`}
+                            rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
+                            title={excluded ? 'この停車パターンは使用しない' : 'クリックしてセル上書きを編集'}
+                            onClick={() => !excluded && onOpenCellEditor(route, pattern, pole, name)}
+                            style={{
+                              ...(excluded ? disabledPreviewCellStyle : {}),
+                              backgroundColor: excluded
+                                ? disabledPreviewCellStyle.backgroundColor
+                                : cellDisplay.overridden
+                                  ? '#fff3cd'
+                                  : indexReversed
+                                    ? '#ffcdd2'
+                                    : undefined,
+                            }}
+                          >
+                            <PreviewCellText text={displayText} rowSpan={cellDisplay.rowSpan} />
+                          </td>
+                        )
+                      })}
                     {showActualTimetable &&
                       constructedTrips.map((trip, index) => {
                         const routeKey = proTripRouteKey(trip)

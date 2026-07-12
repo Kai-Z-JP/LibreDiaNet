@@ -47,6 +47,13 @@ export function duplicateProPreset(preset: ProPreset): ProPreset {
   }
 }
 
+export function importProPreset(preset: ProPreset): ProPreset {
+  return {
+    ...structuredClone(preset),
+    id: crypto.randomUUID(),
+  }
+}
+
 export function duplicateProPole(preset: ProPreset, poleId: string): ProPreset {
   const poleIndex = preset.poles.findIndex((pole) => pole.id === poleId)
   const pole = preset.poles[poleIndex]

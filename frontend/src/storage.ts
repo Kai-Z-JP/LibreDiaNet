@@ -134,6 +134,11 @@ function parseProPresets(value: unknown): ProPreset[] {
   return asArray(value).map((item) => parseProPreset(asRecord(item)))
 }
 
+export function parseProPresetImport(raw: string): ProPreset {
+  const parsed = JSON.parse(raw) as unknown
+  return parseProPreset(asRecord(parsed))
+}
+
 function parseProPreset(value: Record<string, unknown>): ProPreset {
   return {
     id: asString(value.id),
