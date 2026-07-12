@@ -1,7 +1,8 @@
 import DeleteIcon from '@mui/icons-material/Delete'
+import FolderZipIcon from '@mui/icons-material/FolderZip'
 import SaveIcon from '@mui/icons-material/Save'
 import styled from '@emotion/styled'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, TextField, Typography } from '@mui/material'
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, TextField, Typography } from '@mui/material'
 import { useState } from 'react'
 import type { FeedOption, ProGtfsSource, ProVersion } from '../../../../types'
 import { fieldLabelProps } from '../../model/pro-ui-constants'
@@ -41,7 +42,7 @@ export function VersionSettingsDialog({
     onReplaceRawSource,
     onUpdateVersion,
   })
-  const { draftVersion, changed, repoSource, repoFileOptionsByFeedKey, reloadingSourceIds } = state
+  const { draftVersion, changed, repoSource, repoFileOptionsByFeedKey, reloadingSourceIds, inddExporting, inddExportError } = state
 
   return (
     <Dialog open={open} maxWidth="md" fullWidth onClose={onClose}>
@@ -84,8 +85,17 @@ export function VersionSettingsDialog({
               onReloadSource={(source) => void actions.reloadRepoSource(source)}
               reloadingSourceIds={reloadingSourceIds}
             />
+            {inddExportError && <Alert severity="error">{inddExportError}</Alert>}
             <Divider sx={{ my: 2 }} />
             <VersionActions>
+              <Button
+                startIcon={<FolderZipIcon />}
+                variant="outlined"
+                disabled={draftVersion.presets.length === 0 || inddExporting || reloadingSourceIds.length > 0}
+                onClick={() => void actions.exportInddZip()}
+              >
+                {inddExporting ? 'ZIP作成中…' : 'InDesign用JSON一括出力'}
+              </Button>
               <Button startIcon={<SaveIcon />} variant="contained" disabled={!changed || !draftVersion} onClick={actions.save}>
                 保存
               </Button>

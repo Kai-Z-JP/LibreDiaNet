@@ -9,6 +9,7 @@ import {
 } from './pro-source-helpers'
 import { useRepoFeedFileOptions } from './use-repo-feed-file-options'
 import { useRepoSourceReload } from './use-repo-source-reload'
+import { useProVersionInddExport } from './use-pro-version-indd-export'
 
 export function useVersionSettingsDialog({
   selectedVersion,
@@ -29,6 +30,7 @@ export function useVersionSettingsDialog({
   const [repoSource, setRepoSource] = useState<FeedOption | null>(null)
   const repoFileOptionsByFeedKey = useRepoFeedFileOptions(draftVersion)
   const { reloadingSourceIds, reloadRepoSource } = useRepoSourceReload()
+  const inddExport = useProVersionInddExport(draftVersion)
 
   useEffect(() => {
     setDraftVersion(selectedVersion)
@@ -69,6 +71,8 @@ export function useVersionSettingsDialog({
       repoSource,
       repoFileOptionsByFeedKey,
       reloadingSourceIds,
+      inddExporting: inddExport.exporting,
+      inddExportError: inddExport.error,
     },
     actions: {
       renameVersion: (name: string) => setDraftVersion((current) => (current ? { ...current, name } : current)),
@@ -121,6 +125,7 @@ export function useVersionSettingsDialog({
           )
         }),
       reloadRepoSource,
+      exportInddZip: inddExport.requestInddZip,
       save: () => {
         if (draftVersion) {
           onUpdateVersion(draftVersion)

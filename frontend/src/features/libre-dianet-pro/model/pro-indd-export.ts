@@ -73,11 +73,36 @@ export function serializeProInddPreset(preset: ProInddPreset): string {
   return `${JSON.stringify(preset, null, 2)}\n`
 }
 
-export function proInddJsonFileName(presetId: string): string {
-  const safeId = Array.from(presetId.trim().replace(/[\\/:*?"<>|]/g, '_'))
+export function proInddJsonFileName(value: string): string {
+  const safeId = safeInddFileBaseName(value, 'preset')
+  return `${safeId}.json`
+}
+
+export function proInddJsonFileNames(presets: Pick<ProPreset, 'name'>[]): string[] {
+  const used = new Set<string>()
+  return presets.map((preset) => {
+    const baseName = safeInddFileBaseName(preset.name, 'preset')
+    let suffix = 1
+    let fileName = `${baseName}.json`
+    while (used.has(fileName.toLowerCase())) {
+      suffix += 1
+      fileName = `${baseName}_${suffix}.json`
+    }
+    used.add(fileName.toLowerCase())
+    return fileName
+  })
+}
+
+export function proInddZipFileName(versionName: string): string {
+  return `${safeInddFileBaseName(versionName, 'version')}_indd.zip`
+}
+
+function safeInddFileBaseName(value: string, fallback: string): string {
+  const safeId = Array.from(value.trim().replace(/[\\/:*?"<>|]/g, '_'))
     .map((character) => (character.charCodeAt(0) < 32 ? '_' : character))
     .join('')
-  return `${safeId || 'preset'}.json`
+    .replace(/[. ]+$/g, '')
+  return safeId || fallback
 }
 
 function buildProInddPoles(preset: ProPreset, constructedRoutes: ProConstructedRoute[], stopMap: Record<string, GtfsStop>): ProInddPole[] {

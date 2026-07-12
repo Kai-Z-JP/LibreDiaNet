@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_OVERRIDE, type GtfsStop, type ProPoleDetail, type ProPreset } from '../../../types'
 import { stopPatternKey } from '../../../utils'
-import { buildProInddPreset, proInddJsonFileName, serializeProInddPreset } from './pro-indd-export'
+import {
+  buildProInddPreset,
+  proInddJsonFileName,
+  proInddJsonFileNames,
+  proInddZipFileName,
+  serializeProInddPreset,
+} from './pro-indd-export'
 import { proRouteKeyFromParts } from './pro-route-keys'
 import type { ProConstructedRoute, ProConstructedTrip } from './pro-types'
 
@@ -164,5 +170,15 @@ describe('Pro InDesign JSON export', () => {
     expect(JSON.parse(serializeProInddPreset(output))).toEqual(output)
     expect(proInddJsonFileName(preset.id)).toBe('preset_a.json')
     expect(proInddJsonFileName('   ')).toBe('preset.json')
+  })
+
+  it('uses unique preset names for files inside a version ZIP', () => {
+    expect(proInddJsonFileNames([{ name: '中央/線' }, { name: '中央/線' }, { name: '中央_線' }, { name: '  ' }])).toEqual([
+      '中央_線.json',
+      '中央_線_2.json',
+      '中央_線_3.json',
+      'preset.json',
+    ])
+    expect(proInddZipFileName('2026/春改正')).toBe('2026_春改正_indd.zip')
   })
 })
