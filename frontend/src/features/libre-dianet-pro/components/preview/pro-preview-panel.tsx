@@ -126,7 +126,7 @@ export function ProPreviewPanel({
               disabled={props.controls.exportDisabled || props.controls.inddExporting || props.controls.downloading}
               onClick={() => void props.controls.onRequestInddJson()}
             >
-              InDesign用JSON出力
+              Indd出力
             </Button>
             <OutputDialog
               disabled={props.controls.exportDisabled || props.controls.downloading || props.controls.inddExporting}
