@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ProPreset, ProVersion } from '../../../types'
-import { mergeConflictingVersion } from './firebase-version-conflict-handler'
+import { encodeFirebaseVersionDocument, type FirebaseVersionDocument } from './firebase-pro-workspace-codec'
+import { firebaseVersionConflictHandler, mergeConflictingVersion } from './firebase-version-conflict-handler'
 
 const preset = (id: string, name: string): ProPreset => ({
   id,
@@ -21,6 +22,67 @@ const version = (presets: ProPreset[]): ProVersion => ({
 })
 
 describe('mergeConflictingVersion', () => {
+  it('treats documents with reordered object keys as equal', () => {
+    const left = {
+      id: 'document',
+      workspaceId: 'workspace',
+      position: 0,
+      version: version([{ ...preset('a', 'A'), routeDisplayOverrides: [routeDisplayOverride()] }]),
+      _deleted: false,
+    }
+    const right = {
+      version: version([
+        {
+          ...preset('a', 'A'),
+          routeDisplayOverrides: [
+            {
+              stopCellOverrides: [],
+              useTripHeadsignAsDestination: false,
+              destinationOverride: null,
+              routeNameOverride: null,
+              routeKey: 'route',
+            },
+          ],
+        },
+      ]),
+      position: 0,
+      workspaceId: 'workspace',
+      id: 'document',
+      _deleted: false,
+    }
+
+    expect(JSON.stringify(left)).not.toBe(JSON.stringify(right))
+    expect(firebaseVersionConflictHandler.isEqual(left, right, 'test')).toBe(true)
+  })
+
+  it('treats Firestore-encoded and local documents as equal', () => {
+    const local = versionDocument(version([{ ...preset('a', 'A'), excludedStopPatterns: [['source::pattern']] }]))
+    const encoded = encodeFirebaseVersionDocument(local)
+
+    expect(encoded).not.toEqual(local)
+    expect(firebaseVersionConflictHandler.isEqual(local, encoded, 'test')).toBe(true)
+  })
+
+  it('returns local document shapes after resolving an encoded Firestore conflict', async () => {
+    const base = versionDocument(version([{ ...preset('a', 'A'), excludedStopPatterns: [['base']] }]))
+    const local = versionDocument(version([{ ...preset('a', 'ローカル'), excludedStopPatterns: [['local']] }]))
+    const remote = encodeFirebaseVersionDocument(
+      versionDocument(version([{ ...preset('a', 'A'), excludedStopPatterns: [['remote']] }])),
+    )
+
+    const resolved = await firebaseVersionConflictHandler.resolve(
+      {
+        assumedMasterState: encodeFirebaseVersionDocument(base),
+        newDocumentState: encodeFirebaseVersionDocument(local),
+        realMasterState: remote,
+      },
+      'test',
+    )
+
+    expect(resolved.version.presets[0]?.excludedStopPatterns).toEqual([['local']])
+    expect(Array.isArray(resolved.version.presets[0]?.excludedStopPatterns[0])).toBe(true)
+  })
+
   it('combines concurrent edits to different presets', () => {
     const base = version([preset('a', 'A'), preset('b', 'B')])
     const local = version([preset('a', 'Aを編集'), preset('b', 'B')])
@@ -37,3 +99,23 @@ describe('mergeConflictingVersion', () => {
     expect(mergeConflictingVersion(base, local, remote).presets.map(({ name }) => name)).toEqual(['新しいA', 'Bを編集'])
   })
 })
+
+function routeDisplayOverride() {
+  return {
+    routeKey: 'route',
+    routeNameOverride: null,
+    destinationOverride: null,
+    useTripHeadsignAsDestination: false,
+    stopCellOverrides: [],
+  }
+}
+
+function versionDocument(value: ProVersion): FirebaseVersionDocument & { _deleted: boolean } {
+  return {
+    id: 'document',
+    workspaceId: 'workspace',
+    position: 0,
+    version: value,
+    _deleted: false,
+  }
+}

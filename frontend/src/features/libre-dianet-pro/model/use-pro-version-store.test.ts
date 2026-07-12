@@ -27,6 +27,27 @@ describe('mergeRemoteVersions', () => {
     expect(mergeRemoteVersions([previous], [previous], [remote])[0]?.presets[0]?.name).toBe('更新後')
   })
 
+  it('does not preserve a local value only because object keys were reordered', () => {
+    const previous = version([{ ...preset('preset', '更新前'), routeDisplayOverrides: [routeDisplayOverride()] }])
+    const local = version([
+      {
+        ...preset('preset', '更新前'),
+        routeDisplayOverrides: [
+          {
+            stopCellOverrides: [],
+            useTripHeadsignAsDestination: false,
+            destinationOverride: null,
+            routeNameOverride: null,
+            routeKey: 'route',
+          },
+        ],
+      },
+    ])
+    const remote = version([{ ...preset('preset', '更新後'), routeDisplayOverrides: [routeDisplayOverride()] }])
+
+    expect(mergeRemoteVersions([previous], [local], [remote])).toEqual([remote])
+  })
+
   it('preserves locally created and deleted presets', () => {
     const previous = version([preset('deleted', '削除対象')])
     const local = version([preset('created', '新規')])
@@ -35,3 +56,13 @@ describe('mergeRemoteVersions', () => {
     expect(mergeRemoteVersions([previous], [local], [remote])[0]?.presets.map(({ id }) => id)).toEqual(['remote', 'created'])
   })
 })
+
+function routeDisplayOverride() {
+  return {
+    routeKey: 'route',
+    routeNameOverride: null,
+    destinationOverride: null,
+    useTripHeadsignAsDestination: false,
+    stopCellOverrides: [],
+  }
+}

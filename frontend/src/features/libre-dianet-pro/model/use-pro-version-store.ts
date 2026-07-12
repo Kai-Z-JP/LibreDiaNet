@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react'
+import { deepEqual } from 'rxdb/plugins/utils'
 import type { ProPreset, ProVersion } from '../../../types'
 import type { ProWorkspaceStorage } from '../storage/pro-workspace-storage'
 import { createProPreset, createProVersion, duplicateProPreset } from './pro-factories'
@@ -209,5 +210,5 @@ function mergeRemotePresets(previousRemote: ProPreset[], local: ProPreset[], nex
 }
 
 function sameValue(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right)
+  return deepEqual(left, right)
 }

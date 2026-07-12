@@ -26,7 +26,7 @@ export function encodeFirebaseVersionDocument<T extends FirebaseVersionDocument>
       ...document.version,
       presets: document.version.presets.map((preset) => ({
         ...preset,
-        excludedStopPatterns: preset.excludedStopPatterns.map((values) => ({ values })),
+        excludedStopPatterns: decodeExcludedStopPatterns(preset.excludedStopPatterns).map((values) => ({ values })),
       })),
     },
   }

@@ -34,4 +34,34 @@ describe('Firebase Pro workspace codec', () => {
     expect(encodedPatterns).toEqual([{ values: ['source::pattern'] }, { values: ['one', 'two'] }])
     expect(decodeFirebaseVersionDocument(encoded)).toEqual(document)
   })
+
+  it('does not double-encode an already encoded replication state', () => {
+    const document: FirebaseVersionDocument = {
+      id: 'document',
+      workspaceId: 'workspace',
+      position: 0,
+      version: {
+        id: 'version',
+        name: 'Version',
+        revisionDate: '2026-04-01',
+        gtfsSources: [],
+        presets: [
+          {
+            id: 'preset',
+            name: 'Preset',
+            index: 0,
+            sourceIds: [],
+            routes: [],
+            routeDisplayOverrides: [],
+            poles: [],
+            excludedStopPatterns: [['source::pattern']],
+          },
+        ],
+      },
+    }
+
+    const encoded = encodeFirebaseVersionDocument(document)
+
+    expect(encodeFirebaseVersionDocument(encoded)).toEqual(encoded)
+  })
 })

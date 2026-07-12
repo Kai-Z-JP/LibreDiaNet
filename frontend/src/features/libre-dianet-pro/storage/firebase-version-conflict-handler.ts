@@ -1,19 +1,36 @@
 import type { RxConflictHandler } from 'rxdb/plugins/core'
+import { deepEqual } from 'rxdb/plugins/utils'
 import type { ProPreset, ProVersion } from '../../../types'
-import type { FirebaseVersionDocument } from './firebase-pro-workspace-codec'
+import { decodeFirebaseVersionDocument, type FirebaseVersionDocument } from './firebase-pro-workspace-codec'
 
 export const firebaseVersionConflictHandler: RxConflictHandler<FirebaseVersionDocument> = {
-  isEqual: (left, right) => sameValue(left, right),
+  isEqual: (left, right) => sameValue(normalizeDocument(left), normalizeDocument(right)),
   resolve: async ({ assumedMasterState, realMasterState, newDocumentState }) => {
+    const normalizedAssumedMasterState = assumedMasterState ? normalizeDocument(assumedMasterState) : undefined
+    const normalizedRealMasterState = normalizeDocument(realMasterState)
+    const normalizedNewDocumentState = normalizeDocument(newDocumentState)
+
     if (!assumedMasterState || assumedMasterState._deleted || realMasterState._deleted || newDocumentState._deleted) {
-      return newDocumentState
+      return normalizedNewDocumentState
     }
     return {
-      ...newDocumentState,
-      position: mergeValue(assumedMasterState.position, newDocumentState.position, realMasterState.position),
-      version: mergeConflictingVersion(assumedMasterState.version, newDocumentState.version, realMasterState.version),
+      ...normalizedNewDocumentState,
+      position: mergeValue(
+        normalizedAssumedMasterState!.position,
+        normalizedNewDocumentState.position,
+        normalizedRealMasterState.position,
+      ),
+      version: mergeConflictingVersion(
+        normalizedAssumedMasterState!.version,
+        normalizedNewDocumentState.version,
+        normalizedRealMasterState.version,
+      ),
     }
   },
+}
+
+function normalizeDocument<T extends FirebaseVersionDocument>(document: T): T {
+  return decodeFirebaseVersionDocument(document)
 }
 
 export function mergeConflictingVersion(base: ProVersion, local: ProVersion, remote: ProVersion): ProVersion {
@@ -60,5 +77,5 @@ function mergeValue<T>(base: T, local: T, remote: T): T {
 }
 
 function sameValue(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right)
+  return deepEqual(left, right)
 }
