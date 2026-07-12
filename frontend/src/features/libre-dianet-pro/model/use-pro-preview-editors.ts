@@ -113,9 +113,11 @@ export function useProPreviewEditors({
       originalPoleStopKeys: relatedStops.map(proPoleStopKey),
       originalText: cellOverride?.text ?? '',
       originalRowSpan: cellOverride?.rowSpan ?? 1,
+      originalMincho: cellOverride?.mincho ?? false,
       text: cellOverride?.text ?? '',
       useRowSpan: (cellOverride?.rowSpan ?? 1) > 1,
       rowSpanText: String(cellOverride?.rowSpan ?? 2),
+      mincho: cellOverride?.mincho ?? false,
     })
   }
 

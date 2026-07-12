@@ -285,6 +285,7 @@ export type ProStopCellDisplayOverride = {
   poleId: string
   text: string
   rowSpan: number
+  mincho: boolean
 }
 
 export type ProPoleStop = {

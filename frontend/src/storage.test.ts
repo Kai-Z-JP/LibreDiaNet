@@ -149,7 +149,7 @@ describe('Pro preset store', () => {
                     routeNameOverride: 'A1',
                     destinationOverride: '終点',
                     useTripHeadsignAsDestination: false,
-                    stopCellOverrides: [],
+                    stopCellOverrides: [{ poleId: 'pole-1', text: '回送', rowSpan: 1, mincho: true }],
                   },
                 ],
                 poles: [
@@ -207,12 +207,12 @@ describe('Pro preset store', () => {
         routeNameOverride: 'A1',
         destinationOverride: '終点',
         useTripHeadsignAsDestination: false,
-        stopCellOverrides: [],
+        stopCellOverrides: [{ poleId: 'pole-1', text: '回送', rowSpan: 1, mincho: true }],
       },
     ])
   })
 
-  it('defaults old Pro route display overrides to not using trip headsign', () => {
+  it('defaults fields missing from old Pro route display overrides', () => {
     const storage = new MemoryStorage()
     storage.setItem(
       PRO_STORAGE_KEY,
@@ -237,7 +237,7 @@ describe('Pro preset store', () => {
                     routeNameOverride: null,
                     routeNameFont: null,
                     destinationOverride: '終点',
-                    stopCellOverrides: [],
+                    stopCellOverrides: [{ poleId: 'pole-1', text: '回送', rowSpan: 1 }],
                   },
                 ],
                 poles: [],
@@ -250,6 +250,7 @@ describe('Pro preset store', () => {
     )
 
     expect(loadProPresetStore(storage).versions[0]?.presets[0]?.routeDisplayOverrides[0]?.useTripHeadsignAsDestination).toBe(false)
+    expect(loadProPresetStore(storage).versions[0]?.presets[0]?.routeDisplayOverrides[0]?.stopCellOverrides[0]?.mincho).toBe(false)
   })
 })
 

@@ -42,9 +42,11 @@ export type ProStopCellEditor = {
   originalPoleStopKeys: string[]
   originalText: string
   originalRowSpan: number
+  originalMincho: boolean
   text: string
   useRowSpan: boolean
   rowSpanText: string
+  mincho: boolean
 }
 
 export type ProPreviewPendingPoleMerge = {

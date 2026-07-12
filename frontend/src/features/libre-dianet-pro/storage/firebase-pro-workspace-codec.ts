@@ -40,6 +40,13 @@ export function decodeFirebaseVersionDocument<T extends FirebaseVersionDocument>
       ...document.version,
       presets: document.version.presets.map((preset) => ({
         ...preset,
+        routeDisplayOverrides: preset.routeDisplayOverrides.map((override) => ({
+          ...override,
+          stopCellOverrides: override.stopCellOverrides.map((cellOverride) => ({
+            ...cellOverride,
+            mincho: cellOverride.mincho ?? false,
+          })),
+        })),
         excludedStopPatterns: decodeExcludedStopPatterns(preset.excludedStopPatterns),
       })),
     },

@@ -183,6 +183,7 @@ function parseProStopCellDisplayOverrides(value: unknown): ProRouteDisplayOverri
       poleId: asString(record.poleId),
       text: asString(record.text),
       rowSpan: asNumber(record.rowSpan),
+      mincho: asBoolean(record.mincho, false),
     }
   })
 }

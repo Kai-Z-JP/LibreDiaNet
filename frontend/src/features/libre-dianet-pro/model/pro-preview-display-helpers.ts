@@ -26,6 +26,7 @@ export function normalizeProRouteDisplayOverride(
       ...cell,
       text: cell.text.trim(),
       rowSpan: Math.max(cell.rowSpan, 1),
+      mincho: cell.mincho ?? false,
     }))
 
   if (!hasRouteNameOverride && !destinationOverride && !useTripHeadsignAsDestination) {
@@ -66,6 +67,7 @@ export function buildProPreviewCellDisplay(
     rowSpan: cellOverride?.rowSpan ?? 1,
     hidden,
     overridden: Boolean(cellOverride),
+    mincho: cellOverride?.mincho ?? false,
   }
 }
 

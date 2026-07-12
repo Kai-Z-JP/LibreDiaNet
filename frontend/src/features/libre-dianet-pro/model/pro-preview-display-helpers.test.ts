@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EMPTY_OVERRIDE, type ProPoleDetail, type ProRouteDisplayOverride } from '../../../types'
 import { stopPatternKey } from '../../../utils'
 import {
+  buildProPreviewCellDisplay,
   hasProRouteNameOverride,
   isProPatternIndexReversed,
   normalizeProRouteDisplayOverride,
@@ -42,6 +43,24 @@ describe('hasProRouteNameOverride', () => {
 
   it('does not treat null as a route name override', () => {
     expect(hasProRouteNameOverride(baseOverride, 'A1')).toBe(false)
+  })
+})
+
+describe('buildProPreviewCellDisplay', () => {
+  it('uses Gothic by default and exposes the Mincho override', () => {
+    const poles = [pole('pole-a', 'stop-a', 'pattern', 0)]
+
+    expect(buildProPreviewCellDisplay(undefined, poles, 0).mincho).toBe(false)
+    expect(
+      buildProPreviewCellDisplay(
+        {
+          ...baseOverride,
+          stopCellOverrides: [{ poleId: 'pole-a', text: '回送', rowSpan: 1, mincho: true }],
+        },
+        poles,
+        0,
+      ).mincho,
+    ).toBe(true)
   })
 })
 

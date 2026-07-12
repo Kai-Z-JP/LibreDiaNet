@@ -125,7 +125,7 @@ describe('requestDiaNetXlsxInBrowser', () => {
             routeNameOverride: '急行',
             destinationOverride: '上書き行先',
             useTripHeadsignAsDestination: false,
-            stopCellOverrides: [{ poleId: 'stop-2', text: '止', rowSpan: 2 }],
+            stopCellOverrides: [{ poleId: 'stop-2', text: '止', rowSpan: 2, mincho: false }],
           },
         ],
       },

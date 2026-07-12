@@ -81,6 +81,15 @@ export function ProPreviewCellDialog({
                 ))}
               </Box>
               <FormControlLabel
+                label="明朝体で表示する"
+                control={
+                  <Checkbox
+                    checked={editor.mincho}
+                    onChange={(_, checked) => updateEditor((current) => (current ? { ...current, mincho: checked } : current))}
+                  />
+                }
+              />
+              <FormControlLabel
                 label="複数セルを跨いで縦書きにする"
                 control={
                   <Checkbox
@@ -146,6 +155,7 @@ export function ProPreviewCellDialog({
                               poleId: editor.poleId,
                               text,
                               rowSpan,
+                              mincho: editor.mincho,
                             },
                           ]
                         : []),
@@ -180,6 +190,7 @@ function hasCellEditorChanges(editor: ProStopCellEditor): boolean {
   return (
     text !== editor.originalText ||
     rowSpan !== editor.originalRowSpan ||
+    editor.mincho !== editor.originalMincho ||
     currentPoleStopKeys.length !== editor.originalPoleStopKeys.length ||
     currentPoleStopKeys.some((key, index) => key !== editor.originalPoleStopKeys[index])
   )

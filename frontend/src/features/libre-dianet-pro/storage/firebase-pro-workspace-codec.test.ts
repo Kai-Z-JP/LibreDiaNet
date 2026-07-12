@@ -64,4 +64,42 @@ describe('Firebase Pro workspace codec', () => {
 
     expect(encodeFirebaseVersionDocument(encoded)).toEqual(encoded)
   })
+
+  it('defaults Mincho to false for old replicated cell overrides', () => {
+    const oldDocument = {
+      id: 'document',
+      workspaceId: 'workspace',
+      position: 0,
+      version: {
+        id: 'version',
+        name: 'Version',
+        revisionDate: '2026-04-01',
+        gtfsSources: [],
+        presets: [
+          {
+            id: 'preset',
+            name: 'Preset',
+            index: 0,
+            sourceIds: [],
+            routes: [],
+            routeDisplayOverrides: [
+              {
+                routeKey: 'route',
+                routeNameOverride: null,
+                destinationOverride: null,
+                useTripHeadsignAsDestination: false,
+                stopCellOverrides: [{ poleId: 'pole', text: '回送', rowSpan: 1 }],
+              },
+            ],
+            poles: [],
+            excludedStopPatterns: [],
+          },
+        ],
+      },
+    } as unknown as FirebaseVersionDocument
+
+    expect(decodeFirebaseVersionDocument(oldDocument).version.presets[0]?.routeDisplayOverrides[0]?.stopCellOverrides[0]?.mincho).toBe(
+      false,
+    )
+  })
 })

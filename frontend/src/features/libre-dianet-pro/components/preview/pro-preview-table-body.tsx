@@ -174,9 +174,9 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                         return (
                           <td
                             key={`pattern-${presetPatternIndex}-${pole.id}`}
-                            className={`pro-preview-time-cell${cellDisplay.rowSpan > 1 ? ' pro-preview-time-cell-spanned' : ''}${
-                              excluded ? sectionLineClass : `${sectionLineClass} pro-preview-editable`
-                            }`}
+                            className={`pro-preview-time-cell${cellDisplay.mincho ? ' pro-preview-time-cell-mincho' : ''}${
+                              cellDisplay.rowSpan > 1 ? ' pro-preview-time-cell-spanned' : ''
+                            }${excluded ? sectionLineClass : `${sectionLineClass} pro-preview-editable`}`}
                             rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
                             title={excluded ? 'この停車パターンは使用しない' : 'クリックしてセル上書きを編集'}
                             onClick={() => !excluded && onOpenCellEditor(route, pattern, pole, name)}
@@ -209,7 +209,9 @@ export function ProPreviewTableBody({ data, actions }: ProPreviewTableProps) {
                         return (
                           <td
                             key={`actual-time-${trip.sourceId}-${trip.stopTime[0]?.tripId ?? index}-${pole.id}`}
-                            className={`pro-preview-time-cell${cellDisplay.rowSpan > 1 ? ' pro-preview-time-cell-spanned' : ''}${sectionLineClass}`}
+                            className={`pro-preview-time-cell${cellDisplay.mincho ? ' pro-preview-time-cell-mincho' : ''}${
+                              cellDisplay.rowSpan > 1 ? ' pro-preview-time-cell-spanned' : ''
+                            }${sectionLineClass}`}
                             rowSpan={cellDisplay.rowSpan > 1 ? cellDisplay.rowSpan : undefined}
                           >
                             <PreviewCellText text={displayText} rowSpan={cellDisplay.rowSpan} />

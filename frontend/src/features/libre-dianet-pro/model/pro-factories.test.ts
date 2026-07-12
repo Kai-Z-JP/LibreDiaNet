@@ -36,7 +36,7 @@ describe('duplicateProPreset', () => {
           routeNameOverride: null,
           destinationOverride: null,
           useTripHeadsignAsDestination: false,
-          stopCellOverrides: [{ poleId: 'pole-a', text: 'override', rowSpan: 2 }],
+          stopCellOverrides: [{ poleId: 'pole-a', text: 'override', rowSpan: 2, mincho: true }],
         },
       ],
       poles: [
@@ -82,7 +82,7 @@ describe('duplicateProPole', () => {
           routeNameOverride: null,
           destinationOverride: null,
           useTripHeadsignAsDestination: false,
-          stopCellOverrides: [{ poleId: 'pole-a', text: 'override', rowSpan: 2 }],
+          stopCellOverrides: [{ poleId: 'pole-a', text: 'override', rowSpan: 2, mincho: true }],
         },
       ],
       poles: [
@@ -102,6 +102,7 @@ describe('duplicateProPole', () => {
       poleId: duplicatedPole?.id,
       text: 'override',
       rowSpan: 2,
+      mincho: true,
     })
   })
 })

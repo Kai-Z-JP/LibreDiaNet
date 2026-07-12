@@ -1,4 +1,4 @@
-import { Box, FormControlLabel, MenuItem, Switch, TextField, ToggleButton, ToggleButtonGroup } from '@mui/material'
+import { Alert, Box, Button, FormControlLabel, MenuItem, Switch, TextField, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import type { GtfsServiceWeekday, GtfsStop, ProPreset, ProPresetContext, ProVersion } from '../../../../types'
 import type { ProPreviewMode } from '../../model/use-pro-preview-state'
 import { useProPreviewModel } from '../../hooks/use-pro-preview-model'
@@ -120,10 +120,21 @@ export function ProPreviewPanel({
             }
             label="実時刻表"
           />
-          <Box sx={{ marginLeft: 'auto' }}>
-            <OutputDialog disabled={props.controls.exportDisabled || props.controls.downloading} onSubmit={props.controls.onRequestXlsx} />
+          <Box sx={{ marginLeft: 'auto', display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Button
+              variant="outlined"
+              disabled={props.controls.exportDisabled || props.controls.inddExporting || props.controls.downloading}
+              onClick={() => void props.controls.onRequestInddJson()}
+            >
+              InDesign用JSON出力
+            </Button>
+            <OutputDialog
+              disabled={props.controls.exportDisabled || props.controls.downloading || props.controls.inddExporting}
+              onSubmit={props.controls.onRequestXlsx}
+            />
           </Box>
         </Box>
+        {props.controls.inddExportError && <Alert severity="error">{props.controls.inddExportError}</Alert>}
         <ProPreviewTable {...props.table} />
         <ProPreviewEditorDialogs {...props.dialogs} />
       </Box>

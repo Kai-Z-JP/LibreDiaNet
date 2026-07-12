@@ -4,6 +4,7 @@ import { useProPreviewDisplay } from '../model/use-pro-preview-display'
 import { useProPreviewEditors } from '../model/use-pro-preview-editors'
 import { useProPreviewPoles } from '../model/use-pro-preview-poles'
 import { useProPreviewState } from '../model/use-pro-preview-state'
+import { useProInddExport } from '../model/use-pro-indd-export'
 import { useProTrips, useSortedProTrips } from '../model/use-pro-trips'
 import { useProXlsxExport } from '../model/use-pro-xlsx-export'
 export type { ProPoleNameEditor, ProRouteEditor, ProStopCellEditor } from '../model/use-pro-preview-state'
@@ -83,6 +84,14 @@ export function useProPreviewModel({
     setPendingPoleMerge,
   })
   const { downloading, requestXlsx } = useProXlsxExport({ version, preset, context, sourceNameMap })
+  const inddExport = useProInddExport({
+    version,
+    preset,
+    context,
+    constructedRoutes,
+    stopMap,
+    sourceNameMap,
+  })
 
   return {
     state: {
@@ -123,6 +132,7 @@ export function useProPreviewModel({
       updateRouteDisplayOverride: editors.updateRouteDisplayOverride,
       dragPreviewPole: poles.dragPreviewPole,
       requestXlsx,
+      requestInddJson: inddExport.requestInddJson,
     },
     props: {
       controls: {
@@ -132,6 +142,8 @@ export function useProPreviewModel({
         showStaticPatterns,
         showActualTimetable,
         downloading,
+        inddExporting: inddExport.exporting,
+        inddExportError: inddExport.error,
         exportDisabled: display.exportDisabled,
         onSelectPreviewMode: setPreviewMode,
         onSelectWeekday: setWeekday,
@@ -139,6 +151,7 @@ export function useProPreviewModel({
         onToggleStaticPatterns: setShowStaticPatterns,
         onToggleActualTimetable: setShowActualTimetable,
         onRequestXlsx: requestXlsx,
+        onRequestInddJson: inddExport.requestInddJson,
       },
       table: {
         data: {

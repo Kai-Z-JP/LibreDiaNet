@@ -289,7 +289,12 @@ export const ProPreviewStyleScope = styled.div`
     overflow: hidden;
     border-inline: 1px solid #000 !important;
     font-size: 0.9rem;
+    font-family: 'ヒラギノ角ゴ ProN', 'Noto Sans JP', sans-serif;
     line-height: 1.05;
+  }
+
+  .pro-preview-time-cell-mincho {
+    font-family: 'ヒラギノ明朝 ProN', 'Noto Serif JP', serif;
   }
 
   .pro-preview-time-cell-spanned {
