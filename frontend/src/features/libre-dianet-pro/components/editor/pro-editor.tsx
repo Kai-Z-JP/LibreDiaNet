@@ -6,6 +6,7 @@ import { tabLabels } from '../../model/pro-ui-constants'
 import { EditableTitle } from '../../../libre-dianet/components/shared'
 import { PoleMergePanel } from '../pole-merge/pole-merge-panel'
 import { ProPreviewPanel } from '../preview/pro-preview-panel'
+import { ProFareTrianglePanel } from '../fare/pro-fare-triangle-panel'
 import { EmptyState } from '../shared/empty-state'
 import { PresetRoutePanel } from './preset-route-panel'
 import { ProPresetDebugPanel } from './pro-preset-debug-panel'
@@ -78,6 +79,9 @@ export function ProEditor({
       <Tabs
         value={props.tabs.value}
         onChange={(_, next) => props.tabs.onChange(next)}
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
         sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
       >
         {tabLabels.map((label) => (
@@ -96,6 +100,8 @@ export function ProEditor({
         {props.tabs.value === 2 &&
           (props.previewPanel ? <ProPreviewPanel {...props.previewPanel} /> : <EmptyState text="左側からプリセットを作成してください。" />)}
         {props.tabs.value === 3 &&
+          (props.farePanel ? <ProFareTrianglePanel {...props.farePanel} /> : <EmptyState text="左側からプリセットを作成してください。" />)}
+        {props.tabs.value === 4 &&
           (props.debugPanel ? <ProPresetDebugPanel {...props.debugPanel} /> : <EmptyState text="左側からプリセットを作成してください。" />)}
       </EditorTabContent>
     </EditorRoot>

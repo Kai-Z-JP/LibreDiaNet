@@ -38,8 +38,7 @@ export function proEditorReducer(state: ProEditorState, action: ProEditorAction)
         ...state,
         tab: selectionChanged ? 0 : state.tab,
         draftVersion: action.version,
-        draftPreset:
-          selectionChanged || sameValue(state.draftPreset, state.externalPreset) ? action.preset : state.draftPreset,
+        draftPreset: selectionChanged || sameValue(state.draftPreset, state.externalPreset) ? action.preset : state.draftPreset,
         externalPreset: action.preset,
         activeDraftKey: action.draftKey,
       }
@@ -180,6 +179,15 @@ export function useProEditorModel({
             stopMap,
             sourceNameMap,
             onUpdate: actions.replaceDraftPreset,
+          }
+        : null,
+      farePanel: draftPreset
+        ? {
+            preset: draftPreset,
+            context: draftContext,
+            constructedRoutes,
+            stopMap,
+            sourceNameMap,
           }
         : null,
       debugPanel: draftPreset

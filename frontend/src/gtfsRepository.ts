@@ -1,6 +1,6 @@
-import { createGtfsLoader, type GtfsDatabaseProvider, type GtfsLoader } from '@gtfs-jp/loader'
+import { createGtfsLoader, type GtfsDatabaseProvider, type GtfsLoader, type GtfsValidationResult } from '@gtfs-jp/loader'
 import { getActiveServiceIds, type GtfsQuerySource } from '@gtfs-jp/query'
-import { type GtfsJpV4TableRow } from '@gtfs-jp/types'
+import { type GtfsJpV4TableName, type GtfsJpV4TableRow } from '@gtfs-jp/types'
 import type {
   ConstructedRoute,
   DayMapping,
@@ -25,6 +25,8 @@ const IMPORT_OPTIONS = {
   opfsImportMode: 'memory-stage' as const,
 }
 
+const OPTIONAL_DIANET_TABLES = new Set<GtfsJpV4TableName>(['fare_attributes'])
+
 type Db = ReturnType<GtfsLoader['db']>
 type TripRow = Pick<GtfsJpV4TableRow<'trips'>, 'trip_id' | 'route_id' | 'direction_id' | 'service_id' | 'jp_pattern_id'> &
   Partial<Pick<GtfsJpV4TableRow<'trips'>, 'trip_headsign'>>
@@ -36,6 +38,31 @@ type CalendarRow = Pick<
 >
 type RawTripRow = Record<keyof TripRow, unknown>
 type RawStopTimeRow = Record<keyof StopTimeRow, unknown>
+
+export interface FareV1Attribute {
+  fareId: string
+  price: number
+  icPrice: number | null
+  currencyType: string
+  agencyId: string | null
+}
+
+export interface FareV1Rule {
+  fareId: string
+  routeId: string | null
+  originId: string | null
+  destinationId: string | null
+  containsId: string | null
+}
+
+export interface FareV1Data {
+  fareAttributesPresent: boolean
+  fareRulesPresent: boolean
+  stopZoneById: Record<string, string | null>
+  routeAgencyById: Record<string, string | null>
+  attributes: FareV1Attribute[]
+  rules: FareV1Rule[]
+}
 
 class RawCacheMissingError extends Error {
   constructor() {
@@ -60,12 +87,13 @@ export class GtfsRepository {
     const loader = this.createLoader(filename)
     await loader.open()
     const validation = await loader.validate()
-    if (!validation.valid) {
+    if (missingRequiredGtfsTables(validation).length > 0) {
       await loader.reset()
       await importRepoZip(loader, info)
       const postValidation = await loader.validate()
-      if (!postValidation.valid) {
-        throw new Error(`GTFS validation failed: ${postValidation.missingRequired.join(', ')}`)
+      const missingRequired = missingRequiredGtfsTables(postValidation)
+      if (missingRequired.length > 0) {
+        throw new Error(`GTFS validation failed: ${missingRequired.join(', ')}`)
       }
       const handle = { filename, loader }
       this.handles.set(filename, handle)
@@ -86,8 +114,9 @@ export class GtfsRepository {
     await loader.reset()
     await importRepoZip(loader, info)
     const validation = await loader.validate()
-    if (!validation.valid) {
-      throw new Error(`GTFS validation failed: ${validation.missingRequired.join(', ')}`)
+    const missingRequired = missingRequiredGtfsTables(validation)
+    if (missingRequired.length > 0) {
+      throw new Error(`GTFS validation failed: ${missingRequired.join(', ')}`)
     }
     const handle = { filename, loader }
     this.handles.set(filename, handle)
@@ -108,15 +137,16 @@ export class GtfsRepository {
       await loader.reset()
       await loader.importZip(file, IMPORT_OPTIONS)
       const validation = await loader.validate()
-      if (!validation.valid) {
-        throw new Error(`GTFS validation failed: ${validation.missingRequired.join(', ')}`)
+      const missingRequired = missingRequiredGtfsTables(validation)
+      if (missingRequired.length > 0) {
+        throw new Error(`GTFS validation failed: ${missingRequired.join(', ')}`)
       }
       const handle = { filename, loader }
       this.handles.set(filename, handle)
       return { handle, imported: true }
     }
     const validation = await loader.validate()
-    if (!validation.valid) {
+    if (missingRequiredGtfsTables(validation).length > 0) {
       if (!existing) {
         await loader.close()
       }
@@ -320,6 +350,73 @@ export class GtfsRepository {
 
   async getStopsByIds(handle: GtfsHandle, stopIds: string[]): Promise<StopMap> {
     return this.loadStops(handle.loader.db(), stopIds)
+  }
+
+  async loadFareV1Data(handle: GtfsHandle, routeIds: readonly string[], stopIds: readonly string[]): Promise<FareV1Data> {
+    const db = handle.loader.db()
+    const uniqueRouteIds = Array.from(new Set(routeIds))
+    const uniqueStopIds = Array.from(new Set(stopIds))
+    const [fareAttributesPresent, fareRulesPresent, tableMetadata] = await Promise.all([
+      handle.loader.hasTable('fare_attributes'),
+      handle.loader.hasTable('fare_rules'),
+      db.introspection.getTables(),
+    ])
+    const columnsByTable = new Map(tableMetadata.map((table) => [table.name, new Set(table.columns.map((column) => column.name))]))
+    const stopColumns = availableTableColumns(columnsByTable, 'stops', ['stop_id'], ['zone_id'])
+    const routeColumns = availableTableColumns(columnsByTable, 'routes', ['route_id'], ['agency_id'])
+    const fareAttributeColumns = availableTableColumns(
+      columnsByTable,
+      'fare_attributes',
+      ['fare_id', 'price', 'currency_type'],
+      ['ic_price', 'agency_id'],
+    )
+    const fareRuleColumns = availableTableColumns(
+      columnsByTable,
+      'fare_rules',
+      ['fare_id'],
+      ['route_id', 'origin_id', 'destination_id', 'contains_id'],
+    )
+
+    const stopRowsPromise =
+      uniqueStopIds.length === 0
+        ? Promise.resolve([])
+        : db.selectFrom('stops').select(stopColumns).where('stop_id', 'in', uniqueStopIds).execute()
+    const routeRowsPromise =
+      uniqueRouteIds.length === 0
+        ? Promise.resolve([])
+        : db.selectFrom('routes').select(routeColumns).where('route_id', 'in', uniqueRouteIds).execute()
+    const fareAttributeRowsPromise = fareAttributesPresent
+      ? db.selectFrom('fare_attributes').select(fareAttributeColumns).execute()
+      : Promise.resolve([])
+    const fareRuleRowsPromise = fareRulesPresent ? db.selectFrom('fare_rules').select(fareRuleColumns).execute() : Promise.resolve([])
+
+    const [stopRows, routeRows, fareAttributeRows, fareRuleRows] = await Promise.all([
+      stopRowsPromise,
+      routeRowsPromise,
+      fareAttributeRowsPromise,
+      fareRuleRowsPromise,
+    ])
+
+    return {
+      fareAttributesPresent,
+      fareRulesPresent,
+      stopZoneById: Object.fromEntries(stopRows.map((row) => [String(row.stop_id), asOptionalId(row.zone_id)])),
+      routeAgencyById: Object.fromEntries(routeRows.map((row) => [String(row.route_id), asOptionalId(row.agency_id)])),
+      attributes: fareAttributeRows.map((row) => ({
+        fareId: String(row.fare_id),
+        price: toNumber(row.price),
+        icPrice: toNullableNumber(row.ic_price),
+        currencyType: String(row.currency_type),
+        agencyId: asOptionalId(row.agency_id),
+      })),
+      rules: fareRuleRows.map((row) => ({
+        fareId: String(row.fare_id),
+        routeId: asOptionalId(row.route_id),
+        originId: asOptionalId(row.origin_id),
+        destinationId: asOptionalId(row.destination_id),
+        containsId: asOptionalId(row.contains_id),
+      })),
+    }
   }
 
   async buildExportData(handle: GtfsHandle, preset: RoutePresetV2): Promise<DiaNetGtfsExportData> {
@@ -565,6 +662,10 @@ export class GtfsRepository {
   }
 }
 
+export function missingRequiredGtfsTables(validation: Pick<GtfsValidationResult, 'missingRequired'>): GtfsJpV4TableName[] {
+  return validation.missingRequired.filter((tableName) => !OPTIONAL_DIANET_TABLES.has(tableName))
+}
+
 export function selectActiveServiceIdsForWeekday(rows: CalendarRow[], weekday: GtfsServiceWeekday, referenceDateIso: string): string[] {
   return rows
     .filter((row) => {
@@ -657,6 +758,20 @@ function toDirectionId(value: unknown): 0 | 1 | null {
 
 function asOptionalString(value: unknown): string | null {
   return typeof value === 'string' ? value : value == null ? null : String(value)
+}
+
+function asOptionalId(value: unknown): string | null {
+  return asOptionalString(value)?.trim() || null
+}
+
+function availableTableColumns<TColumn extends string>(
+  columnsByTable: Map<string, Set<string>>,
+  tableName: string,
+  requiredColumns: readonly TColumn[],
+  optionalColumns: readonly TColumn[],
+): TColumn[] {
+  const availableColumns = columnsByTable.get(tableName)
+  return [...requiredColumns, ...optionalColumns.filter((column) => availableColumns?.has(column))]
 }
 
 function normalizeGtfsDate(value: string | null): string | null {

@@ -1,4 +1,4 @@
-export const tabLabels = ['路線', '標柱統合', 'プレビュー', 'デバッグ']
+export const tabLabels = ['路線', '標柱統合', 'プレビュー', '三角表運賃', 'デバッグ']
 
 export const fieldLabelProps = {
   shrink: true,
