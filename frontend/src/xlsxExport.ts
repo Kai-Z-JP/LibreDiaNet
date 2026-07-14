@@ -484,7 +484,7 @@ function writeTripTimeCells(
     const trip = trips[tripIndex]
     const cellDisplay = trip ? routeStopCellDisplay(routeDisplayOverrideForTrip(preset, trip), preset.poles, poleIndex) : null
     const baseText = cellDisplay?.textOverride ?? tripTime[poleIndex]
-    const text = horizontalLine && !cellDisplay?.overridden && baseText === '…' ? '———' : baseText
+    const text = horizontalLine && !cellDisplay?.overridden && baseText === '…' ? '――' : baseText
     const cell = row.getCell(FIRST_TRIP_COLUMN + tripIndex)
 
     if (cellDisplay?.hidden) {
@@ -789,7 +789,7 @@ function fillMissingTimes(times: string[]): string[] {
 }
 
 function stopTimeHMM(stopTime: DiaNetStopTimeData | undefined, useArrivalTime: boolean): string {
-  const selectedTime = useArrivalTime ? stopTime?.arrivalTime ?? stopTime?.departureTime : stopTime?.departureTime
+  const selectedTime = useArrivalTime ? (stopTime?.arrivalTime ?? stopTime?.departureTime) : stopTime?.departureTime
   const parts = selectedTime?.split(':')
   if (!parts || parts.length < 2) {
     return ''

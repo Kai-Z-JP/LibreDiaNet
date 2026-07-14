@@ -24,6 +24,7 @@ export type ProInddPole = {
   fill?: true
   topEdgeStroke?: true
   bottomEdgeStroke?: true
+  horizontalLine?: true
 }
 
 export type ProInddDiagram = {
@@ -129,6 +130,7 @@ function buildProInddPoles(preset: ProPreset, constructedRoutes: ProConstructedR
       ...(fill ? { fill: true as const } : {}),
       ...(pole.override.branchStart ? { topEdgeStroke: true as const } : {}),
       ...(pole.override.branchEnd ? { bottomEdgeStroke: true as const } : {}),
+      ...(pole.override.horizontalLine ? { horizontalLine: true as const } : {}),
     }
   })
 }
@@ -160,7 +162,7 @@ function buildProInddCellDisplays(
   const legacyTimes = preset.poles.map((pole) => proTripTimeForPole(trip, pole).replace(/^\u2002/, ' '))
   const displays: ProInddDiagramCellDisplay[] = preset.poles.map((pole, index) => {
     const text = legacyTimes[index] || missingTimeText(legacyTimes, preset, index)
-    const outputText = normalizeInddCellText(pole.override.horizontalLine && text === '…' ? '———' : text)
+    const outputText = normalizeInddCellText(pole.override.horizontalLine && text === '…' ? '――' : text)
     const compareValue = parseCompareValue(outputText)
     return {
       text: outputText,

@@ -66,9 +66,7 @@ describe('buildProPreviewCellDisplay', () => {
 
 describe('proTripPreviewTimes', () => {
   it('uses arrival time only when arrival is explicitly selected', () => {
-    const stopTime = [
-      { tripId: 'trip-1', stopId: 'stop-a', stopSequence: 1, arrivalTime: '07:59:00', departureTime: '08:00:00' },
-    ]
+    const stopTime = [{ tripId: 'trip-1', stopId: 'stop-a', stopSequence: 1, arrivalTime: '07:59:00', departureTime: '08:00:00' }]
     const patternKey = stopPatternKey(stopTime)
     const trip: ProConstructedTrip = {
       sourceId: 'source-a',
@@ -123,8 +121,8 @@ describe('isProPatternIndexReversed', () => {
   })
 
   it('ignores pass markers and non-numeric text', () => {
-    expect(isProPatternIndexReversed(['2', '…', '———', 'text'], 1)).toBe(false)
-    expect(isProPatternIndexReversed(['2', '…', '———', 'text'], 3)).toBe(false)
+    expect(isProPatternIndexReversed(['2', '…', '――', 'text'], 1)).toBe(false)
+    expect(isProPatternIndexReversed(['2', '…', '――', 'text'], 3)).toBe(false)
   })
 })
 
