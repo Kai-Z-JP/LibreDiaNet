@@ -3,6 +3,7 @@ package jp.kaiz.shachia.dianet
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
@@ -13,74 +14,124 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonPrimitive
 
-object DayMappingListSerializer : KSerializer<List<Pair<String, LocalDate>>> {
-    override val descriptor: SerialDescriptor =
-        ListSerializer(DayMappingTupleSerializer).descriptor
+@Serializable(with = DayMappingSerializer::class)
+sealed interface DayMapping {
+    val name: String
+}
 
-    override fun deserialize(decoder: Decoder): List<Pair<String, LocalDate>> {
+data class DateDayMapping(
+    override val name: String,
+    val date: LocalDate,
+) : DayMapping
+
+data class WeekdayDayMapping(
+    override val name: String,
+    val weekday: GtfsServiceWeekday,
+) : DayMapping
+
+enum class GtfsServiceWeekday {
+    MONDAY,
+    TUESDAY,
+    WEDNESDAY,
+    THURSDAY,
+    FRIDAY,
+    SATURDAY,
+    SUNDAY
+}
+
+object DayMappingListSerializer : KSerializer<List<DayMapping>> {
+    override val descriptor: SerialDescriptor =
+        ListSerializer(DayMappingSerializer).descriptor
+
+    override fun deserialize(decoder: Decoder): List<DayMapping> {
         val jsonDecoder = decoder as? JsonDecoder
             ?: throw SerializationException("DayMappingListSerializer supports only JSON")
         val element = jsonDecoder.decodeJsonElement()
-        return jsonDecoder.json.decodeFromJsonElement(ListSerializer(DayMappingTupleSerializer), element)
+        return jsonDecoder.json.decodeFromJsonElement(ListSerializer(DayMappingSerializer), element)
     }
 
-    override fun serialize(encoder: Encoder, value: List<Pair<String, LocalDate>>) {
+    override fun serialize(encoder: Encoder, value: List<DayMapping>) {
         val jsonEncoder = encoder as? JsonEncoder
             ?: throw SerializationException("DayMappingListSerializer supports only JSON")
-        val element = jsonEncoder.json.encodeToJsonElement(ListSerializer(DayMappingTupleSerializer), value)
+        val element = jsonEncoder.json.encodeToJsonElement(ListSerializer(DayMappingSerializer), value)
         jsonEncoder.encodeJsonElement(element)
     }
 }
 
-private object DayMappingTupleSerializer : KSerializer<Pair<String, LocalDate>> {
+object DayMappingSerializer : KSerializer<DayMapping> {
     override val descriptor: SerialDescriptor =
         JsonElement.serializer().descriptor
 
-    override fun deserialize(decoder: Decoder): Pair<String, LocalDate> {
+    override fun deserialize(decoder: Decoder): DayMapping {
         val jsonDecoder = decoder as? JsonDecoder
-            ?: throw SerializationException("DayMappingTupleSerializer supports only JSON")
+            ?: throw SerializationException("DayMappingSerializer supports only JSON")
         return decodeElement(jsonDecoder.decodeJsonElement())
     }
 
-    override fun serialize(encoder: Encoder, value: Pair<String, LocalDate>) {
+    override fun serialize(encoder: Encoder, value: DayMapping) {
         val jsonEncoder = encoder as? JsonEncoder
-            ?: throw SerializationException("DayMappingTupleSerializer supports only JSON")
-        jsonEncoder.encodeJsonElement(
-            buildJsonArray {
-                add(JsonPrimitive(value.first))
-                add(JsonPrimitive(value.second.toString()))
+            ?: throw SerializationException("DayMappingSerializer supports only JSON")
+        val element = when (value) {
+            is DateDayMapping -> buildJsonObject {
+                put("name", JsonPrimitive(value.name))
+                put("type", JsonPrimitive("date"))
+                put("date", JsonPrimitive(value.date.toString()))
             }
-        )
+            is WeekdayDayMapping -> buildJsonObject {
+                put("name", JsonPrimitive(value.name))
+                put("type", JsonPrimitive("weekday"))
+                put("weekday", JsonPrimitive(value.weekday.serialValue()))
+            }
+        }
+        jsonEncoder.encodeJsonElement(element)
     }
 
-    private fun decodeElement(element: JsonElement): Pair<String, LocalDate> =
+    private fun decodeElement(element: JsonElement): DayMapping =
         when (element) {
             is JsonArray -> decodeArray(element)
             is JsonObject -> decodeObject(element)
             else -> throw SerializationException("dayMapping entry must be an array or object")
         }
 
-    private fun decodeArray(element: JsonArray): Pair<String, LocalDate> {
+    private fun decodeArray(element: JsonArray): DayMapping {
         if (element.size != 2) {
             throw SerializationException("dayMapping entry array must have exactly 2 elements")
         }
         val name = element[0].jsonPrimitive.content
         val date = LocalDate.parse(element[1].jsonPrimitive.content)
-        return name to date
+        return DateDayMapping(name, date)
     }
 
-    private fun decodeObject(element: JsonObject): Pair<String, LocalDate> {
+    private fun decodeObject(element: JsonObject): DayMapping {
         val name = element["name"] ?: element["first"]
-        val date = element["date"] ?: element["second"]
-        if (name == null || date == null) {
-            throw SerializationException("dayMapping entry object must contain name/date or first/second")
+        if (name == null) {
+            throw SerializationException("dayMapping entry object must contain name")
         }
-        return name.jsonPrimitive.content to LocalDate.parse(date.jsonPrimitive.content)
+
+        val type = element["type"]?.jsonPrimitive?.content
+        val date = element["date"] ?: element["second"]
+        val weekday = element["weekday"]
+        if (type == "weekday" || weekday != null) {
+            if (weekday == null) {
+                throw SerializationException("weekday dayMapping entry must contain weekday")
+            }
+            return WeekdayDayMapping(name.jsonPrimitive.content, parseGtfsServiceWeekday(weekday.jsonPrimitive.content))
+        }
+        if (date == null) {
+            throw SerializationException("date dayMapping entry must contain date or second")
+        }
+        return DateDayMapping(name.jsonPrimitive.content, LocalDate.parse(date.jsonPrimitive.content))
     }
 }
+
+private fun GtfsServiceWeekday.serialValue(): String =
+    name.lowercase()
+
+private fun parseGtfsServiceWeekday(value: String): GtfsServiceWeekday =
+    GtfsServiceWeekday.values().find { it.serialValue() == value }
+        ?: throw SerializationException("unsupported weekday: $value")

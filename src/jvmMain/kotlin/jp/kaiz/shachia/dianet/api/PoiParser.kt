@@ -96,13 +96,15 @@ private data class DiaNetWorkbookTrip(
     val tripId: String,
     val routeId: String,
     val directionId: Int?,
-    val serviceId: String
+    val serviceId: String,
+    val tripHeadsign: String? = null
 )
 
 private data class DiaNetWorkbookStopTime(
     val tripId: String,
     val stopId: String,
     val stopSequence: Int,
+    val arrivalTime: String?,
     val departureTime: String?,
     val stopPatternId: String? = null
 )
@@ -120,6 +122,39 @@ private data class DiaNetWorkbookCalendar(
     val saturday: Int
 )
 
+private fun DiaNetWorkbookCalendar.isActiveOn(date: LocalDate): Boolean {
+    val startDate = startDate.toGtfsLocalDate()
+    val endDate = endDate.toGtfsLocalDate()
+
+    if (startDate > date || endDate < date) {
+        return false
+    }
+
+    return when (date.dayOfWeek) {
+        DayOfWeek.SUNDAY -> sunday == 1
+        DayOfWeek.MONDAY -> monday == 1
+        DayOfWeek.TUESDAY -> tuesday == 1
+        DayOfWeek.WEDNESDAY -> wednesday == 1
+        DayOfWeek.THURSDAY -> thursday == 1
+        DayOfWeek.FRIDAY -> friday == 1
+        DayOfWeek.SATURDAY -> saturday == 1
+    }
+}
+
+private fun DiaNetWorkbookCalendar.isActiveOn(weekday: GtfsServiceWeekday): Boolean =
+    when (weekday) {
+        GtfsServiceWeekday.SUNDAY -> sunday == 1
+        GtfsServiceWeekday.MONDAY -> monday == 1
+        GtfsServiceWeekday.TUESDAY -> tuesday == 1
+        GtfsServiceWeekday.WEDNESDAY -> wednesday == 1
+        GtfsServiceWeekday.THURSDAY -> thursday == 1
+        GtfsServiceWeekday.FRIDAY -> friday == 1
+        GtfsServiceWeekday.SATURDAY -> saturday == 1
+    }
+
+private fun String.toGtfsLocalDate(): LocalDate =
+    LocalDate(take(4).toInt(), drop(4).take(2).toInt(), takeLast(2).toInt())
+
 private data class DiaNetPreviewRoute(
     val route: DiaNetWorkbookRoute,
     val direction: Int?,
@@ -133,7 +168,13 @@ private data class DiaNetPreviewStopPattern(
 
 private data class DiaNetPreviewTrip(
     val route: DiaNetWorkbookRoute,
+    val trip: DiaNetWorkbookTrip,
     val stopTime: List<DiaNetWorkbookStopTime>
+)
+
+private data class TimetableSortColumn<T>(
+    val item: T,
+    val compareValues: List<Int?>
 )
 
 private fun GTFS.toWorkbookData() = DiaNetWorkbookData(
@@ -146,6 +187,7 @@ private fun GTFS.toWorkbookData() = DiaNetWorkbookData(
             tripId = it.tripId,
             stopId = it.stopId ?: "",
             stopSequence = it.stopSequence,
+            arrivalTime = it.arrivalTime,
             departureTime = it.departureTime,
             stopPatternId = null
         )
@@ -170,8 +212,8 @@ private fun DiaNetGtfsExportData.toWorkbookData() = DiaNetWorkbookData(
     agencyName = agencyName,
     stops = stops.map { DiaNetWorkbookStop(it.id, it.name, it.platformCode, it.jokoOverride) },
     routes = routes.map { DiaNetWorkbookRoute(it.id, it.shortName, it.longName) },
-    trips = trips.map { DiaNetWorkbookTrip(it.tripId, it.routeId, it.directionId, it.serviceId) },
-    stopTimes = stopTimes.map { DiaNetWorkbookStopTime(it.tripId, it.stopId, it.stopSequence, it.departureTime, it.stopPatternId) },
+    trips = trips.map { DiaNetWorkbookTrip(it.tripId, it.routeId, it.directionId, it.serviceId, it.tripHeadsign) },
+    stopTimes = stopTimes.map { DiaNetWorkbookStopTime(it.tripId, it.stopId, it.stopSequence, it.arrivalTime, it.departureTime, it.stopPatternId) },
     calendars = calendars.map {
         DiaNetWorkbookCalendar(
             id = it.id,
@@ -214,7 +256,7 @@ private suspend fun io.ktor.server.application.ApplicationCall.respondWorkbook(
     }
 }
 
-private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayMapping: List<Pair<String, LocalDate>>): ByteArray {
+private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayMapping: List<DayMapping>): ByteArray {
 
     val poles = preset.poles.map { detail -> detail to gtfs.stops.find { pole -> pole.id == detail.id }!! }
     val excludedStopPatternKeys = preset.excludedStopPatterns.map { it.savedStopPatternKey() }.toSet()
@@ -237,57 +279,30 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
         )
     }
 
-    val standardStops = poles.filter { (_, pole) ->
-        constructedRoutes
-            .flatMap(DiaNetPreviewRoute::stopPatterns)
-            .all { pole in it.stops }
-    }.map { it.second }
-
-    val calendarMapping = dayMapping.map { (name, date) ->
-        name to gtfs.calendars.filter { cal ->
-            val startInt = cal.startDate
-            val startDate =
-                LocalDate(startInt.take(4).toInt(), startInt.drop(4).take(2).toInt(), startInt.takeLast(2).toInt())
-            val endInt = cal.endDate
-            val endDate = LocalDate(endInt.take(4).toInt(), endInt.drop(4).take(2).toInt(), endInt.takeLast(2).toInt())
-
-            if (startDate > date || endDate < date) {
-                false
-            }
-            when (date.dayOfWeek) {
-                DayOfWeek.SUNDAY -> cal.sunday == 1
-                DayOfWeek.MONDAY -> cal.monday == 1
-                DayOfWeek.TUESDAY -> cal.tuesday == 1
-                DayOfWeek.WEDNESDAY -> cal.wednesday == 1
-                DayOfWeek.THURSDAY -> cal.thursday == 1
-                DayOfWeek.FRIDAY -> cal.friday == 1
-                DayOfWeek.SATURDAY -> cal.saturday == 1
-                else -> false
+    val calendarMapping = dayMapping.map { mapping ->
+        mapping.name to gtfs.calendars.filter { cal ->
+            when (mapping) {
+                is DateDayMapping -> cal.isActiveOn(mapping.date)
+                is WeekdayDayMapping -> cal.isActiveOn(mapping.weekday)
             }
         }.map { it.id }
     }
 
-    val calTripMapping = calendarMapping.map { (name, calendars) ->
+    val rawCalTripMapping = calendarMapping.map { (name, calendars) ->
         name to preset.routes.flatMap { detail ->
             val route = gtfs.routes.first { it.id == detail.id }
             val trips = gtfs.trips
                 .filter { it.routeId == detail.id && it.directionId == detail.direction && it.serviceId in calendars }
-            trips.map { trip ->
-                gtfs.stopTimes
+            trips.mapNotNull { trip ->
+                val stopTimes = gtfs.stopTimes
                     .filter { it.tripId == trip.tripId }
                     .sortedBy { it.stopSequence }
-            }.filter { stopTimes ->
-                stopTimes.stopPatternKey() !in excludedStopPatternKeys
-            }.map { stopTimes ->
-                DiaNetPreviewTrip(route = route, stopTime = stopTimes)
+                if (stopTimes.stopPatternKey() in excludedStopPatternKeys) {
+                    null
+                } else {
+                    DiaNetPreviewTrip(route = route, trip = trip, stopTime = stopTimes)
+                }
             }
-        }.sortedBy {
-            if (standardStops.isNotEmpty()) {
-                val standartStop = standardStops.first()
-                it.stopTime.find { it.stopId == standartStop.id }
-            } else {
-                it.stopTime.first()
-            }?.departHHMM()
         }
     }
 
@@ -314,6 +329,30 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
         }
     }
 
+    val poleSpans = poles.mapIndexed { index, (_, pole) ->
+        if (index > 0 && poles[index - 1].second.name == pole.name) {
+            1
+        } else {
+            poles.drop(index).takeWhile { (_, candidate) -> candidate.name == pole.name }.size
+        }
+    }
+
+    val calTripMapping = rawCalTripMapping.map { (name, trips) ->
+        name to sortTimetableColumns(
+            trips.map { trip ->
+                val stopIdPatternMapping = stopPatternPoleIndexMapping.getValue(trip.stopTime.stopPatternKey())
+                TimetableSortColumn(
+                    item = trip,
+                    compareValues = preset.poles.mapIndexed { index, _ ->
+                        val poleIndex = stopIdPatternMapping[index]
+                        if (poleIndex == null || poleIndex == -1) null
+                        else trip.stopTime[poleIndex].timeHMM(preset.poles[index].override.jokoOverride == "着").trim().toIntOrNull()
+                    }
+                )
+            },
+            poleSpans
+        )
+    }
 
     val sujiMaps = calTripMapping.map { (name, trips) ->
         val timeListList = trips.map { suji ->
@@ -322,7 +361,7 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
             val sujiTime = preset.poles.mapIndexed { index, poleDetail ->
                 val poleIndex = stopIdPatternMapping[index]
                 if (poleIndex == null || poleIndex == -1) ""
-                else suji.stopTime[poleIndex].departHMM()
+                else suji.stopTime[poleIndex].timeHMM(poleDetail.override.jokoOverride == "着")
             }.toMutableList()
 
             val first = sujiTime.indexOfFirst(String::isNotEmpty)
@@ -560,7 +599,7 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
                             cellStyle = headerDestStyle
                             val stopId = suji.stopTime.last().stopId
                             val stop = poles.map { it.second }.find { it.id == stopId }
-                            +(stop?.name ?: "")
+                            +(suji.trip.tripHeadsign?.takeIf { it.isNotBlank() } ?: stop?.name ?: "")
                         }
                     }
                     repeat(spacing) {
@@ -616,7 +655,7 @@ private fun createDiaNetXlsx(gtfs: DiaNetWorkbookData, preset: RoutePreset, dayM
 
                             timeListList.forEach { sujiTime ->
                                 cell {
-                                    val text = if (override.horizontalLine && sujiTime[index] == "…") "——" else sujiTime[index]
+                                    val text = if (override.horizontalLine && sujiTime[index] == "…") "――" else sujiTime[index]
                                     val time = text.matches(timeReg)
 
                                     cellStyle =
@@ -648,11 +687,121 @@ private fun DiaNetWorkbookStopTime.departHHMM() = departureTime?.split(":")?.let
 } ?: ""
 
 
-private fun DiaNetWorkbookStopTime.departHMM() = departureTime?.split(":")?.let {
+private fun DiaNetWorkbookStopTime.timeHMM(useArrivalTime: Boolean) =
+    (if (useArrivalTime) arrivalTime ?: departureTime else departureTime)?.split(":")?.let {
     val hh = it[0].toInt()
     val mm = it[1].padStart(2, '0')
     "$hh$mm".padStart(4, '\u2002')
-} ?: ""
+    } ?: ""
+
+private fun <T> sortTimetableColumns(columns: List<TimetableSortColumn<T>>, poleSpans: List<Int>): List<T> {
+    val sorted = mutableListOf<TimetableSortColumn<T>>()
+    val remaining = columns.toMutableList()
+
+    while (remaining.isNotEmpty()) {
+        var progress = false
+        val iterator = remaining.listIterator()
+
+        while (iterator.hasNext()) {
+            val check = iterator.next()
+            var addIndex = -1
+
+            if (sorted.isEmpty()) {
+                addIndex = 0
+            } else {
+                for ((sortedIndex, target) in sorted.withIndex()) {
+                    var poleIndex = 0
+                    while (poleIndex < poleSpans.size) {
+                        val targetTime = target.compareValueAt(poleIndex)
+                        val checkTime = check.compareValueAt(poleIndex)
+
+                        if (targetTime != null && checkTime != null) {
+                            if (checkTime < targetTime) {
+                                if (sorted.indexOfFirst { it.compareValueAt(poleIndex) != null } == sortedIndex && addIndex == -1) {
+                                    addIndex = sortedIndex
+                                    break
+                                }
+                                break
+                            }
+                            addIndex = sortedIndex + 1
+                            break
+                        }
+
+                        val colSpan = poleSpans.getOrNull(poleIndex) ?: 1
+                        if (colSpan > 1) {
+                            val targetTimes = target.compareValuesInRange(poleIndex, colSpan)
+                            val checkTimes = check.compareValuesInRange(poleIndex, colSpan)
+
+                            if (targetTimes.any { it != null } && checkTimes.any { it != null }) {
+                                val targetFirstIndex = targetTimes.indexOfFirst { it != null }
+                                val targetLastIndex = targetTimes.indexOfLast { it != null }
+                                val checkFirstIndex = checkTimes.indexOfFirst { it != null }
+                                val checkLastIndex = checkTimes.indexOfLast { it != null }
+
+                                if (targetFirstIndex > checkLastIndex) {
+                                    val targetFirstTime = targetTimes[targetFirstIndex]!!
+                                    val checkLastTime = checkTimes[checkLastIndex]!!
+
+                                    if (targetFirstTime > checkLastTime) {
+                                        if (sortedIndex == 0) {
+                                            addIndex = 0
+                                            break
+                                        }
+                                    } else if (targetFirstTime < checkLastTime) {
+                                        addIndex = sortedIndex + 1
+                                        break
+                                    } else {
+                                        addIndex = sortedIndex
+                                        break
+                                    }
+                                } else if (targetLastIndex < checkFirstIndex) {
+                                    val targetLastTime = targetTimes[targetLastIndex]!!
+                                    val checkFirstTime = checkTimes[checkFirstIndex]!!
+
+                                    if (targetLastTime < checkFirstTime) {
+                                        addIndex = sortedIndex + 1
+                                        break
+                                    } else if (targetLastTime > checkFirstTime) {
+                                        if (sortedIndex == 0) {
+                                            addIndex = 0
+                                            break
+                                        }
+                                    } else {
+                                        addIndex = sortedIndex + 1
+                                        break
+                                    }
+                                }
+                            }
+                        }
+
+                        poleIndex++
+                    }
+                }
+            }
+
+            if (addIndex != -1) {
+                sorted.add(addIndex, check)
+                iterator.remove()
+                progress = true
+            } else if (check.compareValues.isEmpty()) {
+                iterator.remove()
+                progress = true
+            }
+        }
+
+        if (!progress) {
+            sorted.addAll(remaining)
+            remaining.clear()
+        }
+    }
+
+    return sorted.map(TimetableSortColumn<T>::item)
+}
+
+private fun <T> TimetableSortColumn<T>.compareValueAt(index: Int): Int? = compareValues.getOrNull(index)
+
+private fun <T> TimetableSortColumn<T>.compareValuesInRange(start: Int, count: Int): List<Int?> =
+    (start until start + count).map(::compareValueAt)
 
 private fun List<DiaNetWorkbookStopTime>.stopPatternKey(): String {
     val patternId = firstOrNull()?.stopPatternId?.takeIf { it.isNotBlank() }

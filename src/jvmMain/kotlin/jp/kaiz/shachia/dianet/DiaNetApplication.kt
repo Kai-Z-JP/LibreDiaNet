@@ -11,6 +11,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.defaultheaders.*
 import io.ktor.server.plugins.forwardedheaders.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import jp.kaiz.shachia.dianet.api.poiParser
@@ -24,14 +25,34 @@ val client = HttpClient {
     }
 }
 
+private fun frontendResource(path: String): String =
+    DiaNetApplication::class.java.classLoader.getResource(path)!!.readText()
+
+private object DiaNetApplication
+
+private val CrossOriginIsolationHeaders = createApplicationPlugin("CrossOriginIsolationHeaders") {
+    onCall { call ->
+        val path = call.request.path()
+        if (path != "/firebase-auth" && !path.startsWith("/firebase-auth/")) {
+            call.response.header("Cross-Origin-Opener-Policy", "same-origin")
+            call.response.header("Cross-Origin-Embedder-Policy", "require-corp")
+        }
+    }
+}
+
+private suspend fun ApplicationCall.respondFrontend(path: String) {
+    respondText(
+        frontendResource(path),
+        ContentType.Text.Html
+    )
+}
+
 fun Application.module() {
     install(ContentNegotiation) {
         json(kotlinxJson)
     }
-    install(DefaultHeaders) {
-        header("Cross-Origin-Opener-Policy", "same-origin")
-        header("Cross-Origin-Embedder-Policy", "require-corp")
-    }
+    install(DefaultHeaders)
+    install(CrossOriginIsolationHeaders)
     install(CORS) {
         allowHost("127.0.0.1:5173")
         allowHost("localhost:5173")
@@ -51,12 +72,31 @@ fun Application.module() {
             }
         }
 
+        get("/") {
+            val indexPath =
+                if (call.request.queryParameters["experimental"] == "true") {
+                    "react/index.html"
+                } else {
+                    "frontend/index.html"
+                }
+            call.respondFrontend(indexPath)
+        }
+        get("/pro") {
+            call.respondFrontend("react/index.html")
+        }
+        get("/pro/{...}") {
+            call.respondFrontend("react/index.html")
+        }
+        get("/firebase-auth") {
+            call.respondFrontend("react/index.html")
+        }
+        get("/firebase-auth/{...}") {
+            call.respondFrontend("react/index.html")
+        }
+        staticResources("/react", "react")
         staticResources("/", "frontend")
         get("/{...}") {
-            call.respondText(
-                this.javaClass.classLoader.getResource("frontend/index.html")!!.readText(),
-                ContentType.Text.Html
-            )
+            call.respondFrontend("frontend/index.html")
         }
     }
 }

@@ -1,6 +1,14 @@
 import {
   EMPTY_OVERRIDE,
+  type OverrideConfig,
   type PoleDetail,
+  type ProGtfsSource,
+  type ProRouteDisplayOverride,
+  type ProPoleDetail,
+  type ProPreset,
+  type ProPresetStore,
+  type ProRouteDetail,
+  type ProVersion,
   type PresetStoreV2,
   type RawInfoV2,
   type RepoInfoV2,
@@ -10,6 +18,7 @@ import {
 
 export const LEGACY_STORAGE_KEY = 'libre-dianet'
 export const STORAGE_KEY = 'libre-dianet-v2'
+export const PRO_STORAGE_KEY = 'libre-dianet-pro-v1'
 
 const DEFAULT_STORE: PresetStoreV2 = {
   version: 2,
@@ -36,6 +45,18 @@ export function savePresetStore(store: PresetStoreV2, storage: Storage = window.
   storage.setItem(STORAGE_KEY, JSON.stringify(store))
 }
 
+export function loadProPresetStore(storage: Storage = window.localStorage): ProPresetStore {
+  const raw = storage.getItem(PRO_STORAGE_KEY)
+  if (!raw) {
+    return { version: 1, versions: [] }
+  }
+  return parseProPresetStore(raw)
+}
+
+export function saveProPresetStore(store: ProPresetStore, storage: Storage = window.localStorage): void {
+  storage.setItem(PRO_STORAGE_KEY, JSON.stringify(store))
+}
+
 function parseCurrentStore(raw: string): PresetStoreV2 {
   const parsed = JSON.parse(raw) as unknown
   if (!isRecord(parsed) || parsed.version !== 2 || !Array.isArray(parsed.presets)) {
@@ -45,6 +66,180 @@ function parseCurrentStore(raw: string): PresetStoreV2 {
     version: 2,
     presets: parsed.presets.map(parsePresetV2),
   }
+}
+
+export function parseProPresetStore(raw: string): ProPresetStore {
+  const parsed = JSON.parse(raw) as unknown
+  if (!isRecord(parsed) || parsed.version !== 1 || !Array.isArray(parsed.versions)) {
+    throw new Error('Unsupported Pro preset store format')
+  }
+  return {
+    version: 1,
+    versions: parsed.versions.map(parseProVersion),
+  }
+}
+
+function parseProVersion(value: unknown): ProVersion {
+  if (!isRecord(value)) {
+    throw new Error('Pro version is not an object')
+  }
+  return {
+    id: asString(value.id),
+    name: asString(value.name),
+    revisionDate: asString(value.revisionDate),
+    gtfsSources: parseProGtfsSources(value.gtfsSources),
+    presets: parseProPresets(value.presets),
+  }
+}
+
+function parseProGtfsSources(value: unknown): ProGtfsSource[] {
+  return asArray(value).map((item) => {
+    const record = asRecord(item)
+    return {
+      sourceId: asString(record.sourceId),
+      displayName: asOptionalString(record.displayName),
+      info: parseProInfoV2(record.info),
+    }
+  })
+}
+
+function parseProInfoV2(value: unknown): RepoInfoV2 | RawInfoV2 {
+  const record = asRecord(value)
+  if (record.kind === 'repo') {
+    return {
+      kind: 'repo',
+      id: asString(record.id),
+      orgId: asString(record.orgId),
+      feedId: asString(record.feedId),
+      fileUid: asNullableString(record.fileUid),
+      fileLabel: asNullableString(record.fileLabel),
+      name: asNullableString(record.name),
+    }
+  }
+
+  if (record.kind === 'raw') {
+    return {
+      kind: 'raw',
+      id: asString(record.id),
+      uuid: asString(record.uuid),
+      name: asNullableString(record.name),
+      cacheState: asProRawCacheState(record.cacheState),
+    }
+  }
+
+  throw new Error('Unknown Pro preset info kind')
+}
+
+function parseProPresets(value: unknown): ProPreset[] {
+  return asArray(value).map((item) => parseProPreset(asRecord(item)))
+}
+
+export function parseProPresetImport(raw: string): ProPreset {
+  const parsed = JSON.parse(raw) as unknown
+  return parseProPreset(asRecord(parsed))
+}
+
+function parseProPreset(value: Record<string, unknown>): ProPreset {
+  return {
+    id: asString(value.id),
+    name: asString(value.name),
+    index: asNumber(value.index),
+    sourceIds: asStringArray(value.sourceIds),
+    routes: parseProRouteDetails(value.routes),
+    routeDisplayOverrides: parseProRouteDisplayOverrides(value.routeDisplayOverrides),
+    poles: parseProPoleDetails(value.poles),
+    excludedStopPatterns: parseProStopPatterns(value.excludedStopPatterns),
+  }
+}
+
+function parseProRouteDetails(value: unknown): ProRouteDetail[] {
+  return asArray(value).map((item) => {
+    const record = asRecord(item)
+    return {
+      sourceId: asString(record.sourceId),
+      id: asString(record.id),
+      direction: asNullableNumber(record.direction),
+    }
+  })
+}
+
+function parseProRouteDisplayOverrides(value: unknown): ProRouteDisplayOverride[] {
+  return asArray(value).map((item) => {
+    const record = asRecord(item)
+    return {
+      routeKey: asString(record.routeKey),
+      routeNameOverride: asNullableString(record.routeNameOverride),
+      destinationOverride: asNullableString(record.destinationOverride),
+      useTripHeadsignAsDestination: asBoolean(record.useTripHeadsignAsDestination, false),
+      stopCellOverrides: parseProStopCellDisplayOverrides(record.stopCellOverrides),
+    }
+  })
+}
+
+function parseProStopCellDisplayOverrides(value: unknown): ProRouteDisplayOverride['stopCellOverrides'] {
+  return asArray(value).map((item) => {
+    const record = asRecord(item)
+    return {
+      poleId: asString(record.poleId),
+      text: asString(record.text),
+      rowSpan: asNumber(record.rowSpan),
+      mincho: asBoolean(record.mincho, false),
+    }
+  })
+}
+
+function parseProPoleDetails(value: unknown): ProPoleDetail[] {
+  return asArray(value).map((item) => {
+    const record = asRecord(item)
+    return {
+      id: asString(record.id),
+      stops: parseProPoleStops(record.stops),
+      override: parseProOverride(record.override),
+    }
+  })
+}
+
+function parseProPoleStops(value: unknown) {
+  return asArray(value).map((item) => {
+    const record = asRecord(item)
+    return {
+      sourceId: asString(record.sourceId),
+      id: asString(record.id),
+      stopSequence: asNullableNumber(record.stopSequence),
+      stopPatternKey: asString(record.stopPatternKey),
+      stopIndex: asNumber(record.stopIndex),
+    }
+  })
+}
+
+function parseProOverride(value: unknown): OverrideConfig {
+  const record = asRecord(value)
+  return {
+    majorStop: asBoolean(record.majorStop),
+    branchStart: asBoolean(record.branchStart),
+    branchEnd: asBoolean(record.branchEnd),
+    nameOverride: asNullableString(record.nameOverride),
+    locationNameOverride: asNullableString(record.locationNameOverride),
+    jokoOverride: asNullableString(record.jokoOverride),
+    rowShading: asBoolean(record.rowShading),
+    stopNameBold: asBoolean(record.stopNameBold),
+    horizontalLine: asBoolean(record.horizontalLine),
+  }
+}
+
+function parseProStopPatterns(value: unknown): string[][] {
+  return asArray(value).map((item) => asStringArray(item))
+}
+
+function asStringArray(value: unknown): string[] {
+  return asArray(value).map(asString)
+}
+
+function asProRawCacheState(value: unknown): RawInfoV2['cacheState'] {
+  if (value === 'ready' || value === 'missing') {
+    return value
+  }
+  throw new Error('Invalid Pro raw cache state')
 }
 
 export function migrateLegacyStore(raw: string): PresetStoreV2 {
@@ -209,6 +404,13 @@ function asString(value: unknown): string {
   return value
 }
 
+function asNullableString(value: unknown): string | null {
+  if (value === null) {
+    return null
+  }
+  return asString(value)
+}
+
 function asOptionalString(value: unknown): string | null {
   return typeof value === 'string' ? value : null
 }
@@ -219,6 +421,44 @@ function repoInfoId(orgId: string, feedId: string, fileUid: string | null): stri
 
 function asOptionalNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function asNullableNumber(value: unknown): number | null {
+  if (value === null) {
+    return null
+  }
+  return asNumber(value)
+}
+
+function asNumber(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error('Expected number')
+  }
+  return value
+}
+
+function asBoolean(value: unknown, fallback?: boolean): boolean {
+  if (value === undefined && fallback !== undefined) {
+    return fallback
+  }
+  if (typeof value !== 'boolean') {
+    throw new Error('Expected boolean')
+  }
+  return value
+}
+
+function asArray(value: unknown): unknown[] {
+  if (!Array.isArray(value)) {
+    throw new Error('Expected array')
+  }
+  return value
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!isRecord(value)) {
+    throw new Error('Expected object')
+  }
+  return value
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

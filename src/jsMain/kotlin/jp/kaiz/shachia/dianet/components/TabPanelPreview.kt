@@ -1,6 +1,8 @@
 package jp.kaiz.shachia.dianet.components
 
 import emotion.react.css
+import jp.kaiz.shachia.dianet.DateDayMapping
+import jp.kaiz.shachia.dianet.DayMapping
 import jp.kaiz.shachia.dianet.PoleDetail
 import jp.kaiz.shachia.dianet.RouteDetail
 import jp.kaiz.shachia.dianet.data.*
@@ -22,7 +24,7 @@ import web.cssom.*
 import web.html.InputType
 
 external interface TabPanelPreviewProps : TabPanelProps {
-    var onRequestCreateDiaNetXlsx: (List<Pair<String, LocalDate>>) -> Unit
+    var onRequestCreateDiaNetXlsx: (List<DayMapping>) -> Unit
     var isChanged: Boolean
     var isDownloading: Boolean
     var gtfs: JsGTFS
@@ -387,13 +389,13 @@ val TabPanelPreview = FC<TabPanelPreviewProps> { props ->
 
 external interface OutputRequestButtonWithSelectDateDialogProps : Props {
     var buttonDisabled: Boolean
-    var onRequestCreateDiaNetXlsx: (List<Pair<String, LocalDate>>) -> Unit
+    var onRequestCreateDiaNetXlsx: (List<DayMapping>) -> Unit
 }
 
 val OutputRequestButtonWithSelectDateDialog = FC<OutputRequestButtonWithSelectDateDialogProps> { props ->
     var open by useState(false)
 
-    var dayMapping by useState<List<Pair<String, LocalDate>>>(listOf())
+    var dayMapping by useState<List<DateDayMapping>>(listOf())
 
     Button {
         +("xlsx出力")
@@ -418,7 +420,7 @@ val OutputRequestButtonWithSelectDateDialog = FC<OutputRequestButtonWithSelectDa
                 sx {
                     paddingBottom = 6.px
                 }
-                dayMapping.mapIndexed { index, (name, date) ->
+                dayMapping.mapIndexed { index, item ->
                     Box {
                         sx {
                             display = Display.flex
@@ -428,18 +430,18 @@ val OutputRequestButtonWithSelectDateDialog = FC<OutputRequestButtonWithSelectDa
 
                         TextField {
                             label = ReactNode("シート名")
-                            value = name
+                            value = item.name
                             onChange = { event ->
                                 val text = (event.target.asDynamic().value as String)
                                 dayMapping =
                                     dayMapping.toMutableList()
-                                        .apply { set(index, text to dayMapping[index].second) }
+                                        .apply { set(index, dayMapping[index].copy(name = text)) }
                             }
                         }
 
                         TextField {
                             label = ReactNode("日付")
-                            value = date.format(LocalDate.Formats.ISO)
+                            value = item.date.format(LocalDate.Formats.ISO)
                             variant = FormControlVariant.outlined
                             type = InputType.date
                             onChange = { event ->
@@ -447,7 +449,7 @@ val OutputRequestButtonWithSelectDateDialog = FC<OutputRequestButtonWithSelectDa
                                 val changedDate = LocalDate.parse(text)
                                 dayMapping =
                                     dayMapping.toMutableList()
-                                        .apply { set(index, dayMapping[index].first to changedDate) }
+                                        .apply { set(index, dayMapping[index].copy(date = changedDate)) }
                             }
                         }
 
@@ -465,7 +467,7 @@ val OutputRequestButtonWithSelectDateDialog = FC<OutputRequestButtonWithSelectDa
                 +"シートを追加"
 
                 onClick = {
-                    dayMapping += "" to Clock.System.todayIn(TimeZone.currentSystemDefault())
+                    dayMapping += DateDayMapping("", Clock.System.todayIn(TimeZone.currentSystemDefault()))
                 }
             }
         }

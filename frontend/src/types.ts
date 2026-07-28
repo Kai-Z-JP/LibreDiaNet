@@ -1,4 +1,4 @@
-import type { AppGtfsLoader } from './gtfsSchema'
+import type { GtfsLoader } from '@gtfs-jp/loader'
 
 export type OverrideConfig = {
   majorStop: boolean
@@ -121,6 +121,10 @@ export type GtfsFeedFileOption = {
   uid: string
   label: string
   sourceLabel: string
+  fromDate: string | null
+  toDate: string | null
+  memo: string | null
+  createdAt: string | null
 }
 
 export type RouteOption = {
@@ -143,6 +147,7 @@ export type GtfsStopTime = {
   tripId: string
   stopId: string
   stopSequence: number
+  arrivalTime?: string | null
   departureTime: string | null
   stopPatternId?: string | null
 }
@@ -161,6 +166,7 @@ export type DiaNetStopData = {
   name: string
   platformCode: string | null
   jokoOverride?: string | null
+  emptyPole?: boolean
 }
 
 export type DiaNetRouteData = {
@@ -174,12 +180,15 @@ export type DiaNetTripData = {
   routeId: string
   directionId: number | null
   serviceId: string
+  tripHeadsign?: string | null
+  routeDisplayOverrideKey?: string
 }
 
 export type DiaNetStopTimeData = {
   tripId: string
   stopId: string
   stopSequence: number
+  arrivalTime?: string | null
   departureTime: string | null
   stopPatternId?: string | null
 }
@@ -210,15 +219,34 @@ export type ConstructedRoute = {
 }
 
 export type ConstructedTrip = {
+  serviceId: string
   routeId: string
   direction: number | null
   routeName: string
+  tripHeadsign?: string | null
   stopTime: GtfsStopTime[]
 }
 
 export type StopMap = Record<string, GtfsStop>
 
-export type DayMapping = [string, string]
+export type GtfsServiceWeekday = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+
+export type DayMapping =
+  | {
+      name: string
+      type: 'date'
+      date: string
+      serviceIds?: string[]
+    }
+  | {
+      name: string
+      type: 'weekday'
+      weekday: GtfsServiceWeekday
+    }
+  | {
+      name: string
+      type: 'all-days'
+    }
 
 export type OpenHandleResult = {
   handle: GtfsHandle
@@ -227,11 +255,80 @@ export type OpenHandleResult = {
 
 export type GtfsHandle = {
   filename: string
-  loader: AppGtfsLoader
+  loader: GtfsLoader
 }
 
 export type PresetContext = {
   loading: boolean
   handle: GtfsHandle | null
   error: string | null
+}
+
+export type ProGtfsSource = {
+  sourceId: string
+  displayName?: string | null
+  info: RepoInfoV2 | RawInfoV2
+}
+
+export type ProRouteDetail = RouteDetail & {
+  sourceId: string
+}
+
+export type ProRouteDisplayOverride = {
+  routeKey: string
+  routeNameOverride: string | null
+  destinationOverride: string | null
+  useTripHeadsignAsDestination: boolean
+  stopCellOverrides: ProStopCellDisplayOverride[]
+}
+
+export type ProStopCellDisplayOverride = {
+  poleId: string
+  text: string
+  rowSpan: number
+  mincho: boolean
+}
+
+export type ProPoleStop = {
+  sourceId: string
+  id: string
+  stopSequence: number | null
+  stopPatternKey: string
+  stopIndex: number
+}
+
+export type ProPoleDetail = {
+  id: string
+  stops: ProPoleStop[]
+  override: OverrideConfig
+}
+
+export type ProPreset = {
+  id: string
+  name: string
+  index: number
+  sourceIds: string[]
+  routes: ProRouteDetail[]
+  routeDisplayOverrides: ProRouteDisplayOverride[]
+  poles: ProPoleDetail[]
+  excludedStopPatterns: string[][]
+}
+
+export type ProVersion = {
+  id: string
+  name: string
+  revisionDate: string
+  gtfsSources: ProGtfsSource[]
+  presets: ProPreset[]
+}
+
+export type ProPresetStore = {
+  version: 1
+  versions: ProVersion[]
+}
+
+export type ProPresetContext = {
+  loading: boolean
+  handles: Record<string, GtfsHandle>
+  errors: Record<string, string>
 }

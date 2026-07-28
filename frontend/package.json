@@ -11,20 +11,30 @@
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "firebase:deploy:check": "firebase deploy --only firestore,storage --dry-run",
+    "firebase:deploy": "firebase deploy --only firestore,storage",
+    "firebase:storage:cors:apply": "gcloud storage buckets update gs://libre-dianet.firebasestorage.app --project=libre-dianet --cors-file=firebase/storage.cors.json",
+    "firebase:storage:cors:show": "gcloud storage buckets describe gs://libre-dianet.firebasestorage.app --project=libre-dianet --format=default(cors_config)",
+    "firebase:emulators": "firebase emulators:start --project demo-libre-dianet --only auth,firestore,storage"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@gtfs-jp/loader": "^4.0.0-beta.12",
-    "@gtfs-jp/types": "^4.0.0-beta.12",
+    "@gtfs-jp/loader": "^4.0.0-beta.14",
+    "@gtfs-jp/query": "^4.0.0-beta.14",
+    "@gtfs-jp/types": "^4.0.0-beta.14",
     "@hello-pangea/dnd": "^18.0.1",
     "@mui/icons-material": "^7.3.9",
     "@mui/material": "^7.3.9",
+    "exceljs": "^4.4.0",
+    "firebase": "^12.16.0",
+    "jszip": "^3.10.1",
     "kysely": "^0.28.14",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.2"
+    "react-router-dom": "^7.13.2",
+    "rxdb": "^17.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -38,6 +48,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "firebase-tools": "^15.23.0",
     "globals": "^17.4.0",
     "jsdom": "^29.0.1",
     "prettier": "^3.6.2",

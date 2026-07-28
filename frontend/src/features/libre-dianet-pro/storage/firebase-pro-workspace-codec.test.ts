@@ -1,0 +1,105 @@
+import type { ProVersion } from '../../../types'
+import { decodeFirebaseVersionDocument, encodeFirebaseVersionDocument, type FirebaseVersionDocument } from './firebase-pro-workspace-codec'
+
+describe('Firebase Pro workspace codec', () => {
+  it('round-trips excluded stop patterns without nested Firestore arrays', () => {
+    const version: ProVersion = {
+      id: 'version',
+      name: 'Version',
+      revisionDate: '2026-04-01',
+      gtfsSources: [],
+      presets: [
+        {
+          id: 'preset',
+          name: 'Preset',
+          index: 0,
+          sourceIds: [],
+          routes: [],
+          routeDisplayOverrides: [],
+          poles: [],
+          excludedStopPatterns: [['source::pattern'], ['one', 'two']],
+        },
+      ],
+    }
+    const document: FirebaseVersionDocument = {
+      id: 'document',
+      workspaceId: 'workspace',
+      position: 0,
+      version,
+    }
+
+    const encoded = encodeFirebaseVersionDocument(document)
+    const encodedPatterns = encoded.version.presets[0]?.excludedStopPatterns as unknown
+
+    expect(encodedPatterns).toEqual([{ values: ['source::pattern'] }, { values: ['one', 'two'] }])
+    expect(decodeFirebaseVersionDocument(encoded)).toEqual(document)
+  })
+
+  it('does not double-encode an already encoded replication state', () => {
+    const document: FirebaseVersionDocument = {
+      id: 'document',
+      workspaceId: 'workspace',
+      position: 0,
+      version: {
+        id: 'version',
+        name: 'Version',
+        revisionDate: '2026-04-01',
+        gtfsSources: [],
+        presets: [
+          {
+            id: 'preset',
+            name: 'Preset',
+            index: 0,
+            sourceIds: [],
+            routes: [],
+            routeDisplayOverrides: [],
+            poles: [],
+            excludedStopPatterns: [['source::pattern']],
+          },
+        ],
+      },
+    }
+
+    const encoded = encodeFirebaseVersionDocument(document)
+
+    expect(encodeFirebaseVersionDocument(encoded)).toEqual(encoded)
+  })
+
+  it('defaults Mincho to false for old replicated cell overrides', () => {
+    const oldDocument = {
+      id: 'document',
+      workspaceId: 'workspace',
+      position: 0,
+      version: {
+        id: 'version',
+        name: 'Version',
+        revisionDate: '2026-04-01',
+        gtfsSources: [],
+        presets: [
+          {
+            id: 'preset',
+            name: 'Preset',
+            index: 0,
+            sourceIds: [],
+            routes: [],
+            routeDisplayOverrides: [
+              {
+                routeKey: 'route',
+                routeNameOverride: null,
+                destinationOverride: null,
+                useTripHeadsignAsDestination: false,
+                stopCellOverrides: [{ poleId: 'pole', text: '回送', rowSpan: 1 }],
+              },
+            ],
+            poles: [],
+            excludedStopPatterns: [],
+          },
+        ],
+      },
+    } as unknown as FirebaseVersionDocument
+
+    expect(decodeFirebaseVersionDocument(oldDocument).version.presets[0]?.routeDisplayOverrides[0]?.stopCellOverrides[0]?.mincho).toBe(
+      false,
+    )
+  })
+})

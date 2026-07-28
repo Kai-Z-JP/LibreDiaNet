@@ -13,7 +13,6 @@ import jp.kaiz.shachia.gtfs.js.data.JsGTFS
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.datetime.LocalDate
 import mui.icons.material.CloudUpload
 import mui.material.*
 import mui.material.Size
@@ -75,7 +74,7 @@ val PresetEditor = FC<PresetEditorProps> { props ->
 
     var downloading by useState(false)
 
-    val onRequestDiaNetXlsx: (List<Pair<String, LocalDate>>) -> Unit = { dayMapping ->
+    val onRequestDiaNetXlsx: (List<DayMapping>) -> Unit = { dayMapping ->
         downloading = true
 
         val extractFileName: (String?) -> String? = {

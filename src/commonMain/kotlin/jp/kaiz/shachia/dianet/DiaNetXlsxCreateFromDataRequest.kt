@@ -1,6 +1,5 @@
 package jp.kaiz.shachia.dianet
 
-import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -8,7 +7,7 @@ data class DiaNetXlsxCreateFromDataRequest(
     val gtfs: DiaNetGtfsExportData,
     val preset: RoutePreset,
     @Serializable(with = DayMappingListSerializer::class)
-    val dayMapping: List<Pair<String, LocalDate>>
+    val dayMapping: List<DayMapping>
 )
 
 @Serializable
@@ -41,7 +40,8 @@ data class DiaNetTripData(
     val tripId: String,
     val routeId: String,
     val directionId: Int? = null,
-    val serviceId: String
+    val serviceId: String,
+    val tripHeadsign: String? = null
 )
 
 @Serializable
@@ -49,6 +49,7 @@ data class DiaNetStopTimeData(
     val tripId: String,
     val stopId: String,
     val stopSequence: Int,
+    val arrivalTime: String? = null,
     val departureTime: String? = null,
     val stopPatternId: String? = null
 )

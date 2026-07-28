@@ -1,12 +1,14 @@
-import { createGtfsLoader } from '@gtfs-jp/loader'
-import { type GtfsJpV4TableRow } from '@gtfs-jp/types'
-import { GTFS_SCHEMA, type AppGtfsLoader } from './gtfsSchema'
+import { createGtfsLoader, type GtfsDatabaseProvider, type GtfsLoader, type GtfsValidationResult } from '@gtfs-jp/loader'
+import { getActiveServiceIds, type GtfsQuerySource } from '@gtfs-jp/query'
+import { type GtfsJpV4TableName, type GtfsJpV4TableRow } from '@gtfs-jp/types'
 import type {
   ConstructedRoute,
+  DayMapping,
   ConstructedTrip,
   DiaNetGtfsExportData,
   GtfsHandle,
   GtfsRouteSummary,
+  GtfsServiceWeekday,
   GtfsStop,
   GtfsStopTime,
   OpenHandleResult,
@@ -23,12 +25,44 @@ const IMPORT_OPTIONS = {
   opfsImportMode: 'memory-stage' as const,
 }
 
-type Db = ReturnType<AppGtfsLoader['db']>
-type TripRow = Pick<GtfsJpV4TableRow<'trips'>, 'trip_id' | 'route_id' | 'direction_id' | 'service_id' | 'jp_pattern_id'>
+const OPTIONAL_DIANET_TABLES = new Set<GtfsJpV4TableName>(['fare_attributes'])
+
+type Db = ReturnType<GtfsLoader['db']>
+type TripRow = Pick<GtfsJpV4TableRow<'trips'>, 'trip_id' | 'route_id' | 'direction_id' | 'service_id' | 'jp_pattern_id'> &
+  Partial<Pick<GtfsJpV4TableRow<'trips'>, 'trip_headsign'>>
 type StopTimeRow = Pick<GtfsJpV4TableRow<'stop_times'>, 'trip_id' | 'stop_id' | 'stop_sequence'> &
-  Partial<Pick<GtfsJpV4TableRow<'stop_times'>, 'departure_time'>>
+  Partial<Pick<GtfsJpV4TableRow<'stop_times'>, 'arrival_time' | 'departure_time'>>
+type CalendarRow = Pick<
+  GtfsJpV4TableRow<'calendar'>,
+  'service_id' | 'start_date' | 'end_date' | 'sunday' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday'
+>
 type RawTripRow = Record<keyof TripRow, unknown>
 type RawStopTimeRow = Record<keyof StopTimeRow, unknown>
+
+export interface FareV1Attribute {
+  fareId: string
+  price: number
+  icPrice: number | null
+  currencyType: string
+  agencyId: string | null
+}
+
+export interface FareV1Rule {
+  fareId: string
+  routeId: string | null
+  originId: string | null
+  destinationId: string | null
+  containsId: string | null
+}
+
+export interface FareV1Data {
+  fareAttributesPresent: boolean
+  fareRulesPresent: boolean
+  stopZoneById: Record<string, string | null>
+  routeAgencyById: Record<string, string | null>
+  attributes: FareV1Attribute[]
+  rules: FareV1Rule[]
+}
 
 class RawCacheMissingError extends Error {
   constructor() {
@@ -38,6 +72,11 @@ class RawCacheMissingError extends Error {
 
 export class GtfsRepository {
   private readonly handles = new Map<string, GtfsHandle>()
+  private readonly createDatabaseProvider?: (filename: string) => GtfsDatabaseProvider
+
+  constructor(options: { createDatabaseProvider?: (filename: string) => GtfsDatabaseProvider } = {}) {
+    this.createDatabaseProvider = options.createDatabaseProvider
+  }
 
   async openRepoFeed(info: RepoInfoV2): Promise<OpenHandleResult> {
     const filename = repoCacheFilename(info)
@@ -45,15 +84,16 @@ export class GtfsRepository {
     if (existing) {
       return { handle: existing, imported: false }
     }
-    const loader = createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
+    const loader = this.createLoader(filename)
     await loader.open()
     const validation = await loader.validate()
-    if (!validation.valid) {
+    if (missingRequiredGtfsTables(validation).length > 0) {
       await loader.reset()
       await importRepoZip(loader, info)
       const postValidation = await loader.validate()
-      if (!postValidation.valid) {
-        throw new Error(`GTFS validation failed: ${postValidation.missingRequired.join(', ')}`)
+      const missingRequired = missingRequiredGtfsTables(postValidation)
+      if (missingRequired.length > 0) {
+        throw new Error(`GTFS validation failed: ${missingRequired.join(', ')}`)
       }
       const handle = { filename, loader }
       this.handles.set(filename, handle)
@@ -67,15 +107,16 @@ export class GtfsRepository {
   async reloadRepoFeed(info: RepoInfoV2): Promise<OpenHandleResult> {
     const filename = repoCacheFilename(info)
     const existing = this.handles.get(filename)
-    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
+    const loader = existing?.loader ?? this.createLoader(filename)
     if (!existing) {
       await loader.open()
     }
     await loader.reset()
     await importRepoZip(loader, info)
     const validation = await loader.validate()
-    if (!validation.valid) {
-      throw new Error(`GTFS validation failed: ${validation.missingRequired.join(', ')}`)
+    const missingRequired = missingRequiredGtfsTables(validation)
+    if (missingRequired.length > 0) {
+      throw new Error(`GTFS validation failed: ${missingRequired.join(', ')}`)
     }
     const handle = { filename, loader }
     this.handles.set(filename, handle)
@@ -83,12 +124,12 @@ export class GtfsRepository {
   }
 
   async openRawFeed(info: RawInfoV2, file?: File): Promise<OpenHandleResult> {
-    const filename = `raw-${info.uuid}.sqlite3`
+    const filename = gtfsCacheFilename(info)
     const existing = this.handles.get(filename)
     if (existing && !file) {
       return { handle: existing, imported: false }
     }
-    const loader = existing?.loader ?? createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
+    const loader = existing?.loader ?? this.createLoader(filename)
     if (!existing) {
       await loader.open()
     }
@@ -96,15 +137,16 @@ export class GtfsRepository {
       await loader.reset()
       await loader.importZip(file, IMPORT_OPTIONS)
       const validation = await loader.validate()
-      if (!validation.valid) {
-        throw new Error(`GTFS validation failed: ${validation.missingRequired.join(', ')}`)
+      const missingRequired = missingRequiredGtfsTables(validation)
+      if (missingRequired.length > 0) {
+        throw new Error(`GTFS validation failed: ${missingRequired.join(', ')}`)
       }
       const handle = { filename, loader }
       this.handles.set(filename, handle)
       return { handle, imported: true }
     }
     const validation = await loader.validate()
-    if (!validation.valid) {
+    if (missingRequiredGtfsTables(validation).length > 0) {
       if (!existing) {
         await loader.close()
       }
@@ -116,14 +158,14 @@ export class GtfsRepository {
   }
 
   async deleteFeedCache(info: RepoInfoV2 | RawInfoV2): Promise<void> {
-    const filename = info.kind === 'repo' ? repoCacheFilename(info) : `raw-${info.uuid}.sqlite3`
+    const filename = gtfsCacheFilename(info)
     const existing = this.handles.get(filename)
     if (existing) {
       await existing.loader.close({ unlink: true })
       this.handles.delete(filename)
       return
     }
-    const loader = createGtfsLoader({ storage: 'opfs', filename, schema: GTFS_SCHEMA })
+    const loader = this.createLoader(filename)
     await loader.open()
     await loader.close({ unlink: true })
   }
@@ -132,6 +174,15 @@ export class GtfsRepository {
     const closers = Array.from(this.handles.values()).map((handle) => handle.loader.close())
     this.handles.clear()
     await Promise.all(closers)
+  }
+
+  private createLoader(filename: string): GtfsLoader {
+    const database = this.createDatabaseProvider?.(filename)
+    return createGtfsLoader({
+      storage: 'opfs',
+      filename,
+      ...(database ? { database } : {}),
+    })
   }
 
   async listRoutesWithDirections(handle: GtfsHandle): Promise<RouteOption[]> {
@@ -187,6 +238,65 @@ export class GtfsRepository {
   ): Promise<ConstructedTrip[]> {
     const db = handle.loader.db()
     const activeServices = new Set(await this.loadActiveServiceIds(db, dateIso))
+    return this.listTripsForServices(db, selectedRoutes, activeServices, excludedStopPatterns)
+  }
+
+  async listTripsForServiceDate(
+    handle: GtfsHandle,
+    selectedRoutes: RouteDetail[],
+    dateIso: string,
+    excludedStopPatterns: string[][],
+  ): Promise<ConstructedTrip[]> {
+    const db = handle.loader.db()
+    const activeServices = await this.loadActiveServiceIdsForServiceDate(handle, dateIso)
+    return this.listTripsForServices(db, selectedRoutes, activeServices, excludedStopPatterns)
+  }
+
+  async resolveDayMappingServiceIds(
+    handle: GtfsHandle,
+    dayMapping: DayMapping[],
+    mapServiceId: (serviceId: string) => string = (serviceId) => serviceId,
+  ): Promise<DayMapping[]> {
+    return Promise.all(
+      dayMapping.map(async (mapping) => {
+        if (mapping.type !== 'date') {
+          return mapping
+        }
+        const serviceIds = await this.loadActiveServiceIdsForServiceDate(handle, mapping.date)
+        return {
+          ...mapping,
+          serviceIds: Array.from(serviceIds, mapServiceId),
+        }
+      }),
+    )
+  }
+
+  async listTripsForWeekday(
+    handle: GtfsHandle,
+    selectedRoutes: RouteDetail[],
+    weekday: GtfsServiceWeekday,
+    referenceDateIso: string,
+    excludedStopPatterns: string[][],
+  ): Promise<ConstructedTrip[]> {
+    const db = handle.loader.db()
+    const activeServices = new Set(await this.loadActiveServiceIdsForWeekday(db, weekday, referenceDateIso))
+    return this.listTripsForServices(db, selectedRoutes, activeServices, excludedStopPatterns)
+  }
+
+  async listTripsForAllDays(
+    handle: GtfsHandle,
+    selectedRoutes: RouteDetail[],
+    excludedStopPatterns: string[][],
+  ): Promise<ConstructedTrip[]> {
+    return this.listTripsForServices(handle.loader.db(), selectedRoutes, undefined, excludedStopPatterns)
+  }
+
+  private async listTripsForServices(
+    db: Db,
+    selectedRoutes: RouteDetail[],
+    activeServices: Set<string> | undefined,
+    excludedStopPatterns: string[][],
+  ): Promise<ConstructedTrip[]> {
     const excludedKeys = new Set(excludedStopPatterns.map((pattern) => stopPatternKey(pattern)))
     const results: ConstructedTrip[] = []
 
@@ -199,6 +309,7 @@ export class GtfsRepository {
       }
       const stopTimeRows = await this.loadStopTimeRows(db, tripIds, true)
       const patternIdByTripId = tripPatternIdMap(trips)
+      const tripById = new Map(trips.map((trip) => [String(trip.trip_id), trip]))
 
       const grouped = new Map<string, GtfsStopTime[]>()
       for (const row of stopTimeRows) {
@@ -207,6 +318,7 @@ export class GtfsRepository {
           tripId,
           stopId: String(row.stop_id),
           stopSequence: toNumber(row.stop_sequence),
+          arrivalTime: asOptionalString(row.arrival_time),
           departureTime: asOptionalString(row.departure_time),
           stopPatternId: patternIdByTripId.get(tripId) ?? null,
         }
@@ -222,10 +334,17 @@ export class GtfsRepository {
         if (excludedKeys.has(stopPatternKey(stopTimes))) {
           continue
         }
+        const tripId = stopTimes[0]?.tripId ?? ''
+        const trip = tripById.get(tripId)
+        if (!trip) {
+          throw new Error(`Trip not found: ${tripId}`)
+        }
         results.push({
+          serviceId: String(trip.service_id),
           routeId: selectedRoute.id,
           direction: selectedRoute.direction,
           routeName: displayRouteName(route.shortName, route.longName),
+          tripHeadsign: asOptionalString(trip.trip_headsign),
           stopTime: stopTimes,
         })
       }
@@ -236,6 +355,73 @@ export class GtfsRepository {
 
   async getStopsByIds(handle: GtfsHandle, stopIds: string[]): Promise<StopMap> {
     return this.loadStops(handle.loader.db(), stopIds)
+  }
+
+  async loadFareV1Data(handle: GtfsHandle, routeIds: readonly string[], stopIds: readonly string[]): Promise<FareV1Data> {
+    const db = handle.loader.db()
+    const uniqueRouteIds = Array.from(new Set(routeIds))
+    const uniqueStopIds = Array.from(new Set(stopIds))
+    const [fareAttributesPresent, fareRulesPresent, tableMetadata] = await Promise.all([
+      handle.loader.hasTable('fare_attributes'),
+      handle.loader.hasTable('fare_rules'),
+      db.introspection.getTables(),
+    ])
+    const columnsByTable = new Map(tableMetadata.map((table) => [table.name, new Set(table.columns.map((column) => column.name))]))
+    const stopColumns = availableTableColumns(columnsByTable, 'stops', ['stop_id'], ['zone_id'])
+    const routeColumns = availableTableColumns(columnsByTable, 'routes', ['route_id'], ['agency_id'])
+    const fareAttributeColumns = availableTableColumns(
+      columnsByTable,
+      'fare_attributes',
+      ['fare_id', 'price', 'currency_type'],
+      ['ic_price', 'agency_id'],
+    )
+    const fareRuleColumns = availableTableColumns(
+      columnsByTable,
+      'fare_rules',
+      ['fare_id'],
+      ['route_id', 'origin_id', 'destination_id', 'contains_id'],
+    )
+
+    const stopRowsPromise =
+      uniqueStopIds.length === 0
+        ? Promise.resolve([])
+        : db.selectFrom('stops').select(stopColumns).where('stop_id', 'in', uniqueStopIds).execute()
+    const routeRowsPromise =
+      uniqueRouteIds.length === 0
+        ? Promise.resolve([])
+        : db.selectFrom('routes').select(routeColumns).where('route_id', 'in', uniqueRouteIds).execute()
+    const fareAttributeRowsPromise = fareAttributesPresent
+      ? db.selectFrom('fare_attributes').select(fareAttributeColumns).execute()
+      : Promise.resolve([])
+    const fareRuleRowsPromise = fareRulesPresent ? db.selectFrom('fare_rules').select(fareRuleColumns).execute() : Promise.resolve([])
+
+    const [stopRows, routeRows, fareAttributeRows, fareRuleRows] = await Promise.all([
+      stopRowsPromise,
+      routeRowsPromise,
+      fareAttributeRowsPromise,
+      fareRuleRowsPromise,
+    ])
+
+    return {
+      fareAttributesPresent,
+      fareRulesPresent,
+      stopZoneById: Object.fromEntries(stopRows.map((row) => [String(row.stop_id), asOptionalId(row.zone_id)])),
+      routeAgencyById: Object.fromEntries(routeRows.map((row) => [String(row.route_id), asOptionalId(row.agency_id)])),
+      attributes: fareAttributeRows.map((row) => ({
+        fareId: String(row.fare_id),
+        price: toNumber(row.price),
+        icPrice: toNullableNumber(row.ic_price),
+        currencyType: String(row.currency_type),
+        agencyId: asOptionalId(row.agency_id),
+      })),
+      rules: fareRuleRows.map((row) => ({
+        fareId: String(row.fare_id),
+        routeId: asOptionalId(row.route_id),
+        originId: asOptionalId(row.origin_id),
+        destinationId: asOptionalId(row.destination_id),
+        containsId: asOptionalId(row.contains_id),
+      })),
+    }
   }
 
   async buildExportData(handle: GtfsHandle, preset: RoutePresetV2): Promise<DiaNetGtfsExportData> {
@@ -271,6 +457,7 @@ export class GtfsRepository {
         tripId,
         stopId: String(row.stop_id),
         stopSequence: toNumber(row.stop_sequence),
+        arrivalTime: asOptionalString(row.arrival_time),
         departureTime: asOptionalString(row.departure_time),
         stopPatternId: patternIdByTripId.get(tripId) ?? null,
       })
@@ -314,11 +501,13 @@ export class GtfsRepository {
         routeId: String(row.route_id),
         directionId: toNullableNumber(row.direction_id),
         serviceId: String(row.service_id),
+        tripHeadsign: asOptionalString(row.trip_headsign),
       })),
       stopTimes: stopTimeRows.map((row) => ({
         tripId: String(row.trip_id),
         stopId: String(row.stop_id),
         stopSequence: toNumber(row.stop_sequence),
+        arrivalTime: asOptionalString(row.arrival_time),
         departureTime: asOptionalString(row.departure_time),
         stopPatternId: patternIdByTripId.get(String(row.trip_id)) ?? null,
       })),
@@ -346,7 +535,7 @@ export class GtfsRepository {
     const rows = (
       (await db
         .selectFrom('trips')
-        .select(['trip_id', 'route_id', 'direction_id', 'service_id', 'jp_pattern_id'])
+        .select(['trip_id', 'route_id', 'direction_id', 'service_id', 'jp_pattern_id', 'trip_headsign'])
         .$if(direction === null, (qb) => qb.where('direction_id', 'is', null))
         .$if(direction !== null, (qb) => qb.where('direction_id', '=', direction!))
         .where('route_id', '=', route.id)
@@ -426,7 +615,11 @@ export class GtfsRepository {
     return (
       await db
         .selectFrom('stop_times')
-        .select(includeDepartureTime ? ['trip_id', 'stop_id', 'stop_sequence', 'departure_time'] : ['trip_id', 'stop_id', 'stop_sequence'])
+        .select(
+          includeDepartureTime
+            ? ['trip_id', 'stop_id', 'stop_sequence', 'arrival_time', 'departure_time']
+            : ['trip_id', 'stop_id', 'stop_sequence'],
+        )
         .where('trip_id', 'in', tripIds)
         .orderBy('trip_id')
         .orderBy('stop_sequence')
@@ -454,42 +647,56 @@ export class GtfsRepository {
 
   private async loadActiveServiceIds(db: Db, dateIso: string): Promise<string[]> {
     const date = new Date(`${dateIso}T00:00:00`)
-    const weekday = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()] as
-      | 'sunday'
-      | 'monday'
-      | 'tuesday'
-      | 'wednesday'
-      | 'thursday'
-      | 'friday'
-      | 'saturday'
+    const weekday = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()] as GtfsServiceWeekday
 
-    const rows = await db
+    return this.loadActiveServiceIdsForWeekday(db, weekday, dateIso)
+  }
+
+  private async loadActiveServiceIdsForServiceDate(handle: GtfsHandle, dateIso: string): Promise<Set<string>> {
+    const { serviceIds } = await getActiveServiceIds(gtfsQuerySource(handle), dateIso)
+    return serviceIds
+  }
+
+  private async loadActiveServiceIdsForWeekday(db: Db, weekday: GtfsServiceWeekday, referenceDateIso: string): Promise<string[]> {
+    const rows = (await db
       .selectFrom('calendar')
       .select(['service_id', 'start_date', 'end_date', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'])
-      .execute()
+      .execute()) as CalendarRow[]
 
-    return rows
-      .filter((row) => {
-        const start = normalizeGtfsDate(asOptionalString(row.start_date))
-        const end = normalizeGtfsDate(asOptionalString(row.end_date))
-        if (start && start > dateIso) {
-          return false
-        }
-        if (end && end < dateIso) {
-          return false
-        }
-        return toNumber(row[weekday]) === 1
-      })
-      .map((row) => String(row.service_id))
+    return selectActiveServiceIdsForWeekday(rows, weekday, referenceDateIso)
   }
 }
 
-async function importRepoZip(loader: AppGtfsLoader, info: RepoInfoV2): Promise<void> {
+export function missingRequiredGtfsTables(validation: Pick<GtfsValidationResult, 'missingRequired'>): GtfsJpV4TableName[] {
+  return validation.missingRequired.filter((tableName) => !OPTIONAL_DIANET_TABLES.has(tableName))
+}
+
+export function selectActiveServiceIdsForWeekday(rows: CalendarRow[], weekday: GtfsServiceWeekday, referenceDateIso: string): string[] {
+  return rows
+    .filter((row) => {
+      const start = normalizeGtfsDate(asOptionalString(row.start_date))
+      const end = normalizeGtfsDate(asOptionalString(row.end_date))
+      if (start && start > referenceDateIso) {
+        return false
+      }
+      if (end && end < referenceDateIso) {
+        return false
+      }
+      return toNumber(row[weekday]) === 1
+    })
+    .map((row) => String(row.service_id))
+}
+
+async function importRepoZip(loader: GtfsLoader, info: RepoInfoV2): Promise<void> {
   const response = await fetch(repoFeedZipUrl(info))
   if (!response.ok) {
     throw new Error(`Failed to fetch GTFS ZIP: ${response.status}`)
   }
   await loader.importZip(await response.blob(), IMPORT_OPTIONS)
+}
+
+export function gtfsCacheFilename(info: RepoInfoV2 | RawInfoV2): string {
+  return info.kind === 'repo' ? repoCacheFilename(info) : `raw-${info.uuid}.sqlite3`
 }
 
 function repoCacheFilename(info: RepoInfoV2): string {
@@ -510,6 +717,13 @@ function repoFileUid(info: RepoInfoV2): string | null {
   return info.fileUid?.trim() || null
 }
 
+function gtfsQuerySource(handle: GtfsHandle): GtfsQuerySource {
+  return {
+    db: handle.loader.db(),
+    hasTable: (tableName) => handle.loader.hasTable(tableName),
+  }
+}
+
 function tripPatternIdMap(trips: TripRow[]): Map<string, string | null> {
   return new Map(trips.map((trip) => [String(trip.trip_id), asOptionalString(trip.jp_pattern_id)]))
 }
@@ -521,6 +735,7 @@ function toTripRow(row: RawTripRow): TripRow {
     direction_id: toDirectionId(row.direction_id),
     service_id: asRequiredString(row.service_id),
     jp_pattern_id: asOptionalString(row.jp_pattern_id),
+    trip_headsign: asOptionalString(row.trip_headsign),
   }
 }
 
@@ -529,6 +744,7 @@ function toStopTimeRow(row: RawStopTimeRow): StopTimeRow {
     trip_id: asRequiredString(row.trip_id),
     stop_id: asRequiredString(row.stop_id),
     stop_sequence: toNumber(row.stop_sequence),
+    arrival_time: asOptionalString(row.arrival_time),
     departure_time: asOptionalString(row.departure_time),
   }
 }
@@ -547,6 +763,20 @@ function toDirectionId(value: unknown): 0 | 1 | null {
 
 function asOptionalString(value: unknown): string | null {
   return typeof value === 'string' ? value : value == null ? null : String(value)
+}
+
+function asOptionalId(value: unknown): string | null {
+  return asOptionalString(value)?.trim() || null
+}
+
+function availableTableColumns<TColumn extends string>(
+  columnsByTable: Map<string, Set<string>>,
+  tableName: string,
+  requiredColumns: readonly TColumn[],
+  optionalColumns: readonly TColumn[],
+): TColumn[] {
+  const availableColumns = columnsByTable.get(tableName)
+  return [...requiredColumns, ...optionalColumns.filter((column) => availableColumns?.has(column))]
 }
 
 function normalizeGtfsDate(value: string | null): string | null {

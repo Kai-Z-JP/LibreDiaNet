@@ -1,14 +1,16 @@
+import { Global } from '@emotion/react'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import './index.css'
+import FirebaseAuthRoute from './features/libre-dianet-pro/firebase-auth-route'
+import LibreDiaNetProPage from './features/libre-dianet-pro/libre-dianet-pro-page'
+import { globalStyles } from './global-styles'
 
 const theme = createTheme({
   palette: {
     background: {
-      default: '#f0f0f0',
-      paper: '#f8f9ff',
+      default: '#fff',
     },
     primary: {
       main: '#1976d2',
@@ -24,9 +26,12 @@ const theme = createTheme({
 
 createRoot(document.getElementById('root')!).render(
   <ThemeProvider theme={theme}>
+    <Global styles={globalStyles} />
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />} />
+        <Route path="/pro" element={<LibreDiaNetProPage />} />
+        <Route path="/firebase-auth" element={<FirebaseAuthRoute />} />
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>
     </BrowserRouter>

@@ -1,0 +1,109 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(workspaceId) {
+      return /databases/$(database)/documents/libreDiaNetProWorkspaces/$(workspaceId)/members/$(request.auth.uid);
+    }
+
+    function isMember(workspaceId) {
+      return signedIn() && exists(memberPath(workspaceId));
+    }
+
+    function isOwner(workspaceId) {
+      return isMember(workspaceId) && get(memberPath(workspaceId)).data.role == 'owner';
+    }
+
+    function hasVerifiedEmail() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    function authEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    match /libreDiaNetProWorkspaces/{workspaceId} {
+      allow create: if hasVerifiedEmail()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80;
+      allow read: if isMember(workspaceId);
+      allow update: if isOwner(workspaceId)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80;
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow get: if signedIn() && (uid == request.auth.uid || isMember(workspaceId));
+        allow list: if isMember(workspaceId);
+
+        allow create: if hasVerifiedEmail()
+          && uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.workspaceId == workspaceId
+          && request.resource.data.email == authEmail()
+          && (
+            (
+              request.resource.data.role == 'owner'
+              && getAfter(/databases/$(database)/documents/libreDiaNetProWorkspaces/$(workspaceId)).data.ownerUid == request.auth.uid
+            )
+            || (
+              request.resource.data.role == 'editor'
+              && request.resource.data.inviteToken is string
+              && get(/databases/$(database)/documents/libreDiaNetProWorkspaceInvites/$(request.resource.data.inviteToken)).data.workspaceId == workspaceId
+              && get(/databases/$(database)/documents/libreDiaNetProWorkspaceInvites/$(request.resource.data.inviteToken)).data.email == authEmail()
+              && get(/databases/$(database)/documents/libreDiaNetProWorkspaceInvites/$(request.resource.data.inviteToken)).data.expiresAt > request.time
+            )
+          );
+
+        allow update, delete: if false;
+      }
+
+      match /versions/{documentId} {
+        allow read: if isMember(workspaceId);
+        allow create: if isMember(workspaceId)
+          && request.resource.data.workspaceId == workspaceId;
+        allow update: if isMember(workspaceId)
+          && resource.data.workspaceId == workspaceId
+          && request.resource.data.workspaceId == workspaceId;
+        allow delete: if isMember(workspaceId)
+          && resource.data.workspaceId == workspaceId;
+      }
+    }
+
+    match /libreDiaNetProUsers/{uid}/workspaces/{workspaceId} {
+      allow read: if signedIn() && uid == request.auth.uid;
+      allow create, update: if hasVerifiedEmail()
+        && uid == request.auth.uid
+        && request.resource.data.workspaceId == workspaceId
+        && request.resource.data.workspaceName is string
+        && request.resource.data.workspaceName.size() > 0
+        && request.resource.data.workspaceName.size() <= 80
+        && request.resource.data.role == getAfter(memberPath(workspaceId)).data.role;
+      allow delete: if signedIn() && uid == request.auth.uid;
+    }
+
+    match /libreDiaNetProWorkspaceInvites/{token} {
+      allow create: if hasVerifiedEmail()
+        && isOwner(request.resource.data.workspaceId)
+        && request.resource.data.role == 'editor'
+        && request.resource.data.email is string
+        && request.resource.data.email == request.resource.data.email.lower()
+        && request.resource.data.invitedByUid == request.auth.uid
+        && request.resource.data.workspaceName == get(/databases/$(database)/documents/libreDiaNetProWorkspaces/$(request.resource.data.workspaceId)).data.name
+        && request.resource.data.expiresAt > request.time;
+      allow get, delete: if hasVerifiedEmail()
+        && (isOwner(resource.data.workspaceId) || resource.data.email == authEmail());
+      allow list, update: if false;
+    }
+  }
+}
