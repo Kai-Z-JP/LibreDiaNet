@@ -219,6 +219,7 @@ export type ConstructedRoute = {
 }
 
 export type ConstructedTrip = {
+  serviceId: string
   routeId: string
   direction: number | null
   routeName: string

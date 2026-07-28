@@ -1,4 +1,4 @@
-import type { GtfsStop, ProPreset } from '../../../types'
+import type { GtfsServiceWeekday, GtfsStop, ProPreset } from '../../../types'
 import { convertToEnclosedNumber } from '../../../utils'
 import { proPoleDisplayLocationName, proPoleDisplayName } from './pro-pole-stop-helpers'
 import { proDestinationDisplay, proTripTimeForPole, splitDestinationColumns } from './pro-preview-display-helpers'
@@ -11,8 +11,33 @@ export type ProInddPreset = {
   id: string
   name: string
   index: number
+  diagramServiceNames: string[]
   diagrams: ProInddDiagram[][]
   poles: ProInddPole[]
+}
+
+export type ProInddTripsByWeekday = Record<GtfsServiceWeekday, ProConstructedTrip[]>
+
+export const PRO_INDD_WEEKDAYS = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+] as const satisfies readonly GtfsServiceWeekday[]
+
+const PRO_INDD_WORKWEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] as const satisfies readonly GtfsServiceWeekday[]
+
+const PRO_INDD_WEEKDAY_NAMES: Record<GtfsServiceWeekday, string> = {
+  monday: '月曜',
+  tuesday: '火曜',
+  wednesday: '水曜',
+  thursday: '木曜',
+  friday: '金曜',
+  saturday: '土曜',
+  sunday: '日休',
 }
 
 export type ProInddPole = {
@@ -48,26 +73,123 @@ export function buildProInddPreset({
   preset,
   constructedRoutes,
   stopMap,
-  tripsByDay,
+  tripsByWeekday,
 }: {
   preset: ProPreset
   constructedRoutes: ProConstructedRoute[]
   stopMap: Record<string, GtfsStop>
-  tripsByDay: ProConstructedTrip[][]
+  tripsByWeekday: ProInddTripsByWeekday
 }): ProInddPreset {
   const poles = buildProInddPoles(preset, constructedRoutes, stopMap)
+  const diagramsByWeekday = buildProInddDiagramsByWeekday(preset, tripsByWeekday, stopMap, poles)
+  const diagramServices = buildProInddDiagramServices(tripsByWeekday, diagramsByWeekday, poles)
   return {
     id: preset.id,
     name: preset.name,
     index: preset.index,
-    diagrams: tripsByDay.map((trips) =>
-      sortProInddDiagrams(
-        trips.map((trip) => buildProInddDiagram(preset, trip, stopMap)),
-        poles,
-      ),
-    ),
+    diagramServiceNames: diagramServices.map((service) => service.name),
+    diagrams: diagramServices.map((service) => service.diagrams),
     poles,
   }
+}
+
+function buildProInddDiagramsByWeekday(
+  preset: ProPreset,
+  tripsByWeekday: ProInddTripsByWeekday,
+  stopMap: Record<string, GtfsStop>,
+  poles: ProInddPole[],
+): Record<GtfsServiceWeekday, ProInddDiagram[]> {
+  return Object.fromEntries(
+    PRO_INDD_WEEKDAYS.map((weekday) => [
+      weekday,
+      sortProInddDiagrams(
+        tripsByWeekday[weekday].map((trip) => buildProInddDiagram(preset, trip, stopMap)),
+        poles,
+      ),
+    ]),
+  ) as Record<GtfsServiceWeekday, ProInddDiagram[]>
+}
+
+function buildProInddDiagramServices(
+  tripsByWeekday: ProInddTripsByWeekday,
+  diagramsByWeekday: Record<GtfsServiceWeekday, ProInddDiagram[]>,
+  poles: ProInddPole[],
+): { name: string; diagrams: ProInddDiagram[] }[] {
+  // A single weekday diagram is valid only when the active service_id set is identical Monday through Friday.
+  const weekdayGroups = groupWorkweekDaysByServiceIds(tripsByWeekday)
+  const hasCommonWeekdayDiagram = weekdayGroups.length === 1
+  const specificWeekdayServices = hasCommonWeekdayDiagram
+    ? []
+    : weekdayGroups.flatMap(({ weekdays }) => {
+        const diagrams = diagramsByWeekday[weekdays[0]]
+        return diagrams.length === 0 ? [] : [{ name: diagramServiceName(weekdays), diagrams }]
+      })
+
+  return [
+    { name: '平日', diagrams: hasCommonWeekdayDiagram ? diagramsByWeekday.monday : [] },
+    { name: '土曜', diagrams: diagramsByWeekday.saturday },
+    { name: '日休', diagrams: diagramsByWeekday.sunday },
+    { name: '全日', diagrams: unionProInddDiagrams(diagramsByWeekday, poles) },
+    ...specificWeekdayServices,
+  ]
+}
+
+function groupWorkweekDaysByServiceIds(tripsByWeekday: ProInddTripsByWeekday): { weekdays: (typeof PRO_INDD_WORKWEEK)[number][] }[] {
+  const groupsByServiceIds = new Map<string, { weekdays: (typeof PRO_INDD_WORKWEEK)[number][] }>()
+  for (const weekday of PRO_INDD_WORKWEEK) {
+    const serviceIds = Array.from(new Set(tripsByWeekday[weekday].map((trip) => JSON.stringify([trip.sourceId, trip.serviceId])))).sort()
+    const key = JSON.stringify(serviceIds)
+    const group = groupsByServiceIds.get(key) ?? { weekdays: [] }
+    group.weekdays.push(weekday)
+    groupsByServiceIds.set(key, group)
+  }
+  return Array.from(groupsByServiceIds.values())
+}
+
+function unionProInddDiagrams(diagramsByWeekday: Record<GtfsServiceWeekday, ProInddDiagram[]>, poles: ProInddPole[]): ProInddDiagram[] {
+  const unionByKey = new Map<string, { diagram: ProInddDiagram; count: number }>()
+  for (const weekday of PRO_INDD_WEEKDAYS) {
+    const countsForWeekday = new Map<string, { diagram: ProInddDiagram; count: number }>()
+    for (const diagram of diagramsByWeekday[weekday]) {
+      const key = proInddDiagramKey(diagram)
+      const entry = countsForWeekday.get(key) ?? { diagram, count: 0 }
+      entry.count += 1
+      countsForWeekday.set(key, entry)
+    }
+    for (const [key, entry] of countsForWeekday) {
+      const unionEntry = unionByKey.get(key)
+      // A multiset union keeps the largest count seen on any weekday instead of adding seven daily copies.
+      if (!unionEntry || entry.count > unionEntry.count) {
+        unionByKey.set(key, entry)
+      }
+    }
+  }
+
+  return sortProInddDiagrams(
+    Array.from(unionByKey.values()).flatMap(({ diagram, count }) => Array.from({ length: count }, () => diagram)),
+    poles,
+  )
+}
+
+function proInddDiagramKey(diagram: ProInddDiagram): string {
+  return JSON.stringify([
+    diagram.destination,
+    diagram.destinations,
+    diagram.cells,
+    diagram.cellDisplays.map((cell) => [
+      cell.text,
+      cell.rowSpan ?? null,
+      cell.hidden ?? false,
+      cell.compareValue ?? null,
+      cell.overridden ?? false,
+      cell.mincho ?? false,
+    ]),
+    diagram.routeName,
+  ])
+}
+
+function diagramServiceName(weekdays: readonly GtfsServiceWeekday[]): string {
+  return weekdays.map((weekday) => PRO_INDD_WEEKDAY_NAMES[weekday]).join('・')
 }
 
 export function serializeProInddPreset(preset: ProInddPreset): string {

@@ -71,6 +71,7 @@ describe('proTripPreviewTimes', () => {
     const trip: ProConstructedTrip = {
       sourceId: 'source-a',
       sourceName: 'Source A',
+      serviceId: 'service-a',
       routeId: 'route-a',
       direction: 0,
       routeName: 'Route A',
@@ -95,6 +96,7 @@ describe('proTripPreviewTimes', () => {
     const trip: ProConstructedTrip = {
       sourceId: 'source-a',
       sourceName: 'Source A',
+      serviceId: 'service-a',
       routeId: 'route-a',
       direction: 0,
       routeName: 'Route A',

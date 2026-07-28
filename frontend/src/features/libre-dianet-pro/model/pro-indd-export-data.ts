@@ -1,12 +1,10 @@
 import type { GtfsRepository } from '../../../gtfsRepository'
-import type { GtfsServiceWeekday, GtfsStop, ProPreset, ProPresetContext, ProVersion } from '../../../types'
+import type { GtfsStop, ProPreset, ProPresetContext, ProVersion } from '../../../types'
 import { todayIsoDate } from '../../../utils'
-import { buildProInddPreset, type ProInddPreset } from './pro-indd-export'
+import { buildProInddPreset, PRO_INDD_WEEKDAYS, type ProInddPreset, type ProInddTripsByWeekday } from './pro-indd-export'
 import { proExcludedStopPatternsForSource } from './pro-pole-stop-helpers'
 import { proGtfsSourceDisplayName } from './pro-source-helpers'
-import type { ProConstructedRoute, ProConstructedTrip } from './pro-types'
-
-const INDD_DAY_TYPES: GtfsServiceWeekday[] = ['monday', 'saturday', 'sunday']
+import type { ProConstructedRoute } from './pro-types'
 
 export async function openProInddVersionContext(repository: GtfsRepository, version: ProVersion): Promise<ProPresetContext> {
   const usedSourceIds = new Set(version.presets.flatMap((preset) => preset.sourceIds))
@@ -46,14 +44,14 @@ export async function prepareProInddPreset({
 }): Promise<ProInddPreset> {
   const constructedRoutes = await loadProInddConstructedRoutes(repository, preset, context, sourceNameMap)
   const stopMap = await loadProInddStopMap(repository, preset, context, constructedRoutes)
-  const tripsByDay = await loadProInddTripsByDay({
+  const tripsByWeekday = await loadProInddTripsByDay({
     repository,
     preset,
     context,
     sourceNameMap,
     referenceDate: version.revisionDate || todayIsoDate(),
   })
-  return buildProInddPreset({ preset, constructedRoutes, stopMap, tripsByDay })
+  return buildProInddPreset({ preset, constructedRoutes, stopMap, tripsByWeekday })
 }
 
 export async function loadProInddTripsByDay({
@@ -68,9 +66,9 @@ export async function loadProInddTripsByDay({
   context: ProPresetContext
   sourceNameMap: Record<string, string>
   referenceDate: string
-}): Promise<ProConstructedTrip[][]> {
-  return Promise.all(
-    INDD_DAY_TYPES.map(async (weekday) => {
+}): Promise<ProInddTripsByWeekday> {
+  const entries = await Promise.all(
+    PRO_INDD_WEEKDAYS.map(async (weekday) => {
       const tripsBySource = await Promise.all(
         preset.sourceIds.map(async (sourceId) => {
           const handle = requireProInddHandle(context, sourceId, sourceNameMap)
@@ -94,9 +92,10 @@ export async function loadProInddTripsByDay({
           }))
         }),
       )
-      return tripsBySource.flat()
+      return [weekday, tripsBySource.flat()] as const
     }),
   )
+  return Object.fromEntries(entries) as ProInddTripsByWeekday
 }
 
 function loadProInddConstructedRoutes(

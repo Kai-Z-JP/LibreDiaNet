@@ -29,14 +29,14 @@ export function useProInddExport({
     setExporting(true)
     setError(null)
     try {
-      const tripsByDay = await loadProInddTripsByDay({
+      const tripsByWeekday = await loadProInddTripsByDay({
         repository,
         preset,
         context,
         sourceNameMap,
         referenceDate: version.revisionDate || todayIsoDate(),
       })
-      const inddPreset = buildProInddPreset({ preset, constructedRoutes, stopMap, tripsByDay })
+      const inddPreset = buildProInddPreset({ preset, constructedRoutes, stopMap, tripsByWeekday })
       downloadBlob(
         new Blob([serializeProInddPreset(inddPreset)], { type: 'application/json;charset=utf-8' }),
         proInddJsonFileName(preset.id),

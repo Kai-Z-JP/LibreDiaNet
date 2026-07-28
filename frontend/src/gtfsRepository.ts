@@ -334,12 +334,17 @@ export class GtfsRepository {
         if (excludedKeys.has(stopPatternKey(stopTimes))) {
           continue
         }
-        const trip = tripById.get(stopTimes[0]?.tripId ?? '')
+        const tripId = stopTimes[0]?.tripId ?? ''
+        const trip = tripById.get(tripId)
+        if (!trip) {
+          throw new Error(`Trip not found: ${tripId}`)
+        }
         results.push({
+          serviceId: String(trip.service_id),
           routeId: selectedRoute.id,
           direction: selectedRoute.direction,
           routeName: displayRouteName(route.shortName, route.longName),
-          tripHeadsign: asOptionalString(trip?.trip_headsign),
+          tripHeadsign: asOptionalString(trip.trip_headsign),
           stopTime: stopTimes,
         })
       }
